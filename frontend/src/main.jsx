@@ -1,17 +1,16 @@
 import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
-import Views from './views'
+import { createRoot} from 'react-dom/client'
+import { RouterProvider, createBrowserRouter as Router } from 'react-router-dom'
 import './index.css'
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+import { routes } from './routes'
+
+const router = Router(routes)
+
+const root = createRoot(document.getElementById('root'))
+
+root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <div className="flex">
-        <Sidebar />
-        <Views />
-      </div>
-    </BrowserRouter>
+    <RouterProvider router={router}/>
   </React.StrictMode>
 )
