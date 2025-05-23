@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { FaPlus, FaEdit, FaSave } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaSave, FaArrowLeft } from 'react-icons/fa';
 
 const Dashboard = () => {
   const [proyectos, setProyectos] = useState([]);
@@ -10,6 +10,7 @@ const Dashboard = () => {
     prioridad: '',
     responsable: ''
   });
+  const [busqueda, setBusqueda] = useState(''); // Añadir esta línea
   const [showForm, setShowForm] = useState(false);
   const [editando, setEditando] = useState({ id: null, campo: null });
   const navigate = useNavigate();
@@ -115,7 +116,10 @@ const Dashboard = () => {
 
   const filtrarProyectos = () => {
     return proyectos.filter(proyecto => {
-      return (
+      const coincideNombre = busqueda === '' || 
+        proyecto.nombre.toLowerCase().includes(busqueda.toLowerCase());
+      
+      return coincideNombre && (
         (filtros.estado === '' || proyecto.estado.includes(filtros.estado)) &&
         (filtros.equipo === '' || proyecto.equipo.includes(filtros.equipo)) &&
         (filtros.prioridad === '' || proyecto.prioridad === filtros.prioridad) &&
@@ -167,16 +171,21 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold text-green-600">Proyectos Andes BPO</h1>
           <p className="text-gray-600">Implementando la transformación en Andes BPO</p>
         </div>
-        <button 
-          onClick={() => navigate('/nuevo-proyecto')}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
-        >
-          <FaPlus className="mr-2" /> Nuevo Proyecto
-        </button>
       </div>
 
       {/* Filtros */}
       <div className="mb-6 flex flex-wrap gap-4">
+        <div className="w-64">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por nombre</label>
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Nombre del proyecto"
+            className="w-full border border-gray-300 rounded-md shadow-sm p-2"
+          />
+        </div>
+        
         <div className="w-64">
           <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
           <select 
@@ -272,19 +281,13 @@ const Dashboard = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {filtrarProyectos().map((proyecto) => (
               <tr key={proyecto.id} className="hover:bg-gray-50">
-                <td className="px-4 py-4 whitespace-nowrap font-medium">
-                  {editando.id === proyecto.id && editando.campo === 'nombre' ? (
-                    <input
-                      type="text"
-                      value={proyecto.nombre}
-                      onChange={(e) => handleSave(proyecto.id, 'nombre', e.target.value)}
-                      className="border rounded p-1"
-                    />
-                  ) : (
-                    <span onClick={() => handleViewDetails(proyecto.id)} className="cursor-pointer hover:underline">
-                      {proyecto.nombre}
-                    </span>
-                  )}
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 mr-2">
+                      {proyecto.nombre.charAt(0)}
+                    </div>
+                    <span>{proyecto.nombre}</span>
+                  </div>
                 </td>
                 
                 <td className="px-4 py-4 whitespace-nowrap">
@@ -295,7 +298,7 @@ const Dashboard = () => {
                     <span>{proyecto.responsable}</span>
                   </div>
                 </td>
-
+                
                 <td className="px-4 py-4 whitespace-nowrap">
                   {editando.id === proyecto.id && editando.campo === 'estado' ? (
                     <div className="p-2 rounded border bg-white shadow flex flex-col gap-2 min-w-[300px]">
@@ -715,66 +718,25 @@ const DetalleProyecto = () => {
 
 const NuevoProyecto = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    nombre: '',
-    responsable: 'Felipe Gómez',
-    estado: '',
-    tipo: [],
-    equipo: [],
-    prioridad: '',
-    objetivo: '',
-    fechaInicio: '',
-    fechaFin: '',
-    enlace: '',
-    observaciones: ''
-  });
-
-  const opcionesEstado = {
-    pendientes: ['Conceptual', 'Análisis', 'Sin Empezar'],
-    enProceso: ['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas'],
-    terminados: ['Cancelado', 'Pausado', 'En producción', 'Desarrollado']
-  };
-
-  const opcionesTipo = ['Otro', 'Informe', 'Automatización', 'Desarrollo'];
-  const opcionesEquipo = [
-    'Dirección TI',
-    'Estrategia CX',
-    'Dirección Financiera',
-    'Dirección de Servicios',
-    'Dirección Comercial',
-    'Dirección GH',
-    'Desarrollo CX'
-  ];
-  const opcionesPrioridad = ['Alta', 'Media', 'Baja'];
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleMultiSelect = (e) => {
-    const { name, options } = e.target;
-    const selectedValues = Array.from(options)
-      .filter(option => option.selected)
-      .map(option => option.value);
-    
-    setFormData(prev => ({ ...prev, [name]: selectedValues }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const nuevosProyectos = JSON.parse(localStorage.getItem('proyectos') || []);
+  
+  const handleSave = (nuevoProyecto) => {
+    // Obtener proyectos existentes o inicializar un array vacío
+    const nuevosProyectos = JSON.parse(localStorage.getItem('proyectos') || '[]');
     const nuevoId = nuevosProyectos.length > 0 
       ? Math.max(...nuevosProyectos.map(p => p.id)) + 1 
       : 1;
     
-    const nuevoProyecto = {
-      ...formData,
-      id: nuevoId,
-      progreso: 0
+    const proyectoCompleto = {
+      ...nuevoProyecto,
+      id: nuevoId
     };
     
-    localStorage.setItem('proyectos', JSON.stringify([...nuevosProyectos, nuevoProyecto]));
+    // Guardar en localStorage y navegar a la página principal
+    localStorage.setItem('proyectos', JSON.stringify([...nuevosProyectos, proyectoCompleto]));
+    navigate('/');
+  };
+
+  const handleCancel = () => {
     navigate('/');
   };
 
@@ -787,112 +749,11 @@ const NuevoProyecto = () => {
         <FaArrowLeft className="mr-2" /> Volver
       </button>
       
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold text-green-600 mb-6">Crear Nuevo Proyecto</h1>
-        
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Campos del formulario */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre del Proyecto
-              </label>
-              <input
-                type="text"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-md p-2"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
-              </label>
-              <select
-                name="estado"
-                value={formData.estado}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-md p-2"
-                required
-              >
-                <option value="">Seleccionar estado</option>
-                <optgroup label="Pendientes">
-                  {opcionesEstado.pendientes.map(estado => (
-                    <option key={estado} value={estado}>{estado}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="En Proceso">
-                  {opcionesEstado.enProceso.map(estado => (
-                    <option key={estado} value={estado}>{estado}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="Terminados">
-                  {opcionesEstado.terminados.map(estado => (
-                    <option key={estado} value={estado}>{estado}</option>
-                  ))}
-                </optgroup>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo (Múltiple selección)
-              </label>
-              <select
-                multiple
-                name="tipo"
-                value={formData.tipo}
-                onChange={handleMultiSelect}
-                className="w-full border border-gray-300 rounded-md p-2 h-32"
-                required
-              >
-                {opcionesTipo.map(tipo => (
-                  <option key={tipo} value={tipo}>{tipo}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Equipo (Múltiple selección)
-              </label>
-              <select
-                multiple
-                name="equipo"
-                value={formData.equipo}
-                onChange={handleMultiSelect}
-                className="w-full border border-gray-300 rounded-md p-2 h-32"
-                required
-              >
-                {opcionesEquipo.map(equipo => (
-                  <option key={equipo} value={equipo}>{equipo}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Resto de campos del formulario */}
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-300"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700"
-            >
-              Crear Proyecto
-            </button>
-          </div>
-        </form>
-      </div>
+      <NuevoProyectoForm 
+        onSave={handleSave} 
+        onCancel={handleCancel} 
+        proyectoInicial={null} 
+      />
     </div>
   );
 };
@@ -908,5 +769,61 @@ const Views = () => {
     </div>
   );
 };
+const calcularEstadisticas = () => {
+  const proyectosFiltrados = filtrarProyectos();
+  const totalProyectos = proyectosFiltrados.length;
+  const promedioAvance = totalProyectos > 0 ? 
+    proyectosFiltrados.reduce((sum, p) => sum + p.progreso, 0) / totalProyectos : 0;
+  const proyectosAlta = proyectosFiltrados.filter(p => p.prioridad === 'Alta').length;
+  
+  // Calcular proyectos atrasados (fecha fin anterior a hoy pero progreso < 100%)
+  const hoy = new Date();
+  const proyectosAtrasados = proyectosFiltrados.filter(p => {
+    const fechaFin = new Date(p.fechaFin.split('/').reverse().join('-'));
+    return fechaFin < hoy && p.progreso < 100;
+  }).length;
+  
+  return { totalProyectos, promedioAvance, proyectosAlta, proyectosAtrasados };
+};
+
 
 export default Views;
+const handleGuardarProyecto = () => {
+  // Validar campos requeridos
+  if (!nuevoProyecto.nombre || !nuevoProyecto.estado || !nuevoProyecto.prioridad) {
+    alert('Por favor complete los campos requeridos');
+    return;
+  }
+
+  // Crear nuevo proyecto con ID único
+  const proyecto = {
+    ...nuevoProyecto,
+    id: Date.now().toString(),
+    fechaCreacion: new Date().toISOString(),
+    progreso: 0
+  };
+
+  // Actualizar lista de proyectos
+  setProyectos([...proyectos, proyecto]);
+  
+  // Limpiar formulario y ocultarlo
+  setNuevoProyecto({
+    nombre: '',
+    responsable: '',
+    estado: '',
+    tipo: [],
+    equipo: [],
+    prioridad: '',
+    objetivo: '',
+    fechaInicio: '',
+    fechaFin: '',
+    progreso: 0,
+    enlace: '',
+    observaciones: ''
+  });
+  
+  setShowForm(false);
+  
+  // Opcional: Guardar en localStorage
+  localStorage.setItem('proyectos', JSON.stringify([...proyectos, proyecto]));
+};

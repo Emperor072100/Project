@@ -1,11 +1,13 @@
 import React from "react";
 import Projects from "./pages/Projects.jsx";
 import KanbanView from "./components/KanbanView.jsx";
-import Sidebar from "./components/Sidebar.jsx"; // Importamos el componente Sidebar
+import GanttView from "./components/GanttView.jsx"; // Importar el nuevo componente
+import Sidebar from "./components/Sidebar.jsx";
 import Views from "./views.jsx";
 import Tareas from "./pages/Tareas.jsx";
 import Perfil from "./pages/Perfil.jsx";
-
+import Login from "./pages/Login.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 // Componente de layout que incluye la barra lateral
 const Layout = ({ children }) => {
@@ -14,7 +16,6 @@ const Layout = ({ children }) => {
   return (
     <div className="flex">
       <Sidebar 
-        user={{ nombre: "Usuario", rol: "Admin" }} 
         collapsed={collapsed} 
         setCollapsed={setCollapsed} 
       />
@@ -27,35 +28,57 @@ const Layout = ({ children }) => {
 
 export const routes = [
   {
+    path: "/login",
+    element: <Login />
+  },
+  {
     path: "/",
     element: (
-      <Layout>
-        <Views />
-      </Layout>
+      <ProtectedRoute>
+        <Layout>
+          <Views />
+        </Layout>
+      </ProtectedRoute>
     ),
   },
   {
     path: "/kanban",
     element: (
-      <Layout>
-        <KanbanView />
-      </Layout>
+      <ProtectedRoute>
+        <Layout>
+          <KanbanView />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/gantt", // Nueva ruta para la vista Gantt
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <GanttView />
+        </Layout>
+      </ProtectedRoute>
     ),
   },
   {
     path: "/tareas",
     element: (
-      <Layout>
-        <Tareas />
-      </Layout>
+      <ProtectedRoute>
+        <Layout>
+          <Tareas />
+        </Layout>
+      </ProtectedRoute>
     ),
   },
   {
     path: "/perfil",
     element: (
-      <Layout>
-        <Perfil />
-      </Layout>
+      <ProtectedRoute>
+        <Layout>
+          <Perfil />
+        </Layout>
+      </ProtectedRoute>
     ),
   },
 ];

@@ -1,19 +1,67 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// Remove or comment out the problematic import
-// import logo from '../assets/logo.png';
+import { authService } from '../services/authService';
 
-const Sidebar = ({ user, collapsed, setCollapsed }) => {
+const Sidebar = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
+  const [user, setUser] = useState({
+    nombre: '',
+    apellido: '',
+    rol: '',
+    foto: null
+  });
+
+  useEffect(() => {
+    // Obtener datos del usuario del localStorage o sessionStorage
+    const userRole = localStorage.getItem('userRole') || sessionStorage.getItem('userRole') || 'usuario';
+    const userName = localStorage.getItem('userName') || sessionStorage.getItem('userName') || 'Usuario';
+    
+    // Simular datos de usuario para desarrollo
+    let userData;
+    if (userRole === 'admin') {
+      userData = {
+        nombre: 'Carlos',
+        apellido: 'Rodríguez',
+        rol: 'admin',
+        foto: null
+      };
+    } else {
+      userData = {
+        nombre: 'María',
+        apellido: 'González',
+        rol: 'usuario',
+        foto: null
+      };
+    }
+    
+    setUser(userData);
+  }, []);
 
   const handleLogout = () => {
     // Lógica de cierre de sesión
+    authService.logout();
     console.log('Sesión cerrada');
     navigate('/login');
   };
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
+  };
+
+  // Función para obtener las iniciales del usuario
+  const getUserInitials = () => {
+    if (!user.nombre && !user.apellido) return 'U';
+    return `${user.nombre.charAt(0)}${user.apellido ? user.apellido.charAt(0) : ''}`;
+  };
+
+  // Función para obtener el nombre completo
+  const getFullName = () => {
+    return `${user.nombre} ${user.apellido || ''}`.trim();
+  };
+
+  // Función para obtener el texto del rol en español
+  const getRoleText = () => {
+    return user.rol === 'admin' ? 'Administrador' : 'Usuario';
   };
 
   return (
@@ -31,14 +79,21 @@ const Sidebar = ({ user, collapsed, setCollapsed }) => {
       {/* Logo y usuario */}
       <div className={`p-6 flex ${collapsed ? 'justify-center' : 'items-center gap-3'} border-b border-gray-700 transition-all duration-300`}>
         <div className="bg-gray-700 p-2 rounded-full">
-          {/* Replace the img tag with a text or SVG placeholder */}
-          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold">
-            A
-          </div>
+          {user.foto ? (
+            <img 
+              src={user.foto} 
+              alt={getFullName()} 
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold">
+              {getUserInitials()}
+            </div>
+          )}
         </div>
         <div className={`overflow-hidden transition-all duration-300 ${collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-          <h2 className="text-lg font-semibold truncate">{user?.nombre || 'Usuario'}</h2>
-          <p className="text-sm text-gray-400 truncate">{user?.rol || 'Invitado'}</p>
+          <h2 className="text-lg font-semibold truncate">{getFullName()}</h2>
+          <p className="text-sm text-gray-400 truncate">{getRoleText()}</p>
         </div>
       </div>
 
@@ -63,29 +118,29 @@ const Sidebar = ({ user, collapsed, setCollapsed }) => {
             </button>
             
             <button
-              onClick={() => navigate('/tareas')}
+              onClick={() => navigate('/kanban')}
               className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded hover:bg-gray-700 transition-all duration-300`}
-              title="Panel de Tareas"
+              title="Kanban"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               <span className={`transition-all duration-300 ${collapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100 inline'}`}>
-                Panel de Tareas
+                Kanban
               </span>
             </button>
             
-            {/* Nuevo botón para Kanban */}
+            {/* Nuevo botón para la vista Gantt */}
             <button
-              onClick={() => navigate('/kanban')}
+              onClick={() => navigate('/gantt')}
               className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded hover:bg-gray-700 transition-all duration-300`}
-              title="Vista Kanban"
+              title="Gantt"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className={`transition-all duration-300 ${collapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100 inline'}`}>
-                Kanban
+                Gantt
               </span>
             </button>
             

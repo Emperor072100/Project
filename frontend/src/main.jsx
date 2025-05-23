@@ -2,8 +2,12 @@ import React from 'react'
 import { createRoot} from 'react-dom/client'
 import { RouterProvider, createBrowserRouter as Router } from 'react-router-dom'
 import './index.css'
+import { setupAuthInterceptor } from './services/authService'
 
 import { routes } from './routes'
+
+// Configurar interceptor de autenticación
+setupAuthInterceptor();
 
 const router = Router(routes)
 
