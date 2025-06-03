@@ -12,29 +12,17 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   });
 
   useEffect(() => {
-    // Obtener datos del usuario del localStorage o sessionStorage
-    const userRole = localStorage.getItem('userRole') || sessionStorage.getItem('userRole') || 'usuario';
-    const userName = localStorage.getItem('userName') || sessionStorage.getItem('userName') || 'Usuario';
-    
-    // Simular datos de usuario para desarrollo
-    let userData;
-    if (userRole === 'admin') {
-      userData = {
-        nombre: 'Carlos',
-        apellido: 'Rodríguez',
-        rol: 'admin',
-        foto: null
-      };
-    } else {
-      userData = {
-        nombre: 'María',
-        apellido: 'González',
-        rol: 'usuario',
-        foto: null
-      };
-    }
-    
-    setUser(userData);
+    // Get user ID and token from storage
+    const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!userId || !token) return;
+
+    fetch(`http://localhost:8000/usuarios/${userId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.ok ? res.json() : Promise.reject('No se pudo obtener el usuario'))
+      .then(data => setUser(data))
+      .catch(() => setUser({ nombre: '', apellido: '', rol: '', foto: null }));
   }, []);
 
   const handleLogout = () => {
@@ -143,6 +131,22 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                 Gantt
               </span>
             </button>
+            
+            {/* Opción de Usuarios (solo visible para administradores) */}
+            {user.rol === 'admin' && (
+              <button
+                onClick={() => navigate('/usuarios')}
+                className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded hover:bg-gray-700 transition-all duration-300`}
+                title="Gestión de Usuarios"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span className={`transition-all duration-300 ${collapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100 inline'}`}>
+                  Usuarios
+                </span>
+              </button>
+            )}
             
             <button
               onClick={() => navigate('/perfil')}

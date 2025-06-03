@@ -1,13 +1,17 @@
 import React from "react";
-import Projects from "./pages/Projects.jsx";
+
 import KanbanView from "./components/KanbanView.jsx";
 import GanttView from "./components/GanttView.jsx"; // Importar el nuevo componente
 import Sidebar from "./components/Sidebar.jsx";
-import Views from "./views.jsx";
+import Views from "./views.tsx";
 import Tareas from "./pages/Tareas.jsx";
 import Perfil from "./pages/Perfil.jsx";
+import Usuarios from "./pages/Usuarios.jsx"; // Importar el componente de usuarios
 import Login from "./pages/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import DetalleProyecto from './components/DetalleProyecto';
+import NuevoProyecto from './components/NuevoProyecto';
+
 
 // Componente de layout que incluye la barra lateral
 const Layout = ({ children }) => {
@@ -40,6 +44,26 @@ export const routes = [
         </Layout>
       </ProtectedRoute>
     ),
+  },
+  {
+    path: "/proyecto/:id",
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <DetalleProyecto />
+        </Layout>
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: "/nuevo-proyecto",
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <NuevoProyecto />
+        </Layout>
+      </ProtectedRoute>
+    )
   },
   {
     path: "/kanban",
@@ -77,6 +101,16 @@ export const routes = [
       <ProtectedRoute>
         <Layout>
           <Perfil />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/usuarios",
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Usuarios />
         </Layout>
       </ProtectedRoute>
     ),

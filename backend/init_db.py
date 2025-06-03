@@ -1,14 +1,12 @@
 import sys
 from pathlib import Path
 
-# Forzar a incluir el path backend/app en sys.path
-BASE_DIR = Path(__file__).resolve().parent
-APP_DIR = BASE_DIR / "app"
-sys.path.insert(0, str(APP_DIR))
+# Add the project root to Python path
+sys.path.append(str(Path(__file__).parent.parent))
 
-# Ahora importa sin usar "app."
+# Now import without using "app."
 from core.database import SessionLocal, engine, Base
-from models import usuario, proyecto
+from app.models import usuario, proyecto
 from core.security import hash_password
 
 Base.metadata.create_all(bind=engine)

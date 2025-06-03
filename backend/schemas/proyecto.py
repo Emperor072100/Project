@@ -1,11 +1,12 @@
+# proyecto.py
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date
 
 class ProyectoBase(BaseModel):
     nombre: str
-    tipo: Optional[str]
-    equipo: Optional[str]
+    tipo: Optional[List[str]] = []
+    equipo: Optional[List[str]] = []
     estado: Optional[str]
     prioridad: Optional[str]
     objetivo: Optional[str]
@@ -20,8 +21,8 @@ class ProyectoCreate(ProyectoBase):
 
 class ProyectoUpdate(BaseModel):
     nombre: Optional[str]
-    tipo: Optional[str]
-    equipo: Optional[str]
+    tipo: Optional[List[str]] = []
+    equipo: Optional[List[str]] = []
     estado: Optional[str]
     prioridad: Optional[str]
     objetivo: Optional[str]
@@ -33,7 +34,7 @@ class ProyectoUpdate(BaseModel):
 
 class ProyectoOut(ProyectoBase):
     id: int
-    responsable_id: int  # 🔄 corregido
+    responsable_id: int
 
     class Config:
         from_attributes = True

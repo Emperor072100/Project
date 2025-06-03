@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from core.database import Base
 import enum
 
-
 class RolUsuario(str, enum.Enum):
     admin = "admin"
     usuario = "usuario"
@@ -16,5 +15,5 @@ class Usuario(Base):
     correo = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     rol = Column(Enum(RolUsuario), default=RolUsuario.usuario)
-    proyectos = relationship("Proyecto", back_populates="responsable")
 
+    proyectos = relationship("Proyecto", back_populates="responsable")  # opcional

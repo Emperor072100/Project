@@ -1,8 +1,6 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 from enum import Enum
-from datetime import date
-from core.config import DATABASE_URL
-
 
 class RolUsuario(str, Enum):
     admin = "admin"
@@ -16,8 +14,15 @@ class UsuarioBase(BaseModel):
 class UsuarioCreate(UsuarioBase):
     contraseña: str
 
+class UsuarioUpdate(BaseModel):
+    nombre: Optional[str] = None
+    correo: Optional[EmailStr] = None
+    rol: Optional[RolUsuario] = None
+    contraseña: Optional[str] = None
+
 class UsuarioOut(UsuarioBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }

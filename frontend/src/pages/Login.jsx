@@ -32,90 +32,45 @@ const Login = () => {
     setError('');
     
     try {
-      // Credenciales temporales para desarrollo
-      if (credentials.username === 'admin' && credentials.password === 'admin123') {
-        // Simular token JWT
-        const mockToken = {
-          access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTY5MDAwMDAwMH0',
-          token_type: 'bearer'
-        };
-        
-        // Guardar token en localStorage o sessionStorage según rememberMe
-        if (rememberMe) {
-          localStorage.setItem('token', mockToken.access_token);
-          localStorage.setItem('tokenType', mockToken.token_type);
-          localStorage.setItem('userRole', 'admin');
-          localStorage.setItem('userName', 'Administrador');
-        } else {
-          sessionStorage.setItem('token', mockToken.access_token);
-          sessionStorage.setItem('tokenType', mockToken.token_type);
-          sessionStorage.setItem('userRole', 'admin');
-          sessionStorage.setItem('userName', 'Administrador');
-        }
-        
-        // Redirigir al dashboard
-        navigate('/');
-        return;
-      }
-      
-      // Credenciales de usuario normal
-      if (credentials.username === 'usuario' && credentials.password === 'usuario123') {
-        // Simular token JWT
-        const mockToken = {
-          access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3VhcmlvIiwicm9sZSI6InVzdWFyaW8iLCJleHAiOjE2OTAwMDAwMDB9',
-          token_type: 'bearer'
-        };
-        
-        // Guardar token en localStorage o sessionStorage según rememberMe
-        if (rememberMe) {
-          localStorage.setItem('token', mockToken.access_token);
-          localStorage.setItem('tokenType', mockToken.token_type);
-          localStorage.setItem('userRole', 'usuario');
-          localStorage.setItem('userName', 'Usuario Normal');
-        } else {
-          sessionStorage.setItem('token', mockToken.access_token);
-          sessionStorage.setItem('tokenType', mockToken.token_type);
-          sessionStorage.setItem('userRole', 'usuario');
-          sessionStorage.setItem('userName', 'Usuario Normal');
-        }
-        
-        // Redirigir al dashboard
-        navigate('/');
-        return;
-      }
-      
-      // Si las credenciales no coinciden
-      throw new Error('Usuario o contraseña incorrectos');
-      
-      /* Código original comentado para cuando tengas la base de datos
+      console.log('Iniciando solicitud de login');
+      // Usar la API real para autenticación
       const formData = new FormData();
       formData.append('username', credentials.username);
       formData.append('password', credentials.password);
       
+      console.log('Enviando solicitud a:', 'http://localhost:8000/auth/login');
       const response = await fetch('http://localhost:8000/auth/login', {
         method: 'POST',
         body: formData,
       });
       
+      console.log('Respuesta recibida:', response.status);
       const data = await response.json();
+      console.log('Datos recibidos:', data);
       
       if (!response.ok) {
         throw new Error(data.detail || 'Error al iniciar sesión');
       }
       
-      // Guardar token en localStorage o sessionStorage según rememberMe
-      if (rememberMe) {
-        localStorage.setItem('token', data.access_token);
-        localStorage.setItem('tokenType', data.token_type);
-      } else {
-        sessionStorage.setItem('token', data.access_token);
-        sessionStorage.setItem('tokenType', data.token_type);
-      }
+      // Decodificar el token para obtener información del usuario
+      console.log('Decodificando token');
+      const tokenParts = data.access_token.split('.');
+      const payload = JSON.parse(atob(tokenParts[1]));
+      console.log('Payload del token:', payload);
       
+      // Guardar token y datos del usuario en localStorage o sessionStorage según rememberMe
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('token', data.access_token);
+      storage.setItem('tokenType', data.token_type);
+      storage.setItem('userRole', payload.rol);
+      storage.setItem('userName', payload.nombre);
+      storage.setItem('userId', payload.sub);
+      
+      console.log('Redirigiendo a /');
       // Redirigir al dashboard
       navigate('/');
-      */
     } catch (error) {
+      console.error('Error en login:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -148,7 +103,7 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="text-left">
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                Usuario o Email
+              Correo
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -162,7 +117,7 @@ const Login = () => {
                   value={credentials.username}
                   onChange={handleChange}
                   className="pl-10 w-full border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Tu usuario o email"
+                  placeholder="Tu correo"
                 />
               </div>
             </div>
@@ -227,16 +182,9 @@ const Login = () => {
               disabled={loading}
               className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
             >
-              Ingresar
+              {loading ? 'Iniciando sesión...' : 'Ingresar'}
             </button>
           </form>
-          
-          {/* Credenciales de desarrollo */}
-          <div className="mt-6 p-3 bg-blue-50 rounded-lg text-sm text-left">
-            <p className="font-semibold text-blue-700 mb-1">Credenciales para desarrollo:</p>
-            <p className="text-blue-600"><strong>Admin:</strong> usuario: admin / contraseña: admin123</p>
-            <p className="text-blue-600"><strong>Usuario:</strong> usuario: usuario / contraseña: usuario123</p>
-          </div>
         </div>
       </div>
     </div>

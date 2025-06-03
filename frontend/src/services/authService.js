@@ -25,8 +25,10 @@ export const authService = {
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('tokenType');
+    localStorage.removeItem('userId');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('tokenType');
+    sessionStorage.removeItem('userId');
   },
   
   // Obtener token

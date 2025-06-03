@@ -110,7 +110,6 @@ export default function Perfil() {
               {getUserInitials()}
             </div>
           )}
-          
           {/* Botón para cambiar foto */}
           <button 
             onClick={handleSelectPhoto}
@@ -118,47 +117,36 @@ export default function Perfil() {
             title="Cambiar foto"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13h6m2 2v6a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h6" />
             </svg>
           </button>
-          
-          {/* Input oculto para seleccionar archivo */}
-          <input 
-            type="file" 
-            accept="image/*" 
-            className="hidden" 
-            onChange={handlePhotoChange}
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
             ref={input => setFileInput(input)}
+            onChange={handlePhotoChange}
           />
         </div>
-        
         {/* Info usuario */}
-        <div className="ml-0 md:ml-8 flex-1 text-center md:text-left">
-          <h1 className="text-3xl font-extrabold text-green-700 mb-1">{getFullName()}</h1>
+        <div className="ml-0 md:ml-8 flex-1">
+          <h2 className="text-2xl font-bold mb-2">{getFullName()}</h2>
           <div className="text-gray-500 mb-2">{usuario.correo}</div>
-          <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">
-            {getRoleText()}
-          </span>
+          <div className="mb-2">
+            <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+              {getRoleText()}
+            </span>
+          </div>
         </div>
       </div>
-      
-      {/* Proyectos */}
-      <div className="bg-white rounded-xl shadow p-6 w-full max-w-2xl">
-        <h2 className="text-xl font-bold text-green-700 mb-4">
-          {usuario.rol === 'admin' ? 'Todos los Proyectos' : 'Mis Proyectos'}
-        </h2>
-        {proyectos.length > 0 ? (
-          <ul className="space-y-2">
-            {proyectos.map(proy => (
-              <li key={proy.id} className="px-4 py-2 rounded bg-green-50 hover:bg-green-100 transition">
-                <span className="font-medium text-green-800">{proy.nombre}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="text-gray-400">No tienes proyectos asignados.</div>
-        )}
+      {/* Proyectos del usuario */}
+      <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl">
+        <h3 className="text-lg font-semibold mb-4">{usuario.rol === 'admin' ? 'Todos los Proyectos' : 'Mis Proyectos'}</h3>
+        <ul className="list-disc pl-6">
+          {proyectos.map(proy => (
+            <li key={proy.id}>{proy.nombre}</li>
+          ))}
+        </ul>
       </div>
     </div>
   );
