@@ -9,9 +9,6 @@ import Perfil from "./pages/Perfil.jsx";
 import Usuarios from "./pages/Usuarios.jsx"; // Importar el componente de usuarios
 import Login from "./pages/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import DetalleProyecto from './components/DetalleProyecto';
-import NuevoProyecto from './components/NuevoProyecto';
-
 
 // Componente de layout que incluye la barra lateral
 const Layout = ({ children }) => {
@@ -44,26 +41,6 @@ export const routes = [
         </Layout>
       </ProtectedRoute>
     ),
-  },
-  {
-    path: "/proyecto/:id",
-    element: (
-      <ProtectedRoute>
-        <Layout>
-          <DetalleProyecto />
-        </Layout>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: "/nuevo-proyecto",
-    element: (
-      <ProtectedRoute>
-        <Layout>
-          <NuevoProyecto />
-        </Layout>
-      </ProtectedRoute>
-    )
   },
   {
     path: "/kanban",

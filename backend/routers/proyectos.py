@@ -27,7 +27,7 @@ def listar_proyectos(
 ):
     if usuario.rol == "admin":
         return db.query(modelo.Proyecto).all()
-    return db.query(modelo.Proyecto).filter_by(responsable_id=usuario.id).all()
+    return db.query(modelo.Proyecto).all()
 
 @router.put("/{proyecto_id}", response_model=ProyectoOut)
 def actualizar_proyecto(

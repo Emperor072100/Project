@@ -5,8 +5,8 @@ from datetime import date
 
 class ProyectoBase(BaseModel):
     nombre: str
-    tipo: Optional[List[str]] = []
-    equipo: Optional[List[str]] = []
+    # tipo_id: Optional[List[int]] = []
+    # equipo_id: Optional[List[int]] = []
     estado: Optional[str]
     prioridad: Optional[str]
     objetivo: Optional[str]
@@ -21,8 +21,8 @@ class ProyectoCreate(ProyectoBase):
 
 class ProyectoUpdate(BaseModel):
     nombre: Optional[str]
-    tipo: Optional[List[str]] = []
-    equipo: Optional[List[str]] = []
+    # tipo_id: Optional[List[str]] = []
+    # equipo_id: Optional[List[str]] = []
     estado: Optional[str]
     prioridad: Optional[str]
     objetivo: Optional[str]
@@ -35,6 +35,7 @@ class ProyectoUpdate(BaseModel):
 class ProyectoOut(ProyectoBase):
     id: int
     responsable_id: int
+    responsable_nombre: str = None
 
     class Config:
         from_attributes = True

@@ -10,7 +10,7 @@ class UsuarioBase(BaseModel):
     nombre: str
     correo: EmailStr
     rol: RolUsuario
-
+    apellido: str
 class UsuarioCreate(UsuarioBase):
     contraseña: str
 
@@ -19,6 +19,7 @@ class UsuarioUpdate(BaseModel):
     correo: Optional[EmailStr] = None
     rol: Optional[RolUsuario] = None
     contraseña: Optional[str] = None
+    apellido: str
 
 class UsuarioOut(UsuarioBase):
     id: int

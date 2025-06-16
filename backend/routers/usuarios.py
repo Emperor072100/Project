@@ -19,7 +19,8 @@ def crear_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db), current
     
     hashed_password = hash_password(usuario.contraseña)
     nuevo_usuario = Usuario(
-    nombre=usuario.nombre,      # ← AÑADIR
+    nombre=usuario.nombre, 
+    apellido=usuario.apellido,     # ← AÑADIR
     correo=usuario.correo,
     hashed_password=hashed_password,
     rol=usuario.rol
@@ -52,6 +53,7 @@ def actualizar_usuario(usuario_id: int, usuario_update: UsuarioUpdate, db: Sessi
     if usuario_update.nombre: usuario.nombre = usuario_update.nombre
     if usuario_update.correo: usuario.correo = usuario_update.correo
     if usuario_update.rol: usuario.rol = usuario_update.rol
+    if usuario_update.apellido: usuario.apellido = usuario_update.apellido
     if usuario_update.contraseña: usuario.hashed_password = hash_password(usuario_update.contraseña)
 
     db.commit()

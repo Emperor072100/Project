@@ -96,10 +96,11 @@ const Usuarios = () => {
       // Limpiar el formulario
       setFormData({
         nombre: '',
+        apellido: '', // ← añadir esto
         correo: '',
         contraseña: '',
         rol: 'usuario'
-      });
+      });   
       setEditingId(null);
       setShowForm(false);
     } catch (err) {
@@ -165,6 +166,7 @@ const Usuarios = () => {
           onClick={() => {
             setFormData({
               nombre: '',
+              apellido: '', // ← añadir esto
               correo: '',
               contraseña: '',
               rol: 'usuario'
@@ -321,5 +323,7 @@ const Usuarios = () => {
     </div>
   );
 };
+
+console.log(JSON.parse(localStorage.getItem('user'))); // o sessionStorage
 
 export default Usuarios;

@@ -1,16 +1,20 @@
+// views.tsx (actualizado)
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaPlus, FaEdit, FaSave, FaArrowLeft } from 'react-icons/fa';
 import axios from "axios";
+import TablaProyectos from './components/TablaProyectos';
 
 // Tipo completo para Proyecto
 export interface Proyecto {
   id: number;
   nombre: string;
   responsable: string;
+  responsable_nombre?: string; // Nuevo campo para el nombre del responsable
+  responsable_id?: number; // ID del responsable
   estado: string;
-  tipo: string[];
-  equipo: string[];
+  tipo: string[] | string;  // Allow both array and string
+  equipo: string[] | string; // Allow both array and string
   prioridad: string;
   objetivo: string;
   fechaInicio: string;
@@ -34,7 +38,6 @@ export const Dashboard: React.FC = () => {
   const [user, setUser] = useState<{ id: string; rol: string }>({ id: '', rol: '' });
 
   useEffect(() => {
-    // Obtener userId y token
     const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId') || '';
     const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
     if (userId && token) {
@@ -45,56 +48,64 @@ export const Dashboard: React.FC = () => {
         .then(data => setUser({ id: data.id?.toString() || userId, rol: data.rol || '' }))
         .catch(() => setUser({ id: userId, rol: '' }));
     }
+
     const fetchInitialData = async () => {
       try {
-        const token = localStorage.getItem('token');
+        let rawToken = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!rawToken) {
+          console.warn("⚠️ No hay token en localStorage/sessionStorage");
+          return;
+        }
+        const token = rawToken.replace(/^"|"$/g, '');
         const proyectosResponse = await axios.get("http://localhost:8000/proyectos", {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-        setProyectos(proyectosResponse.data);
-      } catch (error) {
-        console.error("Error al cargar datos iniciales", error);
+
+        const proyectosNormalizados = proyectosResponse.data.map((p: any) => ({
+          ...p,
+          tipo: p.tipo || [],
+          equipo: p.equipo || [],
+          responsable_nombre: p.responsable_nombre || p.responsable,
+          fechaInicio: p.fecha_inicio || '',
+          fechaFin: p.fecha_fin || ''
+        }));
+        
+        setProyectos(proyectosNormalizados);
+      } catch (error: any) {
+        // Mejor log para AxiosError
+        if (error.response) {
+          console.error("🚫 Error al cargar proyectos:", error.message, error.response.status, error.response.data);
+        } else if (error.request) {
+          console.error("🚫 Error al cargar proyectos: No response received", error.message, error.request);
+        } else {
+          console.error("🚫 Error al cargar proyectos:", error.message);
+        }
       }
     };
-    fetchInitialData();
 
-    axios.get('http://localhost:8000/proyectos/', {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')?.replace(/^"|"$/g, '')}`
-      }
-    })
+    fetchInitialData();
   }, []);
+
   const opcionesEstado = {
     pendientes: ['Conceptual', 'Análisis', 'Sin Empezar'],
     enProceso: ['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas'],
     terminados: ['Cancelado', 'Pausado', 'En producción', 'Desarrollado']
   };
-
-  const opcionesTipo = ['Otro', 'Informe', 'Automatización', 'Desarrollo'];
-  const opcionesEquipo = [
-    'Dirección TI',
-    'Estrategia CX',
-    'Dirección Financiera',
-    'Dirección de Servicios',
-    'Dirección Comercial',
-    'Dirección GH',
-    'Desarrollo CX'
-  ];
+  const opcionesEquipo = ['Dirección TI', 'Estrategia CX', 'Dirección Financiera', 'Dirección de Servicios', 'Dirección Comercial', 'Dirección GH', 'Desarrollo CX'];
   const opcionesPrioridad = ['Alta', 'Media', 'Baja'];
 
   const filtrarProyectos = () => {
     return proyectos.filter(proyecto => {
-      const coincideNombre = busqueda === '' ||
-        proyecto.nombre.toLowerCase().includes(busqueda.toLowerCase());
-      // Si es admin, ve todos; si es usuario, solo los que creó
-      const puedeVer = user.rol === 'admin' || proyecto.responsable === user.id;
+      const coincideNombre = busqueda === '' || proyecto.nombre.toLowerCase().includes(busqueda.toLowerCase());
+      const puedeVer = user.rol === 'admin' || proyecto.responsable_id?.toString() === user.id || proyecto.responsable === user.id;
+      const responsableNombre = proyecto.responsable_nombre || proyecto.responsable;
       return coincideNombre && puedeVer && (
         (filtros.estado === '' || proyecto.estado.includes(filtros.estado)) &&
         (filtros.equipo === '' || proyecto.equipo.includes(filtros.equipo)) &&
         (filtros.prioridad === '' || proyecto.prioridad === filtros.prioridad) &&
-        (filtros.responsable === '' || proyecto.responsable === filtros.responsable)
+        (filtros.responsable === '' || responsableNombre === filtros.responsable)
       );
     });
   };
@@ -131,10 +142,6 @@ export const Dashboard: React.FC = () => {
     setEditando({ id: null, campo: null });
   };
 
-  const handleViewDetails = (id: number) => {
-    navigate(`/proyecto/${id}`);
-  };
-
   return (
     <div className="p-6 w-full bg-white">
       <div className="flex justify-between items-center mb-6">
@@ -155,7 +162,6 @@ export const Dashboard: React.FC = () => {
             className="w-full border border-gray-300 rounded-md shadow-sm p-2"
           />
         </div>
-
         <div className="w-64">
           <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
           <select
@@ -182,7 +188,6 @@ export const Dashboard: React.FC = () => {
             </optgroup>
           </select>
         </div>
-
         <div className="w-64">
           <label className="block text-sm font-medium text-gray-700 mb-1">Equipo</label>
           <select
@@ -197,7 +202,6 @@ export const Dashboard: React.FC = () => {
             ))}
           </select>
         </div>
-
         <div className="w-64">
           <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
           <select
@@ -212,7 +216,6 @@ export const Dashboard: React.FC = () => {
             ))}
           </select>
         </div>
-
         <div className="w-64">
           <label className="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
           <select
@@ -222,138 +225,27 @@ export const Dashboard: React.FC = () => {
             className="w-full border border-gray-300 rounded-md shadow-sm p-2"
           >
             <option value="">Todos los responsables</option>
-            {[...new Set(proyectos.map(p => p.responsable))].map(res => (
+            {[...new Set(proyectos.map(p => p.responsable_nombre || p.responsable))].map(res => (
               <option key={res} value={res}>{res}</option>
             ))}
           </select>
         </div>
       </div>
 
-      <div className="p-6 w-full bg-white">
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="bg-gray-100">
-        <tr>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Nombre</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Responsable</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Estado</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Tipo</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Equipo</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Prioridad</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Objetivo</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Fecha Inicio</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Fecha Fin</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Progreso</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Enlace</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Observaciones</th>
-          <th className="px-4 py-2 text-left text-xs font-semibold">Acciones</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
-        {filtrarProyectos().map((proyecto) => (
-          <tr key={proyecto.id} className="hover:bg-gray-50">
-            <td className="px-4 py-2">
-              {editando.id === proyecto.id && editando.campo === 'nombre' ? (
-                <input type="text" value={proyecto.nombre} onChange={(e) => handleSave(proyecto.id, 'nombre', e.target.value)} className="border p-1 rounded" />
-              ) : (
-                <span onClick={() => handleEdit(proyecto.id, 'nombre')}>{proyecto.nombre}</span>
-              )}
-            </td>
-            <td className="px-4 py-2">{proyecto.responsable}</td>
-            <td className="px-4 py-2">
-              {editando.id === proyecto.id && editando.campo === 'estado' ? (
-                <select value={proyecto.estado} onChange={(e) => handleSave(proyecto.id, 'estado', e.target.value)} className="border p-1 rounded">
-                  {Object.values(opcionesEstado).flat().map(op => (
-                    <option key={op} value={op}>{op}</option>
-                  ))}
-                </select>
-              ) : (
-                <span className={getColorEstado(proyecto.estado)} onClick={() => handleEdit(proyecto.id, 'estado')}>{proyecto.estado}</span>
-              )}
-            </td>
-            <td className="px-4 py-2">
-              {editando.id === proyecto.id && editando.campo === 'tipo' ? (
-                <select multiple value={proyecto.tipo} onChange={(e) => {
-                  const values = Array.from(e.target.selectedOptions, o => o.value);
-                  handleSave(proyecto.id, 'tipo', values);
-                }} className="border p-1 rounded">
-                  {opcionesTipo.map(op => <option key={op} value={op}>{op}</option>)}
-                </select>
-              ) : (
-                <div onClick={() => handleEdit(proyecto.id, 'tipo')}>
-                  {proyecto.tipo.join(', ')}
-                </div>
-              )}
-            </td>
-            <td className="px-4 py-2">
-              {editando.id === proyecto.id && editando.campo === 'equipo' ? (
-                <select multiple value={proyecto.equipo} onChange={(e) => {
-                  const values = Array.from(e.target.selectedOptions, o => o.value);
-                  handleSave(proyecto.id, 'equipo', values);
-                }} className="border p-1 rounded">
-                  {opcionesEquipo.map(op => <option key={op} value={op}>{op}</option>)}
-                </select>
-              ) : (
-                <div onClick={() => handleEdit(proyecto.id, 'equipo')}>
-                  {proyecto.equipo.join(', ')}
-                </div>
-              )}
-            </td>
-            <td className="px-4 py-2">
-              {editando.id === proyecto.id && editando.campo === 'prioridad' ? (
-                <select value={proyecto.prioridad} onChange={(e) => handleSave(proyecto.id, 'prioridad', e.target.value)} className="border p-1 rounded">
-                  {opcionesPrioridad.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              ) : (
-                <span className={getColorPrioridad(proyecto.prioridad)} onClick={() => handleEdit(proyecto.id, 'prioridad')}>{proyecto.prioridad}</span>
-              )}
-            </td>
-            <td className="px-4 py-2">
-              {editando.id === proyecto.id && editando.campo === 'objetivo' ? (
-                <input type="text" value={proyecto.objetivo} onChange={(e) => handleSave(proyecto.id, 'objetivo', e.target.value)} className="border p-1 rounded" />
-              ) : (
-                <span onClick={() => handleEdit(proyecto.id, 'objetivo')}>{proyecto.objetivo}</span>
-              )}
-            </td>
-            <td className="px-4 py-2">
-              {editando.id === proyecto.id && editando.campo === 'fechaInicio' ? (
-                <input type="date" value={proyecto.fechaInicio} onChange={(e) => handleSave(proyecto.id, 'fechaInicio', e.target.value)} className="border p-1 rounded" />
-              ) : (
-                <span onClick={() => handleEdit(proyecto.id, 'fechaInicio')}>{proyecto.fechaInicio}</span>
-              )}
-            </td>
-            <td className="px-4 py-2">
-              {editando.id === proyecto.id && editando.campo === 'fechaFin' ? (
-                <input type="date" value={proyecto.fechaFin} onChange={(e) => handleSave(proyecto.id, 'fechaFin', e.target.value)} className="border p-1 rounded" />
-              ) : (
-                <span onClick={() => handleEdit(proyecto.id, 'fechaFin')}>{proyecto.fechaFin}</span>
-              )}
-            </td>
-            {/* <td className="px-4 py-2">
-              {calcularProgreso(proyecto.valorInicial, proyecto.valorFinal)}%
-            </td> */}
-            <td className="px-4 py-2">
-              <a href={proyecto.enlace} target="_blank" rel="noreferrer" className="text-blue-600 underline">Ver</a>
-            </td>
-            <td className="px-4 py-2">
-              {editando.id === proyecto.id && editando.campo === 'observaciones' ? (
-                <textarea value={proyecto.observaciones} onChange={(e) => handleSave(proyecto.id, 'observaciones', e.target.value)} className="border p-1 rounded w-full" rows={3} />
-              ) : (
-                <span onClick={() => handleEdit(proyecto.id, 'observaciones')} className="block max-w-xs truncate" title={proyecto.observaciones}>{proyecto.observaciones}</span>
-              )}
-            </td>
-            <td className="px-4 py-2">
-              <button onClick={() => handleViewDetails(proyecto.id)} className="text-green-600 hover:text-green-800">
-                Ver
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-
+      <TablaProyectos
+        proyectos={proyectos}
+        editando={editando}
+        handleEdit={handleEdit}
+        handleSave={handleSave}
+        getColorEstado={getColorEstado}
+        getColorPrioridad={getColorPrioridad}
+        filtrarProyectos={filtrarProyectos}
+      />
     </div>
   );
 };
+localStorage.removeItem("user");
+localStorage.removeItem("token");
+localStorage.removeItem("userId");
 
 export default Dashboard;

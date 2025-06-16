@@ -15,5 +15,6 @@ class Usuario(Base):
     correo = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     rol = Column(Enum(RolUsuario), default=RolUsuario.usuario)
+    apellido = Column(String, nullable=False)
 
     proyectos = relationship("Proyecto", back_populates="responsable")  # opcional

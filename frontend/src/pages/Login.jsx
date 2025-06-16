@@ -4,14 +4,14 @@ import { FaLock, FaEye, FaEyeSlash, FaUser } from 'react-icons/fa';
 
 const Login = () => {
   const [credentials, setCredentials] = useState({
-    username: '',
+    correo: '',
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -30,55 +30,58 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     try {
       console.log('Iniciando solicitud de login');
-      // Usar la API real para autenticación
-      const formData = new FormData();
-      formData.append('username', credentials.username);
+
+      const formData = new URLSearchParams();
+      formData.append('username', credentials.correo);
       formData.append('password', credentials.password);
-      
-      console.log('Enviando solicitud a:', 'http://localhost:8000/auth/login');
+
       const response = await fetch('http://localhost:8000/auth/login', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
         body: formData,
       });
-      
-      console.log('Respuesta recibida:', response.status);
+
       const data = await response.json();
       console.log('Datos recibidos:', data);
-      
+
       if (!response.ok) {
         throw new Error(data.detail || 'Error al iniciar sesión');
       }
-      
-      // Decodificar el token para obtener información del usuario
-      console.log('Decodificando token');
-      const tokenParts = data.access_token.split('.');
-      const payload = JSON.parse(atob(tokenParts[1]));
-      console.log('Payload del token:', payload);
-      
-      // Guardar token y datos del usuario en localStorage o sessionStorage según rememberMe
+
+      // Validar respuesta del servidor
+      if (!data.user || !data.user.rol || !data.user.nombre || !data.access_token) {
+        throw new Error('Respuesta del servidor incompleta');
+      }
+
+      // Guardar token, user y userId
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem('token', data.access_token);
-      storage.setItem('tokenType', data.token_type);
-      storage.setItem('userRole', payload.rol);
-      storage.setItem('userName', payload.nombre);
-      storage.setItem('userId', payload.sub);
-      
-      console.log('Redirigiendo a /');
-      // Redirigir al dashboard
-      navigate('/');
+      storage.setItem('userId', data.user.id); // ✅ Necesario para Sidebar
+      storage.setItem('user', JSON.stringify({
+        id: data.user.id,
+        nombre: data.user.nombre,
+        correo: data.user.correo,
+        rol: data.user.rol,
+        apellido: data.user.apellido
+      }));
+
+      console.log('Login exitoso, redirigiendo...');
+      navigate('/'); // Ruta principal (Views con Sidebar)
+
     } catch (error) {
       console.error('Error en login:', error);
-      setError(error.message);
+      setError(error.message || 'Credenciales incorrectas');
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPassword = () => {
-    // Implementar recuperación de contraseña
     alert('Funcionalidad de recuperación de contraseña pendiente');
   };
 
@@ -86,24 +89,23 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-green-50 p-4">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-md overflow-hidden">
         <div className="p-8 text-center">
-          {/* Icono de candado */}
           <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
             <FaLock className="text-green-600 text-2xl" />
           </div>
-          
+
           <h1 className="text-xl font-bold text-green-700 mb-1">Sistema de ANDESBPO</h1>
           <p className="text-sm text-gray-500 mb-6">Accede a tu cuenta para continuar</p>
-          
+
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">
               {error}
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="text-left">
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-              Correo
+                Correo
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -111,17 +113,17 @@ const Login = () => {
                 </div>
                 <input
                   id="username"
-                  name="username"
+                  name="correo"
                   type="text"
                   required
-                  value={credentials.username}
+                  value={credentials.correo}
                   onChange={handleChange}
                   className="pl-10 w-full border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   placeholder="Tu correo"
                 />
               </div>
             </div>
-            
+
             <div className="text-left">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Contraseña
@@ -153,7 +155,7 @@ const Login = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -176,7 +178,7 @@ const Login = () => {
                 Olvidé mi contraseña
               </button>
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}

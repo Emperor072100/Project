@@ -9,8 +9,8 @@ class Proyecto(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
-    tipo = Column(ARRAY(String))
-    equipo = Column(ARRAY(String))
+    # tipo_id = Column(ARRAY(Integer), nullable=True, default=list)
+    # equipo_id = Column(ARRAY(Integer), nullable=True, default=list)
     estado = Column(String)
     prioridad = Column(String)
     objetivo = Column(Text)

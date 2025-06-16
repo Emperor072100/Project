@@ -19,7 +19,7 @@ app.add_middleware(
 app.include_router(proyectos.router)
 app.include_router(tareas.router)
 app.include_router(auth.router)
-app.include_router(usuarios.router) # Se añade el router de usuarios
+app.include_router(usuarios.router)  # Se añade usuarios
 
 @app.get("/")
 def root():
