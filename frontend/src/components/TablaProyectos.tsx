@@ -68,8 +68,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   return (
     <>
       <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-300">
-        <table className="min-w-full text-sm text-left bg-white">
-          <thead className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+        <table className="min-w-full text-xs text-left bg-white">
+          <thead className="bg-gradient-to-r from-green-500 to-green-600 text-white sticky top-0 z-10">
             <tr>
               {[
                 "Nombre", "Responsable", "Estado", "Tipo", "Equipo", "Prioridad",
@@ -77,7 +77,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 "Observaciones", "Acciones"
               ].map(header => (
                 <th key={`header-${header.toLowerCase().replace(/\s+/g, '-')}`} 
-                    className="px-6 py-3 font-semibold text-sm tracking-wide">
+                    className="px-4 py-2 font-semibold text-xs tracking-wide">
                   {header}
                 </th>
               ))}

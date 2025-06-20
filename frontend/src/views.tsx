@@ -76,9 +76,8 @@ export const Dashboard: React.FC = () => {
   const filtrarProyectos = () => {
     return proyectos.filter(proyecto => {
       const coincideNombre = busqueda === '' || proyecto.nombre.toLowerCase().includes(busqueda.toLowerCase());
-      const puedeVer = user.rol === 'admin' || proyecto.responsable_id?.toString() === user.id || proyecto.responsable === user.id;
       const responsableNombre = proyecto.responsable_nombre || proyecto.responsable;
-      return coincideNombre && puedeVer && (
+      return coincideNombre && (
         (filtros.estado === '' || proyecto.estado.includes(filtros.estado)) &&
         (filtros.equipo === '' || proyecto.equipo.includes(filtros.equipo)) &&
         (filtros.prioridad === '' || proyecto.prioridad === filtros.prioridad) &&
@@ -108,19 +107,19 @@ export const Dashboard: React.FC = () => {
     }
   };
   return (
-    <div className="p-6 w-full bg-white space-y-6">
-      <h1 className="text-2xl font-bold text-green-600">Proyectos Andes BPO</h1>
-      <p className="text-gray-600">Implementando la transformación en Andes BPO</p>
+    <div className="p-4 w-full bg-white space-y-4">
+      <h1 className="text-xl font-bold text-green-600">Proyectos Andes BPO</h1>
+      <p className="text-sm text-gray-600">Implementando la transformación en Andes BPO</p>
 
       {/* Filtros y botón de crear proyecto */}
-      <div className="flex flex-wrap gap-4 justify-between items-center">
-        <div className="flex flex-wrap gap-4 flex-grow">
+      <div className="flex flex-wrap gap-2 justify-between items-center mb-2">
+        <div className="flex flex-wrap gap-2 flex-grow">
           <input 
             type="text" 
             value={busqueda} 
             onChange={(e) => setBusqueda(e.target.value)} 
             placeholder="Buscar por nombre" 
-            className="w-64 border border-gray-300 rounded-md shadow-sm p-2" 
+            className="w-48 border border-gray-300 rounded-md shadow-sm p-1 text-sm" 
           />
           
           {/* Estado select */}
@@ -128,7 +127,7 @@ export const Dashboard: React.FC = () => {
             name="estado" 
             value={filtros.estado} 
             onChange={handleFiltroChange} 
-            className="w-64 border p-2 rounded"
+            className="w-48 border p-1 rounded text-sm"
           >
             <option key={createSelectKey('estado', 'todos')} value="">Todos los estados</option>
             {Object.entries(opcionesEstado).flatMap(([grupo, estados]) => (
@@ -194,13 +193,15 @@ export const Dashboard: React.FC = () => {
           </select>
         </div>
         
-        {/* Botón para mostrar modal */}
+        {/* Botón para mostrar modal - Solo visible para administradores */}
+        {(user.rol === 'admin') && (
         <button
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 ml-auto"
+          className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 ml-auto text-sm"
           onClick={() => setMostrarModal(true)}
         >
           + Nuevo Proyecto
         </button>
+        )}
       </div>
       
       {/* Modal */}
@@ -222,7 +223,9 @@ export const Dashboard: React.FC = () => {
       )}
       
       {/* KPIs */}
-      <KPIs proyectos={proyectos} />
+      <div className="mb-2">
+        <KPIs proyectos={proyectos} />
+      </div>
 
       {/* Tabla */}
       <TablaProyectos

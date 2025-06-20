@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, Date, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ARRAY
 from core.database import Base
+from app.models.tipo_equipo import proyecto_tipo, proyecto_equipo
 
 
 class Proyecto(Base):
@@ -9,11 +9,6 @@ class Proyecto(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
-    # Eliminar esta línea
-    # responsable = relationship("Usuario", backref="proyectos")
-    
-    # Mantener solo esta
-    responsable = relationship("Usuario", back_populates="proyectos")
     estado = Column(String)
     prioridad = Column(String)
     objetivo = Column(Text)
@@ -26,3 +21,7 @@ class Proyecto(Base):
 
     responsable = relationship("Usuario", back_populates="proyectos")
     tareas = relationship("Tarea", back_populates="proyecto", cascade="all, delete-orphan")
+    
+    # Relaciones muchos a muchos
+    tipos = relationship("Tipo", secondary=proyecto_tipo, back_populates="proyectos")
+    equipos = relationship("Equipo", secondary=proyecto_equipo, back_populates="proyectos")

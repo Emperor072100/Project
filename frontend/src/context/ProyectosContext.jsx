@@ -24,12 +24,13 @@ export const ProyectosProvider = ({ children }) => {
       });
       
       // Normalizar los datos para que sean consistentes en todas las vistas
+      // En la función fetchProyectos
       const proyectosNormalizados = res.data.map((p) => ({
         ...p,
         id: p.id,
         nombre: p.nombre,
-        tipo: p.tipo || [],
-        equipo: p.equipo || [],
+        tipo: p.tipos || [], // Cambiado de p.tipo a p.tipos
+        equipo: p.equipos || [], // Cambiado de p.equipo a p.equipos
         responsable: p.responsable || '',
         responsable_nombre: p.responsable_nombre || p.responsable,
         responsable_id: p.responsable_id,

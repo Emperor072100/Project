@@ -37,6 +37,8 @@ class ProyectoOut(ProyectoBase):
     id: int
     responsable_id: int
     responsable_nombre: str = None
+    tipos: List[str] = []
+    equipos: List[str] = []
 
     class Config:
         from_attributes = True

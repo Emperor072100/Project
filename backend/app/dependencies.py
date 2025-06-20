@@ -31,14 +31,14 @@ def get_current_user(
     )
     try:
         payload = decodificar_token(token)
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        user_id = int(payload.get("sub"))  # <- aquí el fix importante
+        if not user_id:
             raise credentials_exception
-    except JWTError:
+    except (JWTError, ValueError):
         raise credentials_exception
 
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
-    if user is None:
+    if not user:
         raise credentials_exception
     return user
 
