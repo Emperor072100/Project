@@ -1,20 +1,22 @@
-// views.tsx (actualizado)
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPlus, FaEdit, FaSave, FaArrowLeft } from 'react-icons/fa';
-import axios from "axios";
+import toast from "react-hot-toast";
+import KPIs from './components/KPIs';
 import TablaProyectos from './components/TablaProyectos';
+import NuevoProyecto from './components/NuevoProyecto';
+import PanelDetalleProyecto from './components/PanelDetalleProyecto';
+import { useProyectos } from './context/ProyectosContext';
 
-// Tipo completo para Proyecto
+
 export interface Proyecto {
   id: number;
   nombre: string;
   responsable: string;
-  responsable_nombre?: string; // Nuevo campo para el nombre del responsable
-  responsable_id?: number; // ID del responsable
+  responsable_nombre?: string;
+  responsable_id?: number;
   estado: string;
-  tipo: string[] | string;  // Allow both array and string
-  equipo: string[] | string; // Allow both array and string
+  tipo: string[] | string;
+  equipo: string[] | string;
   prioridad: string;
   objetivo: string;
   fechaInicio: string;
@@ -24,18 +26,22 @@ export interface Proyecto {
   observaciones: string;
 }
 
+// Add this helper function before the Dashboard component
+const createSelectKey = (prefix: string, value: string | number, index?: number) => 
+  `${prefix}-${value?.toString().toLowerCase().replace(/\s+/g, '-')}${index !== undefined ? `-${index}` : ''}`;
+
 export const Dashboard: React.FC = () => {
-  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
-  const [filtros, setFiltros] = useState({
-    estado: '',
-    equipo: '',
-    prioridad: '',
-    responsable: ''
-  });
+  // Usar el contexto de proyectos en lugar del estado local
+  const { proyectos, updateProyecto, deleteProyecto, fetchProyectos } = useProyectos();
+  
+  const [filtros, setFiltros] = useState({ estado: '', equipo: '', prioridad: '', responsable: '' });
   const [busqueda, setBusqueda] = useState<string>('');
   const [editando, setEditando] = useState<{ id: number | null; campo: string | null }>({ id: null, campo: null });
-  const navigate = useNavigate();
   const [user, setUser] = useState<{ id: string; rol: string }>({ id: '', rol: '' });
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [proyectoSeleccionado, setProyectoSeleccionado] = useState<Proyecto | null>(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId') || '';
@@ -48,45 +54,16 @@ export const Dashboard: React.FC = () => {
         .then(data => setUser({ id: data.id?.toString() || userId, rol: data.rol || '' }))
         .catch(() => setUser({ id: userId, rol: '' }));
     }
-
-    const fetchInitialData = async () => {
-      try {
-        let rawToken = localStorage.getItem('token') || sessionStorage.getItem('token');
-        if (!rawToken) {
-          console.warn("⚠️ No hay token en localStorage/sessionStorage");
-          return;
-        }
-        const token = rawToken.replace(/^"|"$/g, '');
-        const proyectosResponse = await axios.get("http://localhost:8000/proyectos", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        const proyectosNormalizados = proyectosResponse.data.map((p: any) => ({
-          ...p,
-          tipo: p.tipo || [],
-          equipo: p.equipo || [],
-          responsable_nombre: p.responsable_nombre || p.responsable,
-          fechaInicio: p.fecha_inicio || '',
-          fechaFin: p.fecha_fin || ''
-        }));
-        
-        setProyectos(proyectosNormalizados);
-      } catch (error: any) {
-        // Mejor log para AxiosError
-        if (error.response) {
-          console.error("🚫 Error al cargar proyectos:", error.message, error.response.status, error.response.data);
-        } else if (error.request) {
-          console.error("🚫 Error al cargar proyectos: No response received", error.message, error.request);
-        } else {
-          console.error("🚫 Error al cargar proyectos:", error.message);
-        }
-      }
-    };
-
-    fetchInitialData();
   }, []);
+
+  const handleSave = async (id: number, campo: keyof Proyecto, valor: any) => {
+    await updateProyecto(id, campo, valor);
+    setEditando({ id: null, campo: null });
+  };
+
+  const handleEliminar = async (id: number) => {
+    await deleteProyecto(id);
+  };
 
   const opcionesEstado = {
     pendientes: ['Conceptual', 'Análisis', 'Sin Empezar'],
@@ -130,122 +107,145 @@ export const Dashboard: React.FC = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const handleEdit = (id: number, campo: string) => {
-    setEditando({ id, campo });
-  };
-
-  const handleSave = (id: number, campo: keyof Proyecto, valor: any) => {
-    setProyectos(prev =>
-      prev.map(proy => proy.id === id ? { ...proy, [campo]: valor } : proy)
-    );
-    setEditando({ id: null, campo: null });
-  };
-
   return (
-    <div className="p-6 w-full bg-white">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-green-600">Proyectos Andes BPO</h1>
-          <p className="text-gray-600">Implementando la transformación en Andes BPO</p>
-        </div>
-      </div>
+    <div className="p-6 w-full bg-white space-y-6">
+      <h1 className="text-2xl font-bold text-green-600">Proyectos Andes BPO</h1>
+      <p className="text-gray-600">Implementando la transformación en Andes BPO</p>
 
-      <div className="mb-6 flex flex-wrap gap-4">
-        <div className="w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por nombre</label>
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Nombre del proyecto"
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2"
+      {/* Filtros y botón de crear proyecto */}
+      <div className="flex flex-wrap gap-4 justify-between items-center">
+        <div className="flex flex-wrap gap-4 flex-grow">
+          <input 
+            type="text" 
+            value={busqueda} 
+            onChange={(e) => setBusqueda(e.target.value)} 
+            placeholder="Buscar por nombre" 
+            className="w-64 border border-gray-300 rounded-md shadow-sm p-2" 
           />
-        </div>
-        <div className="w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-          <select
-            name="estado"
-            value={filtros.estado}
-            onChange={handleFiltroChange}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2"
+          
+          {/* Estado select */}
+          <select 
+            name="estado" 
+            value={filtros.estado} 
+            onChange={handleFiltroChange} 
+            className="w-64 border p-2 rounded"
           >
-            <option value="">Todos los estados</option>
-            <optgroup label="Pendientes">
-              {opcionesEstado.pendientes.map((estado) => (
-                <option key={estado} value={estado}>{estado}</option>
-              ))}
-            </optgroup>
-            <optgroup label="En Proceso">
-              {opcionesEstado.enProceso.map((estado) => (
-                <option key={estado} value={estado}>{estado}</option>
-              ))}
-            </optgroup>
-            <optgroup label="Terminados">
-              {opcionesEstado.terminados.map((estado) => (
-                <option key={estado} value={estado}>{estado}</option>
-              ))}
-            </optgroup>
-          </select>
-        </div>
-        <div className="w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Equipo</label>
-          <select
-            name="equipo"
-            value={filtros.equipo}
-            onChange={handleFiltroChange}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2"
-          >
-            <option value="">Todos los equipos</option>
-            {opcionesEquipo.map((equipo) => (
-              <option key={equipo} value={equipo}>{equipo}</option>
+            <option key={createSelectKey('estado', 'todos')} value="">Todos los estados</option>
+            {Object.entries(opcionesEstado).flatMap(([grupo, estados]) => (
+              <optgroup key={`grupo-${grupo}`} label={grupo}>
+                {estados.map((estado) => (
+                  <option key={createSelectKey('estado', estado)} value={estado}>
+                    {estado}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
-        </div>
-        <div className="w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
-          <select
-            name="prioridad"
-            value={filtros.prioridad}
-            onChange={handleFiltroChange}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2"
-          >
-            <option value="">Todas las prioridades</option>
-            {opcionesPrioridad.map((prioridad) => (
-              <option key={prioridad} value={prioridad}>{prioridad}</option>
-            ))}
-          </select>
-        </div>
-        <div className="w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
-          <select
-            name="responsable"
-            value={filtros.responsable}
-            onChange={handleFiltroChange}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2"
-          >
-            <option value="">Todos los responsables</option>
-            {[...new Set(proyectos.map(p => p.responsable_nombre || p.responsable))].map(res => (
-              <option key={res} value={res}>{res}</option>
-            ))}
-          </select>
-        </div>
-      </div>
 
+          {/* Equipo select */}
+          <select 
+            name="equipo" 
+            value={filtros.equipo} 
+            onChange={handleFiltroChange} 
+            className="w-64 border p-2 rounded"
+          >
+            <option key={createSelectKey('equipo', 'todos')} value="">Todos los equipos</option>
+            {opcionesEquipo.map(equipo => (
+              <option key={createSelectKey('equipo', equipo)} value={equipo}>
+                {equipo}
+              </option>
+            ))}
+          </select>
+
+          {/* Prioridad select */}
+          <select 
+            name="prioridad" 
+            value={filtros.prioridad} 
+            onChange={handleFiltroChange} 
+            className="w-64 border p-2 rounded"
+          >
+            <option key={createSelectKey('prioridad', 'todos')} value="">Todas las prioridades</option>
+            {opcionesPrioridad.map(prioridad => (
+              <option key={createSelectKey('prioridad', prioridad)} value={prioridad}>
+                {prioridad}
+              </option>
+            ))}
+          </select>
+
+          {/* Responsable select */}
+          <select 
+            name="responsable" 
+            value={filtros.responsable} 
+            onChange={handleFiltroChange} 
+            className="w-64 border p-2 rounded"
+          >
+            <option key={createSelectKey('responsable', 'todos')} value="">Todos los responsables</option>
+            {[...new Set(proyectos.map(p => p.responsable_nombre || p.responsable))]
+              .filter(Boolean)
+              .map((res, index) => (
+                <option 
+                  key={createSelectKey('responsable', res, index)} 
+                  value={res}
+                  style={{color: 'red'}}
+                >
+                  {res}
+                </option>
+              ))}
+          </select>
+        </div>
+        
+        {/* Botón para mostrar modal */}
+        <button
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 ml-auto"
+          onClick={() => setMostrarModal(true)}
+        >
+          + Nuevo Proyecto
+        </button>
+      </div>
+      
+      {/* Modal */}
+      {mostrarModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setMostrarModal(false)}
+            >✕</button>
+            <h2 className="text-xl font-semibold mb-4">Nuevo Proyecto</h2>
+            <NuevoProyecto
+              onCreado={() => {
+                setMostrarModal(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* KPIs */}
+      <KPIs proyectos={proyectos} />
+
+      {/* Tabla */}
       <TablaProyectos
         proyectos={proyectos}
         editando={editando}
-        handleEdit={handleEdit}
+        handleEdit={(id, campo) => setEditando({ id, campo })}
         handleSave={handleSave}
         getColorEstado={getColorEstado}
         getColorPrioridad={getColorPrioridad}
         filtrarProyectos={filtrarProyectos}
+        onVerDetalle={(proyecto) => setProyectoSeleccionado(proyecto)}
+        onEliminar={handleEliminar}
       />
+
+      {/* Panel de Detalle */}
+      {proyectoSeleccionado && (
+        <PanelDetalleProyecto
+          proyecto={proyectoSeleccionado}
+          onClose={() => setProyectoSeleccionado(null)}
+        />
+      )}
     </div>
   );
 };
-localStorage.removeItem("user");
-localStorage.removeItem("token");
-localStorage.removeItem("userId");
 
 export default Dashboard;

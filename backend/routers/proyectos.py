@@ -14,7 +14,19 @@ def crear_proyecto(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    nuevo = modelo.Proyecto(**proyecto.dict(), responsable_id=usuario.id)
+    # Crear diccionario con los datos del proyecto
+    proyecto_data = proyecto.dict(exclude_unset=True)
+    
+    # Si no se proporciona responsable_id, usar el ID del usuario actual
+    if 'responsable_id' not in proyecto_data or not proyecto_data['responsable_id']:
+        proyecto_data['responsable_id'] = usuario.id
+    
+    # Verificar que el usuario tenga permisos para asignar a otro responsable
+    if proyecto_data['responsable_id'] != usuario.id and usuario.rol != 'admin':
+        raise HTTPException(status_code=403, detail="No tienes permisos para asignar proyectos a otros usuarios")
+    
+    # Crear el nuevo proyecto
+    nuevo = modelo.Proyecto(**proyecto_data)
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
@@ -25,9 +37,39 @@ def listar_proyectos(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    if usuario.rol == "admin":
-        return db.query(modelo.Proyecto).all()
-    return db.query(modelo.Proyecto).all()
+    from app.models.usuario import Usuario
+    
+    # Consulta con join para obtener el nombre del responsable
+    query = db.query(modelo.Proyecto, Usuario.nombre.label("responsable_nombre")).\
+            join(Usuario, modelo.Proyecto.responsable_id == Usuario.id)
+    
+    # Filtrar por rol
+    if usuario.rol != "admin":
+        query = query.filter(modelo.Proyecto.responsable_id == usuario.id)
+    
+    # Ejecutar consulta y formatear resultados
+    resultados = query.all()
+    proyectos = []
+    
+    for proyecto, responsable_nombre in resultados:
+        # Crear un diccionario con los datos del proyecto
+        proyecto_dict = {
+            "id": proyecto.id,
+            "nombre": proyecto.nombre,
+            "estado": proyecto.estado,
+            "prioridad": proyecto.prioridad,
+            "objetivo": proyecto.objetivo,
+            "enlace": proyecto.enlace,
+            "observaciones": proyecto.observaciones,
+            "fecha_inicio": proyecto.fecha_inicio,
+            "fecha_fin": proyecto.fecha_fin,
+            "progreso": proyecto.progreso,
+            "responsable_id": proyecto.responsable_id,
+            "responsable_nombre": responsable_nombre
+        }
+        proyectos.append(proyecto_dict)
+    
+    return proyectos
 
 @router.put("/{proyecto_id}", response_model=ProyectoOut)
 def actualizar_proyecto(

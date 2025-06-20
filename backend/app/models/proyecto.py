@@ -9,8 +9,11 @@ class Proyecto(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
-    # tipo_id = Column(ARRAY(Integer), nullable=True, default=list)
-    # equipo_id = Column(ARRAY(Integer), nullable=True, default=list)
+    # Eliminar esta línea
+    # responsable = relationship("Usuario", backref="proyectos")
+    
+    # Mantener solo esta
+    responsable = relationship("Usuario", back_populates="proyectos")
     estado = Column(String)
     prioridad = Column(String)
     objetivo = Column(Text)

@@ -5,8 +5,8 @@ from datetime import date
 
 class ProyectoBase(BaseModel):
     nombre: str
-    # tipo_id: Optional[List[int]] = []
-    # equipo_id: Optional[List[int]] = []
+    tipo: Optional[List[str]] = []
+    equipo: Optional[List[str]] = []
     estado: Optional[str]
     prioridad: Optional[str]
     objetivo: Optional[str]
@@ -17,12 +17,13 @@ class ProyectoBase(BaseModel):
     progreso: Optional[float]
 
 class ProyectoCreate(ProyectoBase):
-    pass
+    responsable_id: Optional[int] = None
 
 class ProyectoUpdate(BaseModel):
     nombre: Optional[str]
-    # tipo_id: Optional[List[str]] = []
-    # equipo_id: Optional[List[str]] = []
+    tipo: Optional[List[str]] = []
+    equipo: Optional[List[str]] = []
+    responsable_nombre: Optional[str] = None
     estado: Optional[str]
     prioridad: Optional[str]
     objetivo: Optional[str]

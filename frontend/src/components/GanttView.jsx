@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useProyectos } from '../context/ProyectosContext';
 
 const GanttView = () => {
-  const [proyectos, setProyectos] = useState([]);
+  const { proyectos, loading } = useProyectos();
   const [timeRange, setTimeRange] = useState('quarter'); // 'month', 'quarter', 'year'
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
-  const [loading, setLoading] = useState(true);
 
   // Función para añadir días a una fecha
   const addDays = (date, days) => {
@@ -65,92 +65,6 @@ const GanttView = () => {
     }
   }, [timeRange]);
 
-  useEffect(() => {
-    // Simulación de carga de datos
-    const datosEjemplo = [
-      { 
-        id: 1, 
-        nombre: 'Factura Online', 
-        responsable: 'Felipe Gómez', 
-        estado: 'En producción', 
-        fechaInicio: '2023-07-01',
-        fechaFin: '2023-08-15',
-        progreso: 100,
-        color: '#4CAF50' // Verde para proyectos completados
-      },
-      { 
-        id: 2, 
-        nombre: 'Factura Auditoria', 
-        responsable: 'Felipe Gómez', 
-        estado: 'En desarrollo', 
-        fechaInicio: '2023-07-01',
-        fechaFin: '2023-09-15',
-        progreso: 65,
-        color: '#2196F3' // Azul para proyectos en desarrollo
-      },
-      { 
-        id: 3, 
-        nombre: 'Gestión comercial', 
-        responsable: 'Felipe Gómez', 
-        estado: 'Desarrollado', 
-        fechaInicio: '2023-06-01',
-        fechaFin: '2023-08-30',
-        progreso: 100,
-        color: '#4CAF50'
-      },
-      { 
-        id: 4, 
-        nombre: 'Contabilidad', 
-        responsable: 'Felipe Gómez', 
-        estado: 'Pausado', 
-        fechaInicio: '2023-10-01',
-        fechaFin: '2023-11-15',
-        progreso: 45,
-        color: '#FFC107' // Amarillo para proyectos pausados
-      },
-      { 
-        id: 5, 
-        nombre: 'Actividad Juego del mes', 
-        responsable: 'Felipe Gómez', 
-        estado: 'En producción', 
-        fechaInicio: '2023-08-01',
-        fechaFin: '2023-11-14',
-        progreso: 100,
-        color: '#4CAF50'
-      },
-      { 
-        id: 6, 
-        nombre: 'Sistema de Reportes', 
-        responsable: 'Ana Martínez', 
-        estado: 'Sin Empezar', 
-        fechaInicio: '2023-12-01',
-        fechaFin: '2024-02-28',
-        progreso: 0,
-        color: '#9E9E9E' // Gris para proyectos sin empezar
-      },
-      { 
-        id: 7, 
-        nombre: 'Integración API', 
-        responsable: 'Carlos Rodríguez', 
-        estado: 'En diseño', 
-        fechaInicio: '2023-11-15',
-        fechaFin: '2024-01-15',
-        progreso: 25,
-        color: '#2196F3'
-      },
-    ];
-
-    // Convertir fechas de string a objetos Date
-    const proyectosConFechas = datosEjemplo.map(proyecto => ({
-      ...proyecto,
-      fechaInicioObj: new Date(proyecto.fechaInicio),
-      fechaFinObj: new Date(proyecto.fechaFin)
-    }));
-
-    setProyectos(proyectosConFechas);
-    setLoading(false);
-  }, []);
-
   // Generar los días para el encabezado del Gantt
   const generateDays = () => {
     const days = [];
@@ -166,18 +80,20 @@ const GanttView = () => {
 
   // Calcular la posición y ancho de la barra de proyecto
   const calculateBarPosition = (proyecto) => {
-    const days = generateDays();
+    // Asegurarse de que las fechas son objetos Date
+    const fechaInicio = proyecto.fechaInicioObj || new Date(proyecto.fechaInicio);
+    const fechaFin = proyecto.fechaFinObj || new Date(proyecto.fechaFin);
     
     // Verificar si el proyecto está dentro del rango visible
-    if (proyecto.fechaFinObj < startDate || proyecto.fechaInicioObj > endDate) {
+    if (fechaFin < startDate || fechaInicio > endDate) {
       return { left: 0, width: 0, visible: false };
     }
     
     // Calcular fecha de inicio visible (la más tardía entre la fecha de inicio del proyecto y startDate)
-    const visibleStartDate = proyecto.fechaInicioObj < startDate ? startDate : proyecto.fechaInicioObj;
+    const visibleStartDate = fechaInicio < startDate ? startDate : fechaInicio;
     
     // Calcular fecha de fin visible (la más temprana entre la fecha de fin del proyecto y endDate)
-    const visibleEndDate = proyecto.fechaFinObj > endDate ? endDate : proyecto.fechaFinObj;
+    const visibleEndDate = fechaFin > endDate ? endDate : fechaFin;
     
     // Calcular posición izquierda (días desde startDate hasta el inicio visible)
     const leftDays = diffDays(startDate, visibleStartDate);
@@ -189,8 +105,8 @@ const GanttView = () => {
       left: `${leftDays * 40}px`,
       width: `${widthDays * 40}px`,
       visible: true,
-      startOutOfRange: proyecto.fechaInicioObj < startDate,
-      endOutOfRange: proyecto.fechaFinObj > endDate
+      startOutOfRange: fechaInicio < startDate,
+      endOutOfRange: fechaFin > endDate
     };
   };
 
@@ -296,7 +212,7 @@ const GanttView = () => {
             return (
               <div key={proyecto.id} className="flex border-b border-gray-200 hover:bg-gray-50">
                 <div className="w-72 flex-shrink-0 p-2 font-medium">{proyecto.nombre}</div>
-                <div className="w-36 flex-shrink-0 p-2 text-sm">{proyecto.responsable}</div>
+                <div className="w-36 flex-shrink-0 p-2 text-sm">{proyecto.responsable_nombre || proyecto.responsable}</div>
                 <div className="w-28 flex-shrink-0 p-2">
                   <span className={`px-2 py-1 text-xs rounded-full ${getColorEstado(proyecto.estado)}`}>
                     {proyecto.estado}
@@ -318,7 +234,7 @@ const GanttView = () => {
                       style={{ 
                         left: barPosition.left, 
                         width: barPosition.width,
-                        backgroundColor: proyecto.color,
+                        backgroundColor: proyecto.color || '#4CAF50',
                         opacity: barPosition.startOutOfRange || barPosition.endOutOfRange ? 0.7 : 1
                       }}
                     >
@@ -328,10 +244,10 @@ const GanttView = () => {
                       {/* Fechas de inicio y fin */}
                       <div className="flex justify-between w-full px-2 absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="bg-gray-800 text-white px-1 py-0.5 rounded text-xs whitespace-nowrap">
-                          Inicio: {formatShortDate(proyecto.fechaInicioObj)}
+                          Inicio: {formatShortDate(proyecto.fechaInicioObj || new Date(proyecto.fechaInicio))}
                         </span>
                         <span className="bg-gray-800 text-white px-1 py-0.5 rounded text-xs whitespace-nowrap">
-                          Fin: {formatShortDate(proyecto.fechaFinObj)}
+                          Fin: {formatShortDate(proyecto.fechaFinObj || new Date(proyecto.fechaFin))}
                         </span>
                       </div>
                       

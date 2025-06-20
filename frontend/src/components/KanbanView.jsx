@@ -14,15 +14,17 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useProyectos } from '../context/ProyectosContext';
 
 const KanbanView = () => {
+  const { proyectos, loading, updateProyectoFromKanban } = useProyectos();
+  
   const [columns, setColumns] = useState([
     { id: 'pendientes', title: 'PENDIENTES', color: 'bg-yellow-50' },
     { id: 'enProceso', title: 'EN PROCESO', color: 'bg-blue-50' },
     { id: 'terminados', title: 'TERMINADOS', color: 'bg-green-50' }
   ]);
 
-  const [projects, setProjects] = useState([]);
   const [columnCounts, setColumnCounts] = useState({});
 
   const sensors = useSensors(
@@ -31,131 +33,36 @@ const KanbanView = () => {
   );
 
   useEffect(() => {
-    const exampleProjects = [
-      {
-        id: '1',
-        name: 'Sistema de gestión de facturas',
-        responsable: 'Felipe Gómez',
-        column: 'pendientes',
-        subcolumn: 'Conceptual',
-        priority: 'Alta',
-        progress: 0,
-        team: 'Dirección Comercial'
-      },
-      {
-        id: '2',
-        name: 'Desarrollo Incidencias',
-        responsable: 'Felipe Gómez',
-        column: 'pendientes',
-        subcolumn: 'Análisis',
-        priority: 'Media',
-        progress: 25,
-        team: 'Dirección TI'
-      },
-      {
-        id: '3',
-        name: 'BI Seguimiento Automatismo',
-        responsable: 'Felipe Gómez',
-        column: 'enProceso',
-        subcolumn: 'En desarrollo',
-        priority: 'Baja',
-        progress: 50,
-        team: 'Dirección TI'
-      },
-      {
-        id: '4',
-        name: 'Calidad UX',
-        responsable: 'Felipe Gómez',
-        column: 'enProceso',
-        subcolumn: 'Etapa pruebas',
-        priority: 'Alta',
-        progress: 75,
-        team: 'Estrategia CX'
-      },
-      {
-        id: '5',
-        name: 'Plantillas CRM: Migración',
-        responsable: 'Felipe Gómez',
-        column: 'terminados',
-        subcolumn: 'En producción',
-        priority: 'Media',
-        progress: 100,
-        team: 'Dirección Comercial'
-      },
-      {
-        id: '6',
-        name: 'Contabilización',
-        responsable: 'Felipe Gómez',
-        column: 'terminados',
-        subcolumn: 'Pausado',
-        priority: 'Media',
-        progress: 30,
-        team: 'Dirección Financiera'
-      },
-      {
-        id: '7',
-        name: 'Andes Calibre',
-        responsable: 'Felipe Gómez',
-        column: 'terminados',
-        subcolumn: 'Desarrollado',
-        priority: 'Alta',
-        progress: 100,
-        team: 'Dirección GH'
-      }
-    ];
-
-    setProjects(exampleProjects);
-
+    // Actualizar contadores de columnas cuando cambian los proyectos
     const counts = {};
     columns.forEach(col => {
-      counts[col.id] = exampleProjects.filter(p => p.column === col.id).length;
+      counts[col.id] = proyectos.filter(p => p.column === col.id).length;
     });
     setColumnCounts(counts);
-  }, []);
+  }, [proyectos, columns]);
 
-  const handleDragEnd = (event) => {
+  const handleDragEnd = async (event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const activeIndex = projects.findIndex(p => p.id === active.id);
-    const overIndex = projects.findIndex(p => p.id === over.id);
+    // Encontrar los proyectos involucrados
+    const activeProject = proyectos.find(p => p.id.toString() === active.id.toString());
+    const overProject = proyectos.find(p => p.id.toString() === over.id.toString());
 
-    if (activeIndex === -1 || overIndex === -1) return;
-
-    const activeProject = projects[activeIndex];
-    const overProject = projects[overIndex];
+    if (!activeProject || !overProject) return;
 
     const sameColumn = activeProject.column === overProject.column;
 
-    let updatedProjects = [...projects];
-
-    if (sameColumn) {
-      const columnProjects = projects.filter(p => p.column === activeProject.column);
-      const ids = columnProjects.map(p => p.id);
-      const oldIndex = ids.indexOf(active.id);
-      const newIndex = ids.indexOf(over.id);
-      const reordered = arrayMove(columnProjects, oldIndex, newIndex);
-
-      let i = 0;
-      updatedProjects = projects.map(p => {
-        if (p.column !== activeProject.column) return p;
-        return reordered[i++];
-      });
-    } else {
-      updatedProjects[activeIndex] = { ...activeProject, column: overProject.column };
+    if (!sameColumn) {
+      // Si se mueve a otra columna, actualizar el estado del proyecto
+      await updateProyectoFromKanban(activeProject.id, overProject.column);
     }
-
-    setProjects(updatedProjects);
-
-    const newCounts = {};
-    columns.forEach((col) => {
-      newCounts[col.id] = updatedProjects.filter((p) => p.column === col.id).length;
-    });
-    setColumnCounts(newCounts);
+    // No necesitamos manejar el reordenamiento dentro de la misma columna
+    // ya que no afecta al estado del proyecto
   };
 
   const getProjectsByColumn = (columnId) =>
-    projects.filter((project) => project.column === columnId);
+    proyectos.filter((project) => project.column === columnId);
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -177,7 +84,7 @@ const KanbanView = () => {
       setNodeRef,
       transform,
       transition
-    } = useSortable({ id: project.id });
+    } = useSortable({ id: project.id.toString() });
 
     const style = {
       transform: CSS.Transform.toString(transform),
@@ -193,22 +100,22 @@ const KanbanView = () => {
         className="bg-white p-3 rounded-md shadow-sm mb-2 cursor-move border-l-4 border-blue-500"
       >
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-medium text-sm">{project.name}</h3>
-          <span className={`${getPriorityColor(project.priority)} px-2 py-0.5 rounded-full text-xs font-medium`}>
-            {project.priority}
+          <h3 className="font-medium text-sm">{project.nombre}</h3>
+          <span className={`${getPriorityColor(project.prioridad)} px-2 py-0.5 rounded-full text-xs font-medium`}>
+            {project.prioridad}
           </span>
         </div>
         <div className="flex items-center mb-2">
           <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 mr-2 text-xs">
-            {project.responsable.charAt(0)}
+            {(project.responsable_nombre || project.responsable || 'S/A').charAt(0).toUpperCase()}
           </div>
-          <span className="text-xs text-gray-500">{project.team}</span>
+          <span className="text-xs text-gray-500">{Array.isArray(project.equipo) ? project.equipo[0] : project.equipo}</span>
         </div>
         <div className="text-xs bg-gray-100 px-2 py-1 rounded mb-2">
           {project.subcolumn}
         </div>
         <div className="w-full bg-gray-200 rounded-full h-1.5">
-          <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${project.progress}%` }}></div>
+          <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${project.progreso}%` }}></div>
         </div>
       </div>
     );
@@ -226,7 +133,7 @@ const KanbanView = () => {
           </span>
         </div>
         <SortableContext
-          items={projects.map((p) => p.id)}
+          items={projects.map((p) => p.id.toString())}
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-2">
@@ -238,6 +145,10 @@ const KanbanView = () => {
       </div>
     );
   };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Cargando...</div>;
+  }
 
   return (
     <div className="p-4">
