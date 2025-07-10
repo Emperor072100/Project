@@ -1,39 +1,53 @@
-from sqlalchemy import Column, Integer, String, Table, ForeignKey
+from sqlalchemy import Table, Column, Integer, ForeignKey, String
 from sqlalchemy.orm import relationship
-from core.database import Base
+from core.database import Base  # Asegúrate de que esta importación sea consistente
 
-# Tabla de relación muchos a muchos para Proyecto-Tipo
-proyecto_tipo = Table(
-    "proyecto_tipo",
+# =============================================
+# Tablas de asociación (many-to-many)
+# =============================================
+
+proyecto_equipos = Table(
+    'proyecto_equipos',
     Base.metadata,
-    Column("proyecto_id", Integer, ForeignKey("proyectos.id"), primary_key=True),
-    Column("tipo_id", Integer, ForeignKey("tipos.id"), primary_key=True),
+    Column('proyecto_id', Integer, ForeignKey('proyectos.id'), primary_key=True),
+    Column('equipo_id', Integer, ForeignKey('equipos.id'), primary_key=True),
+    extend_existing=True
 )
 
-# Tabla de relación muchos a muchos para Proyecto-Equipo
-proyecto_equipo = Table(
-    "proyecto_equipo",
+proyecto_tipos = Table(
+    'proyecto_tipos',
     Base.metadata,
-    Column("proyecto_id", Integer, ForeignKey("proyectos.id"), primary_key=True),
-    Column("equipo_id", Integer, ForeignKey("equipos.id"), primary_key=True),
+    Column('proyecto_id', Integer, ForeignKey('proyectos.id'), primary_key=True),
+    Column('tipo_id', Integer, ForeignKey('tipos.id'), primary_key=True),
+    extend_existing=True
 )
 
-# Modelo para Tipo
-class Tipo(Base):
-    __tablename__ = "tipos"
 
-    id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String, unique=True, nullable=False)
-    
-    # Relación con proyectos
-    proyectos = relationship("Proyecto", secondary=proyecto_tipo, back_populates="tipos")
 
-# Modelo para Equipo
+
+
+# =============================================
+# Modelos de base de datos
+# =============================================
+
 class Equipo(Base):
     __tablename__ = "equipos"
-
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, unique=True, nullable=False)
     
-    # Relación con proyectos
-    proyectos = relationship("Proyecto", secondary=proyecto_equipo, back_populates="equipos")
+    proyectos = relationship(
+        "Proyecto", 
+        secondary=proyecto_equipos, 
+        back_populates="equipos"
+    )
+
+class Tipo(Base):
+    __tablename__ = "tipos"
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String, unique=True, nullable=False)
+    
+    proyectos = relationship(
+        "Proyecto", 
+        secondary=proyecto_tipos, 
+        back_populates="tipos"
+    )

@@ -6,7 +6,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # Now import without using "app."
 from core.database import SessionLocal, engine, Base
-from app.models import usuario, proyecto
+from app.models import usuario, proyecto, tipo_equipo
 from core.security import hash_password
 
 Base.metadata.create_all(bind=engine)

@@ -16,8 +16,20 @@ class ProyectoBase(BaseModel):
     fecha_fin: Optional[date]
     progreso: Optional[float]
 
-class ProyectoCreate(ProyectoBase):
-    responsable_id: Optional[int] = None
+    
+class ProyectoCreate(BaseModel):
+    nombre: str
+    responsable_id: int
+    estado_id: int
+    prioridad_id: int
+    objetivo: Optional[str] = None
+    enlace: Optional[str] = None
+    observaciones: Optional[str] = None
+    fecha_inicio: Optional[date] = None
+    fecha_fin: Optional[date] = None
+    progreso: Optional[float] = 0.0
+    tipos: Optional[List[int]] = []  # Para IDs de tipos
+    equipos: Optional[List[int]] = [] # Para IDs de equipos
 
 class ProyectoUpdate(BaseModel):
     nombre: Optional[str]

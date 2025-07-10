@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-
 from schemas.tarea import TareaCreate, TareaUpdate, TareaOut
 from app.models import tarea as models, proyecto as modelos_proyecto
 from app.dependencies import get_db
