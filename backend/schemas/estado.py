@@ -4,7 +4,10 @@ from typing import Optional
 
 class EstadoBase(BaseModel):
     nombre: str
-    categoria: Optional[str] = None
+    categoria: str | None = None
+
+class EstadoCreate(EstadoBase):
+    pass
 
 class EstadoOut(EstadoBase):
     id: int

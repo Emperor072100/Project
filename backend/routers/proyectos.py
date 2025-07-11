@@ -1,34 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from schemas.proyecto import ProyectoCreate, ProyectoUpdate, ProyectoOut
 from app.models import proyecto as modelo
+from app.models.tipo_equipo import Tipo, Equipo  # 👈 Import directo aquí
 from app.dependencies import get_db
 from core.security import get_current_user, UserInDB
-from typing import List
+from typing import List, Optional
 from app.models.usuario import Usuario
 from app.models.usuario import RolUsuario
-from app.models.tipo_equipo import proyecto_tipos, proyecto_equipos 
 import traceback
-from sqlalchemy.orm import contains_eager, joinedload
+from sqlalchemy.orm import joinedload
+from datetime import date
+
 
 router = APIRouter(prefix="/proyectos", tags=["Proyectos"])
-
-# @router.post("/", response_model=ProyectoOut)
-# def crear_proyecto(
-#     proyecto: ProyectoCreate,
-#     db: Session = Depends(get_db),
-#     usuario: UserInDB = Depends(get_current_user)
-# ):
-#     proyecto_data = proyecto.dict(exclude_unset=True)
-#     if 'responsable_id' not in proyecto_data or not proyecto_data['responsable_id']:
-#         proyecto_data['responsable_id'] = usuario.id
-#     if proyecto_data['responsable_id'] != usuario.id and usuario.rol != 'admin':
-#         raise HTTPException(status_code=403, detail="No tienes permisos para asignar proyectos a otros usuarios")
-#     nuevo = modelo.Proyecto(**proyecto_data)
-#     db.add(nuevo)
-#     db.commit()
-#     db.refresh(nuevo)
-#     return nuevo
 
 @router.post("/", response_model=ProyectoOut)
 def crear_proyecto(
@@ -36,75 +21,81 @@ def crear_proyecto(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    # Prepare data excluding relationships
     proyecto_data = proyecto.dict(exclude={"tipos", "equipos"})
-    
-    # Handle responsible assignment
+
     if not proyecto_data.get('responsable_id'):
         proyecto_data['responsable_id'] = usuario.id
 
-    # Permission check
     if usuario.rol != 'admin' and proyecto_data['responsable_id'] != usuario.id:
         raise HTTPException(status_code=403, detail="No tienes permisos para asignar proyectos a otros usuarios")
 
-    # Create proyecto instance
     nuevo_proyecto = modelo.Proyecto(**proyecto_data)
     db.add(nuevo_proyecto)
-    db.flush()  # Get the ID without committing yet
-    
-    # Handle tipos relationship
+    db.flush()  # Para obtener el ID sin hacer commit aún
+
     if proyecto.tipos:
-        tipos_objs = db.query(modelo.Tipo).filter(modelo.Tipo.id.in_(proyecto.tipos)).all()
+        tipos_objs = db.query(Tipo).filter(Tipo.id.in_(proyecto.tipos)).all()  # 👈 Cambio aquí
         nuevo_proyecto.tipos.extend(tipos_objs)
-    
-    # Handle equipos relationship
+
     if proyecto.equipos:
-        equipos_objs = db.query(modelo.Equipo).filter(modelo.Equipo.id.in_(proyecto.equipos)).all()
+        equipos_objs = db.query(Equipo).filter(Equipo.id.in_(proyecto.equipos)).all()  # 👈 Cambio aquí
         nuevo_proyecto.equipos.extend(equipos_objs)
-    
+
     db.commit()
     db.refresh(nuevo_proyecto)
     return nuevo_proyecto
-from sqlalchemy.orm import joinedload
+
+
+from fastapi import Query
+from typing import Optional
+from datetime import date
 
 @router.get("/")
 def listar_proyectos(
     db: Session = Depends(get_db),
-    usuario: UserInDB = Depends(get_current_user)
+    usuario: UserInDB = Depends(get_current_user),
+    estado_id: int = Query(None),
+    prioridad_id: int = Query(None),
+    desde: date = Query(None),
+    hasta: date = Query(None),
+    nombre: str = Query(None),
+    responsable_id: int = Query(None)
 ):
     try:
-        rol = usuario.rol
-        admin = RolUsuario.admin
-        user_rol = RolUsuario.usuario
+        query = db.query(modelo.Proyecto).options(
+            joinedload(modelo.Proyecto.tipos),
+            joinedload(modelo.Proyecto.equipos),
+            joinedload(modelo.Proyecto.estado),
+            joinedload(modelo.Proyecto.prioridad),
+            joinedload(modelo.Proyecto.responsable)
+        )
 
-        if str(rol) == str(admin):
-            proyectos = db.query(modelo.Proyecto).options(
-                joinedload(modelo.Proyecto.tipos),
-                joinedload(modelo.Proyecto.equipos),
-                joinedload(modelo.Proyecto.estado),
-                joinedload(modelo.Proyecto.prioridad),
-                joinedload(modelo.Proyecto.responsable)
-            ).all()
-        elif str(rol) == str(user_rol):
-            proyectos = db.query(modelo.Proyecto).options(
-                joinedload(modelo.Proyecto.tipos),
-                joinedload(modelo.Proyecto.equipos),
-                joinedload(modelo.Proyecto.estado),
-                joinedload(modelo.Proyecto.prioridad),
-                joinedload(modelo.Proyecto.responsable)
-            ).filter(modelo.Proyecto.responsable_id == usuario.id).all()
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Rol no válido para acceder a los proyectos: {rol}"
-            )
+        # Filtrado por rol
+        if usuario.rol != RolUsuario.admin:
+            query = query.filter(modelo.Proyecto.responsable_id == usuario.id)
+        elif responsable_id:
+            query = query.filter(modelo.Proyecto.responsable_id == responsable_id)
+
+        # Filtros opcionales
+        if estado_id:
+            query = query.filter(modelo.Proyecto.estado_id == estado_id)
+        if prioridad_id:
+            query = query.filter(modelo.Proyecto.prioridad_id == prioridad_id)
+        if desde:
+            query = query.filter(modelo.Proyecto.fecha_inicio >= desde)
+        if hasta:
+            query = query.filter(modelo.Proyecto.fecha_inicio <= hasta)
+        if nombre:
+            query = query.filter(modelo.Proyecto.nombre.ilike(f"%{nombre}%"))
+
+        proyectos = query.all()
 
         return [
             {
                 "id": proyecto.id,
                 "nombre": proyecto.nombre,
                 "responsable_id": proyecto.responsable_id,
-                "responsable_nombre": proyecto.responsable.nombre,
+                "responsable_nombre": proyecto.responsable.nombre if proyecto.responsable else None,
                 "estado": proyecto.estado.nombre,
                 "tipos": [tipo.nombre for tipo in proyecto.tipos],
                 "equipos": [equipo.nombre for equipo in proyecto.equipos],
@@ -130,30 +121,31 @@ def actualizar_proyecto(
     proyecto = db.query(modelo.Proyecto).filter_by(id=proyecto_id).first()
     if not proyecto:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
     if usuario.rol != "admin" and proyecto.responsable_id != usuario.id:
         raise HTTPException(status_code=403, detail="No tienes permisos para modificar este proyecto")
+
     if 'responsable_id' in datos.dict(exclude_unset=True) and datos.responsable_id != proyecto.responsable_id:
         if usuario.rol != "admin":
             raise HTTPException(status_code=403, detail="Solo los administradores pueden cambiar el responsable de un proyecto")
 
-    print("🔍 datos.dict():", datos.dict())
     update_data = datos.dict(exclude_unset=True)
-    print("🔍 Campos procesados (exclude_unset):", update_data)
 
     if 'tipo' in update_data:
         if update_data['tipo']:
-            tipos_objs = db.query(modelo.Tipo).filter(modelo.Tipo.nombre.in_(update_data['tipo'])).all()
+            tipos_objs = db.query(Tipo).filter(Tipo.nombre.in_(update_data['tipo'])).all()
             proyecto.tipos = tipos_objs
         update_data.pop('tipo', None)
 
     if 'equipo' in update_data:
         if update_data['equipo']:
-            equipos_objs = db.query(modelo.Equipo).filter(modelo.Equipo.nombre.in_(update_data['equipo'])).all()
+            equipos_objs = db.query(Equipo).filter(Equipo.nombre.in_(update_data['equipo'])).all()
             proyecto.equipos = equipos_objs
         update_data.pop('equipo', None)
 
     if 'estado' in update_data and update_data['estado'] not in [
-        'Conceptual', 'Análisis', 'Sin Empezar', 'En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas', 'Cancelado', 'Pausado', 'En producción', 'Desarrollado']:
+        'Conceptual', 'Análisis', 'Sin Empezar', 'En diseño', 'En desarrollo', 'En curso',
+        'Etapa pruebas', 'Cancelado', 'Pausado', 'En producción', 'Desarrollado']:
         raise HTTPException(status_code=422, detail="Estado no válido")
 
     if 'prioridad' in update_data and update_data['prioridad'] not in ['Alta', 'Media', 'Baja']:
@@ -165,6 +157,7 @@ def actualizar_proyecto(
     db.commit()
     db.refresh(proyecto)
     return proyecto
+
 
 @router.delete("/{proyecto_id}")
 def eliminar_proyecto(
@@ -178,6 +171,7 @@ def eliminar_proyecto(
     db.delete(proyecto)
     db.commit()
     return {"ok": True}
+
 
 @router.get("/{proyecto_id}", response_model=ProyectoOut)
 def obtener_proyecto(
@@ -200,7 +194,7 @@ def obtener_proyecto(
     tipos = [tipo.nombre for tipo in proyecto.tipos]
     equipos = [equipo.nombre for equipo in proyecto.equipos]
 
-    proyecto_dict = {
+    return {
         "id": proyecto.id,
         "nombre": proyecto.nombre,
         "estado": proyecto.estado,
@@ -216,5 +210,3 @@ def obtener_proyecto(
         "tipos": tipos,
         "equipos": equipos
     }
-
-    return proyecto_dict

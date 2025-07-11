@@ -2,6 +2,9 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date
+from schemas.estado import EstadoOut
+from schemas.prioridad import PrioridadOut
+from schemas.usuario import UsuarioOut
 
 class ProyectoBase(BaseModel):
     nombre: str
@@ -45,12 +48,35 @@ class ProyectoUpdate(BaseModel):
     fecha_fin: Optional[date]
     progreso: Optional[float]
 
-class ProyectoOut(ProyectoBase):
+class TipoOut(BaseModel):
     id: int
+    nombre: str
+    class Config:
+        from_attributes = True
+
+class EquipoOut(BaseModel):
+    id: int
+    nombre: str
+    class Config:
+        from_attributes = True
+
+class ProyectoOut(BaseModel):
+    id: int
+    nombre: str
+    objetivo: Optional[str]
+    enlace: Optional[str]
+    observaciones: Optional[str]
+    fecha_inicio: Optional[date]
+    fecha_fin: Optional[date]
+    progreso: Optional[int]
     responsable_id: int
-    responsable_nombre: str = None
-    tipos: List[str] = []
-    equipos: List[str] = []
+    responsable_nombre: Optional[str] = None
+
+    estado: EstadoOut
+    prioridad: PrioridadOut
+    tipos: List[TipoOut]
+    equipos: List[EquipoOut]
+
 
     class Config:
         from_attributes = True
