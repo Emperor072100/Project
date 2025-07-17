@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Proyecto } from '../views';
 import { useNavigate } from 'react-router-dom';
 import PanelDetalleProyecto from './PanelDetalleProyecto';
+import NuevoProyecto from './NuevoProyecto'; // Ajusta la importación en TablaProyectos.tsx
+import { toast } from 'react-hot-toast'; // Cambiado de react-toastify a react-hot-toast
 
 interface TablaProyectosProps {
   proyectos: Proyecto[];
@@ -54,9 +56,9 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   const navigate = useNavigate();
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState<Proyecto | null>(null);
 
-  const createUniqueKey = (prefix: string, id: number, value: string) => 
+  const createUniqueKey = (prefix: string, id: number, value: string) =>
     `${prefix}-${id}-${value.replace(/\s+/g, '-')}`;
-    
+
   // Función para obtener el color de la barra de progreso según el porcentaje
   const getProgressColor = (progreso: number) => {
     if (progreso < 25) return 'bg-red-500';
@@ -65,19 +67,39 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     return 'bg-green-500';
   };
 
+  // Manejar la creación de un nuevo proyecto
+  const handleProyectoCreado = () => {
+    // Recargar proyectos o actualizar la lista
+    // Por ejemplo, si tienes una función para actualizar:
+    // fetchProyectos();
+    toast.success("Proyecto creado exitosamente");
+  };
+
   return (
     <>
+      {/* Header con filtros */}
+      <div className="flex flex-wrap gap-2 justify-between items-center mb-2">
+        <div className="flex flex-wrap gap-2">
+          {/* Tus filtros existentes */}
+        </div>
+        
+        <div>
+          <NuevoProyecto onCreado={handleProyectoCreado} />
+        </div>
+      </div>
+
+      {/* Tabla */}
       <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-300">
         <table className="min-w-full text-xs text-left bg-white">
-          <thead className="bg-gradient-to-r from-green-500 to-green-600 text-white sticky top-0 z-10">
+          <thead className="bg-gradient-to-r from-green-500 to-green-600 text-white top-0 z-10">
             <tr>
               {[
                 "Nombre", "Responsable", "Estado", "Tipo", "Equipo", "Prioridad",
-                "Objetivo", "Fecha Inicio", "Fecha Fin", "Progreso", "Enlace", 
+                "Objetivo", "Fecha Inicio", "Fecha Fin", "Progreso", "Enlace",
                 "Observaciones", "Acciones"
               ].map(header => (
-                <th key={`header-${header.toLowerCase().replace(/\s+/g, '-')}`} 
-                    className="px-4 py-2 font-semibold text-xs tracking-wide">
+                <th key={`header-${header.toLowerCase().replace(/\s+/g, '-')}`}
+                  className="px-4 py-2 font-semibold text-xs tracking-wide">
                   {header}
                 </th>
               ))}
@@ -85,8 +107,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
           </thead>
           <tbody className="divide-y divide-gray-200">
             {filtrarProyectos().map((proyecto) => (
-              <tr key={proyecto.id} 
-                  className="hover:bg-green-50/50 transition-all duration-200">
+              <tr key={proyecto.id}
+                className="hover:bg-green-50/50 transition-all duration-200">
                 {/* Nombre */}
                 <td className="px-6 py-4 whitespace-normal">
                   <span className="text-green-700 font-medium hover:text-green-900 hover:underline cursor-pointer">
@@ -115,8 +137,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                             key={createUniqueKey('estado', proyecto.id, estado)}
                             onClick={() => handleSave(proyecto.id, 'estado', estado)}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                              estado === proyecto.estado 
-                                ? 'bg-yellow-200 text-yellow-800 ring-2 ring-yellow-500' 
+                              estado === proyecto.estado
+                                ? 'bg-yellow-200 text-yellow-800 ring-2 ring-yellow-500'
                                 : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                             }`}
                           >
@@ -124,7 +146,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                           </button>
                         ))}
                       </div>
-                      
+
                       <div className="font-medium text-xs text-gray-500 mb-1 mt-3">En curso</div>
                       <div className="flex flex-wrap gap-1">
                         {opcionesEstado.enProceso.map(estado => (
@@ -132,8 +154,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                             key={createUniqueKey('estado', proyecto.id, estado)}
                             onClick={() => handleSave(proyecto.id, 'estado', estado)}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                              estado === proyecto.estado 
-                                ? 'bg-blue-200 text-blue-800 ring-2 ring-blue-500' 
+                              estado === proyecto.estado
+                                ? 'bg-blue-200 text-blue-800 ring-2 ring-blue-500'
                                 : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                             }`}
                           >
@@ -141,7 +163,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                           </button>
                         ))}
                       </div>
-                      
+
                       <div className="font-medium text-xs text-gray-500 mb-1 mt-3">Completado</div>
                       <div className="flex flex-wrap gap-1">
                         {opcionesEstado.terminados.map(estado => {
@@ -149,7 +171,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                           let textColor = 'text-green-800';
                           let hoverColor = 'hover:bg-green-200';
                           let ringColor = 'ring-green-500';
-                          
+
                           if (estado === 'Cancelado') {
                             bgColor = 'bg-red-100';
                             textColor = 'text-red-800';
@@ -161,14 +183,14 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                             hoverColor = 'hover:bg-red-200';
                             ringColor = 'ring-red-500';
                           }
-                          
+
                           return (
                             <button
                               key={createUniqueKey('estado', proyecto.id, estado)}
                               onClick={() => handleSave(proyecto.id, 'estado', estado)}
                               className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                                estado === proyecto.estado 
-                                  ? `${bgColor} ${textColor} ring-2 ${ringColor}` 
+                                estado === proyecto.estado
+                                  ? `${bgColor} ${textColor} ring-2 ${ringColor}`
                                   : `${bgColor} ${textColor} ${hoverColor}`
                               }`}
                             >
@@ -179,7 +201,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <span 
+                    <span
                       className={`px-3 py-1.5 rounded-full text-xs font-medium inline-flex items-center ${getColorEstado(proyecto.estado)} cursor-pointer`}
                       onClick={() => handleEdit(proyecto.id, 'estado')}
                     >
@@ -191,13 +213,13 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 {/* Tipo */}
                 <td className="px-6 py-4 whitespace-normal">
                   {editando.id === proyecto.id && editando.campo === 'tipo' ? (
-                    <select 
-                      multiple 
-                      value={Array.isArray(proyecto.tipo) ? proyecto.tipo : [proyecto.tipo]} 
+                    <select
+                      multiple
+                      value={Array.isArray(proyecto.tipo) ? proyecto.tipo : [proyecto.tipo]}
                       onChange={(e) => {
                         const values = Array.from(e.target.selectedOptions, o => o.value);
                         handleSave(proyecto.id, 'tipo', values);
-                      }} 
+                      }}
                       className="border p-1 rounded w-full"
                     >
                       {opcionesTipo.map(op => (
@@ -221,9 +243,9 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                         {opcionesEquipo.map(equipo => {
                           let bgColor = '';
                           let textColor = '';
-                          
+
                           // Asignar colores según el equipo
-                          switch(equipo) {
+                          switch (equipo) {
                             case 'Dirección TI':
                               bgColor = 'bg-red-100';
                               textColor = 'text-red-800';
@@ -256,24 +278,24 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                               bgColor = 'bg-gray-100';
                               textColor = 'text-gray-800';
                           }
-                          
-                          const isSelected = Array.isArray(proyecto.equipo) 
+
+                          const isSelected = Array.isArray(proyecto.equipo)
                             ? proyecto.equipo.includes(equipo)
                             : proyecto.equipo === equipo;
-                            
+
                           return (
                             <button
                               key={createUniqueKey('equipo', proyecto.id, equipo)}
                               onClick={() => {
                                 const currentEquipo = Array.isArray(proyecto.equipo) ? [...proyecto.equipo] : [proyecto.equipo].filter(Boolean);
                                 let newEquipo;
-                                
+
                                 if (isSelected) {
                                   newEquipo = currentEquipo.filter(e => e !== equipo);
                                 } else {
                                   newEquipo = [...currentEquipo, equipo];
                                 }
-                                
+
                                 handleSave(proyecto.id, 'equipo', newEquipo);
                               }}
                               className={`px-3 py-1.5 rounded-full text-xs font-medium ${bgColor} ${textColor} ${
@@ -287,16 +309,16 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div 
+                    <div
                       onClick={() => handleEdit(proyecto.id, 'equipo')}
                       className="cursor-pointer flex flex-wrap gap-1"
                     >
                       {Array.isArray(proyecto.equipo) ? proyecto.equipo.map(equipo => {
                         let bgColor = '';
                         let textColor = '';
-                        
+
                         // Asignar colores según el equipo
-                        switch(equipo) {
+                        switch (equipo) {
                           case 'Dirección TI':
                             bgColor = 'bg-red-100';
                             textColor = 'text-red-800';
@@ -329,9 +351,9 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                             bgColor = 'bg-gray-100';
                             textColor = 'text-gray-800';
                         }
-                        
+
                         return (
-                          <span 
+                          <span
                             key={createUniqueKey('equipo-display', proyecto.id, equipo)}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}
                           >
@@ -350,9 +372,9 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 {/* Prioridad */}
                 <td className="px-6 py-4 whitespace-normal">
                   {editando.id === proyecto.id && editando.campo === 'prioridad' ? (
-                    <select 
-                      value={proyecto.prioridad} 
-                      onChange={(e) => handleSave(proyecto.id, 'prioridad', e.target.value)} 
+                    <select
+                      value={proyecto.prioridad}
+                      onChange={(e) => handleSave(proyecto.id, 'prioridad', e.target.value)}
                       className="border p-1 rounded w-full"
                     >
                       {opcionesPrioridad.map(p => (
@@ -362,7 +384,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                       ))}
                     </select>
                   ) : (
-                    <span 
+                    <span
                       className={`${getColorPrioridad(proyecto.prioridad)} px-2 py-1 rounded-full text-xs`}
                       onClick={() => handleEdit(proyecto.id, 'prioridad')}
                     >
@@ -374,14 +396,14 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 {/* Objetivo */}
                 <td className="px-6 py-4 whitespace-normal">
                   {editando.id === proyecto.id && editando.campo === 'objetivo' ? (
-                    <input 
-                      type="text" 
-                      value={proyecto.objetivo} 
-                      onChange={(e) => handleSave(proyecto.id, 'objetivo', e.target.value)} 
-                      className="border p-1 rounded w-full" 
+                    <input
+                      type="text"
+                      value={proyecto.objetivo}
+                      onChange={(e) => handleSave(proyecto.id, 'objetivo', e.target.value)}
+                      className="border p-1 rounded w-full"
                     />
                   ) : (
-                    <span 
+                    <span
                       onClick={() => handleEdit(proyecto.id, 'objetivo')}
                       className="cursor-pointer"
                     >
@@ -393,14 +415,14 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 {/* Fecha Inicio */}
                 <td className="px-6 py-4 whitespace-normal">
                   {editando.id === proyecto.id && editando.campo === 'fechaInicio' ? (
-                    <input 
-                      type="date" 
-                      value={proyecto.fechaInicio} 
-                      onChange={(e) => handleSave(proyecto.id, 'fechaInicio', e.target.value)} 
-                      className="border p-1 rounded w-full" 
+                    <input
+                      type="date"
+                      value={proyecto.fechaInicio}
+                      onChange={(e) => handleSave(proyecto.id, 'fechaInicio', e.target.value)}
+                      className="border p-1 rounded w-full"
                     />
                   ) : (
-                    <span 
+                    <span
                       onClick={() => handleEdit(proyecto.id, 'fechaInicio')}
                       className="cursor-pointer"
                     >
@@ -412,14 +434,14 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 {/* Fecha Fin */}
                 <td className="px-6 py-4 whitespace-normal">
                   {editando.id === proyecto.id && editando.campo === 'fechaFin' ? (
-                    <input 
-                      type="date" 
-                      value={proyecto.fechaFin} 
-                      onChange={(e) => handleSave(proyecto.id, 'fechaFin', e.target.value)} 
-                      className="border p-1 rounded w-full" 
+                    <input
+                      type="date"
+                      value={proyecto.fechaFin}
+                      onChange={(e) => handleSave(proyecto.id, 'fechaFin', e.target.value)}
+                      className="border p-1 rounded w-full"
                     />
                   ) : (
-                    <span 
+                    <span
                       onClick={() => handleEdit(proyecto.id, 'fechaFin')}
                       className="cursor-pointer"
                     >
@@ -433,26 +455,26 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                   {editando.id === proyecto.id && editando.campo === 'progreso' ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <input 
-                          type="range" 
-                          value={proyecto.progreso} 
-                          onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))} 
-                          min="0" 
-                          max="100" 
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" 
+                        <input
+                          type="range"
+                          value={proyecto.progreso}
+                          onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
+                          min="0"
+                          max="100"
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                         />
-                        <input 
-                          type="number" 
-                          value={proyecto.progreso} 
-                          onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))} 
-                          min="0" 
-                          max="100" 
-                          className="w-16 border p-1 rounded" 
+                        <input
+                          type="number"
+                          value={proyecto.progreso}
+                          onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
+                          min="0"
+                          max="100"
+                          className="w-16 border p-1 rounded"
                         />
                       </div>
                     </div>
                   ) : (
-                    <div 
+                    <div
                       onClick={() => handleEdit(proyecto.id, 'progreso')}
                       className="cursor-pointer space-y-1"
                     >
@@ -460,7 +482,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                         <span className="text-sm font-medium">{proyecto.progreso}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div 
+                        <div
                           className={`h-2.5 rounded-full ${getProgressColor(proyecto.progreso)}`}
                           style={{ width: `${proyecto.progreso}%` }}
                         ></div>
@@ -471,10 +493,10 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
 
                 {/* Enlace */}
                 <td className="px-6 py-4 whitespace-normal">
-                  <a 
-                    href={proyecto.enlace} 
-                    target="_blank" 
-                    rel="noreferrer" 
+                  <a
+                    href={proyecto.enlace}
+                    target="_blank"
+                    rel="noreferrer"
                     className="text-blue-600 underline"
                   >
                     Ver
@@ -484,16 +506,16 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 {/* Observaciones */}
                 <td className="px-6 py-4 whitespace-normal">
                   {editando.id === proyecto.id && editando.campo === 'observaciones' ? (
-                    <textarea 
-                      value={proyecto.observaciones} 
-                      onChange={(e) => handleSave(proyecto.id, 'observaciones', e.target.value)} 
-                      className="border p-1 rounded w-full" 
-                      rows={3} 
+                    <textarea
+                      value={proyecto.observaciones}
+                      onChange={(e) => handleSave(proyecto.id, 'observaciones', e.target.value)}
+                      className="border p-1 rounded w-full"
+                      rows={3}
                     />
                   ) : (
-                    <span 
-                      onClick={() => handleEdit(proyecto.id, 'observaciones')} 
-                      className="block max-w-xs truncate cursor-pointer" 
+                    <span
+                      onClick={() => handleEdit(proyecto.id, 'observaciones')}
+                      className="block max-w-xs truncate cursor-pointer"
                       title={proyecto.observaciones}
                     >
                       {proyecto.observaciones}
@@ -537,8 +559,12 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
 
       {/* Panel de Detalle Modal */}
       {proyectoSeleccionado && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={() => setProyectoSeleccionado(null)}
+          ></div>
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto z-10">
             <PanelDetalleProyecto
               proyecto={proyectoSeleccionado}
               onClose={() => setProyectoSeleccionado(null)}

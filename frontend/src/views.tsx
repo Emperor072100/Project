@@ -33,15 +33,35 @@ const createSelectKey = (prefix: string, value: string | number, index?: number)
 export const Dashboard: React.FC = () => {
   // Usar el contexto de proyectos en lugar del estado local
   const { proyectos, updateProyecto, deleteProyecto, fetchProyectos } = useProyectos();
+  const navigate = useNavigate();
   
+  useEffect(() => {
+    // Verificar si ya se ha recargado
+    const hasReloaded = sessionStorage.getItem('dashboard_reloaded');
+    
+    if (!hasReloaded) {
+      // Marcar como recargado antes de la recarga para evitar un bucle
+      sessionStorage.setItem('dashboard_reloaded', 'true');
+      
+      // Recargar la página después de un corto retraso
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    }
+    
+    // Limpiar el flag cuando se desmonte el componente (opcional)
+    return () => {
+      // Descomenta si quieres que recargue cada vez que se monte nuevamente
+      // sessionStorage.removeItem('dashboard_reloaded');
+    };
+  }, []); // Array de dependencias vacío - solo ejecutar al montar
+
   const [filtros, setFiltros] = useState({ estado: '', equipo: '', prioridad: '', responsable: '' });
   const [busqueda, setBusqueda] = useState<string>('');
   const [editando, setEditando] = useState<{ id: number | null; campo: string | null }>({ id: null, campo: null });
   const [user, setUser] = useState<{ id: string; rol: string }>({ id: '', rol: '' });
   const [mostrarModal, setMostrarModal] = useState(false);
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState<Proyecto | null>(null);
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId') || '';
@@ -106,6 +126,8 @@ export const Dashboard: React.FC = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  
   return (
     <div className="p-4 w-full bg-white space-y-4">
       <h1 className="text-xl font-bold text-green-600">Proyectos Andes BPO</h1>
@@ -185,42 +207,13 @@ export const Dashboard: React.FC = () => {
                 <option 
                   key={createSelectKey('responsable', res, index)} 
                   value={res}
-                  style={{color: 'red'}}
                 >
                   {res}
                 </option>
               ))}
           </select>
         </div>
-        
-        {/* Botón para mostrar modal - Solo visible para administradores */}
-        {(user.rol === 'admin') && (
-        <button
-          className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 ml-auto text-sm"
-          onClick={() => setMostrarModal(true)}
-        >
-          + Nuevo Proyecto
-        </button>
-        )}
-      </div>
-      
-      {/* Modal */}
-      {mostrarModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl relative">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-              onClick={() => setMostrarModal(false)}
-            >✕</button>
-            <h2 className="text-xl font-semibold mb-4">Nuevo Proyecto</h2>
-            <NuevoProyecto
-              onCreado={() => {
-                setMostrarModal(false);
-              }}
-            />
-          </div>
-        </div>
-      )}
+      </div> {/* Cierra el div de "flex flex-wrap gap-2 justify-between items-center mb-2" */}
       
       {/* KPIs */}
       <div className="mb-2">

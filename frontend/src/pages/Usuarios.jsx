@@ -64,17 +64,29 @@ const Usuarios = () => {
     setError(null); // Limpiar errores previos
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
       const url = editingId 
         ? `http://localhost:8000/usuarios/${editingId}` 
-        : 'http://localhost:8000/usuarios'; 
+        : 'http://localhost:8000/auth/register'; // Usar el nuevo endpoint
       
       const method = editingId ? 'PUT' : 'POST';
       
+      // Preparar el cuerpo de la solicitud según el formato requerido por FastAPI
+      const bodyData = { 
+        nombre: formData.nombre,
+        correo: formData.correo,
+        rol: formData.rol,
+        apellido: formData.apellido,
+        contraseña: formData.contraseña
+      };
+      
       // Para PUT, no enviar la contraseña si está vacía
-      const bodyData = { ...formData };
       if (editingId && !formData.contraseña) {
         delete bodyData.contraseña;
       }
+
+      console.log(`Enviando solicitud ${method} a: ${url}`);
+      console.log('Datos enviados:', JSON.stringify(bodyData));
 
       const response = await fetch(url, {
         method,
@@ -82,30 +94,44 @@ const Usuarios = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(bodyData) // Usar bodyData
+        body: JSON.stringify(bodyData)
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Error al guardar usuario' }));
-        throw new Error(errorData.detail || 'Error al guardar usuario');
+        throw new Error(`Error ${response.status}: No se pudo ${editingId ? 'actualizar' : 'crear'} el usuario`);
       }
       
-      // Actualizar la lista de usuarios
+      // Si todo salió bien, actualizar usuarios y resetear formulario
       fetchUsuarios();
-      
-      // Limpiar el formulario
       setFormData({
         nombre: '',
-        apellido: '', // ← añadir esto
+        apellido: '',
         correo: '',
         contraseña: '',
         rol: 'usuario'
-      });   
+      });
       setEditingId(null);
       setShowForm(false);
     } catch (err) {
       setError('Error: ' + err.message);
       console.error(err);
+    }
+  };
+
+  const handleFormSubmit = async (e) => {
+    const response = await handleSubmit(e);
+    if (response) {
+      // Si todo salió bien, actualizar usuarios y resetear formulario
+      fetchUsuarios();
+      setFormData({
+        nombre: '',
+        apellido: '',
+        correo: '',
+        contraseña: '',
+        rol: 'usuario'
+      });
+      setEditingId(null);
+      setShowForm(false);
     }
   };
 
@@ -192,7 +218,7 @@ const Usuarios = () => {
           <h2 className="text-xl font-semibold mb-4">
             {editingId ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
           </h2>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleFormSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
@@ -296,13 +322,13 @@ const Usuarios = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleEdit(usuario)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-3"
+                        className="text-blue-600 hover:text-blue-900"
                       >
                         <FaEdit />
                       </button>
                       <button
                         onClick={() => handleDelete(usuario.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-red-600 hover:text-red-900 ml-2"
                       >
                         <FaTrash />
                       </button>
@@ -311,7 +337,7 @@ const Usuarios = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
                     {searchTerm ? 'No hay usuarios que coincidan con la búsqueda.' : 'No hay usuarios registrados'}
                   </td>
                 </tr>
