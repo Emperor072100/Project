@@ -15,15 +15,22 @@ def crear_usuario(
     db: Session = Depends(get_db)
 ):
     try:
-        print("Datos recibidos en POST /usuarios/:", usuario)
-
+        print(f"🔍 Datos recibidos: {usuario}")
+        
+        # Verificar si el usuario ya existe
         existente = db.query(Usuario).filter(
             (Usuario.nombre == usuario.nombre) | (Usuario.correo == usuario.correo)
         ).first()
+        
         if existente:
+            print("❌ Usuario ya existe")
             raise HTTPException(status_code=400, detail="Nombre o correo ya en uso")
 
+        print("🔑 Hasheando contraseña...")
         hashed_password = hash_password(usuario.contraseña)
+        print("✅ Contraseña hasheada exitosamente")
+        
+        print("📝 Creando usuario...")
         nuevo_usuario = Usuario(
             nombre=usuario.nombre,
             apellido=usuario.apellido,
@@ -31,13 +38,23 @@ def crear_usuario(
             hashed_password=hashed_password,
             rol=usuario.rol
         )
+        
+        print("💾 Guardando en base de datos...")
         db.add(nuevo_usuario)
         db.commit()
         db.refresh(nuevo_usuario)
+        
+        print("✅ Usuario creado exitosamente")
         return nuevo_usuario
+        
+    except HTTPException as http_exc:
+        print(f"❌ HTTPException: {http_exc.detail}")
+        raise http_exc
     except Exception as e:
-        print("🔥 ERROR creando usuario:", e)
-        raise HTTPException(status_code=500, detail="Error interno del servidor")
+        print(f"🔥 ERROR inesperado: {str(e)}")
+        print(f"🔥 Tipo de error: {type(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 @router.get("", response_model=List[UsuarioOut])
 def listar_usuarios(nombre: Optional[str] = Query(None), db: Session = Depends(get_db), current_user = Depends(get_current_user)):

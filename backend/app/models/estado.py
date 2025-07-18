@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from core.database import Base
 
 class Estado(Base):
-    __tablename__ = "estados"
+    __tablename__ = "project_estados"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(255), nullable=False)

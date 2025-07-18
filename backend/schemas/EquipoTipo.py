@@ -11,7 +11,7 @@ class ProyectoTipoCreate(ProyectoTipoBase):
 
 class ProyectoTipo(ProyectoTipoBase):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ProyectoEquipoBase(BaseModel):
     proyecto_id: int
@@ -22,7 +22,7 @@ class ProyectoEquipoCreate(ProyectoEquipoBase):
 
 class ProyectoEquipo(ProyectoEquipoBase):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Related entity schemas
 class TipoBase(BaseModel):
@@ -34,7 +34,7 @@ class TipoCreate(TipoBase):
 class Tipo(TipoBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class EquipoBase(BaseModel):
     nombre: str
@@ -45,4 +45,4 @@ class EquipoCreate(EquipoBase):
 class Equipo(EquipoBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True

@@ -7,7 +7,7 @@ from app.models.prioridad import Prioridad
 
 class Proyecto(Base):
 
-    __tablename__ = "proyectos"
+    __tablename__ = "project_proyectos"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
@@ -19,10 +19,10 @@ class Proyecto(Base):
     fecha_inicio = Column(Date)
     fecha_fin = Column(Date)
     progreso = Column(Float)
-    responsable_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    responsable_id = Column(Integer, ForeignKey("project_usuarios.id"), nullable=False)
 
-    estado_id = Column(Integer, ForeignKey("estados.id"), nullable=False)
-    prioridad_id = Column(Integer, ForeignKey("prioridades.id"), nullable=False)
+    estado_id = Column(Integer, ForeignKey("project_estados.id"), nullable=False)
+    prioridad_id = Column(Integer, ForeignKey("project_prioridades.id"), nullable=False)
 
     estado = relationship("Estado", back_populates="proyectos")
     prioridad = relationship("Prioridad", back_populates="proyectos")

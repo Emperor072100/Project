@@ -9,16 +9,16 @@ from core.database import Base  # Asegúrate de que esta importación sea consis
 proyecto_equipos = Table(
     'proyecto_equipos',
     Base.metadata,
-    Column('proyecto_id', Integer, ForeignKey('proyectos.id'), primary_key=True),
-    Column('equipo_id', Integer, ForeignKey('equipos.id'), primary_key=True),
+    Column('proyecto_id', Integer, ForeignKey('project_proyectos.id'), primary_key=True),
+    Column('equipo_id', Integer, ForeignKey('project_equipos.id'), primary_key=True),
     extend_existing=True
 )
 
 proyecto_tipos = Table(
     'proyecto_tipos',
     Base.metadata,
-    Column('proyecto_id', Integer, ForeignKey('proyectos.id'), primary_key=True),
-    Column('tipo_id', Integer, ForeignKey('tipos.id'), primary_key=True),
+    Column('proyecto_id', Integer, ForeignKey('project_proyectos.id'), primary_key=True),
+    Column('tipo_id', Integer, ForeignKey('project_tipos.id'), primary_key=True),
     extend_existing=True
 )
 
@@ -31,7 +31,7 @@ proyecto_tipos = Table(
 # =============================================
 
 class Equipo(Base):
-    __tablename__ = "equipos"
+    __tablename__ = "project_equipos"
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, unique=True, nullable=False)
     
@@ -42,7 +42,7 @@ class Equipo(Base):
     )
 
 class Tipo(Base):
-    __tablename__ = "tipos"
+    __tablename__ = "project_tipos"
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, unique=True, nullable=False)
     

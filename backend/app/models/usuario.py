@@ -8,7 +8,7 @@ class RolUsuario(str, enum.Enum):
     usuario = "usuario"
 
 class Usuario(Base):
-    __tablename__ = "usuarios"
+    __tablename__ = "project_usuarios"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, unique=True, index=True, nullable=False)
