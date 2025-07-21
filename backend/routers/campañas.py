@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 from schemas.campaña import CampañaCreate, CampañaUpdate, CampañaOut
-from app.models.campaña import Campaña, TipoCampaña
+from app.models.campana import Campaña, TipoCampaña
 from app.models.cliente import Cliente
 from app.dependencies import get_db
 from core.security import get_current_user, UserInDB

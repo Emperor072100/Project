@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from app.models.campaña import TipoCampaña
+from app.models.campana import TipoCampaña
 
 
 class CampañaBase(BaseModel):
