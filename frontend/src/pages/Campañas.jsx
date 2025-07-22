@@ -53,9 +53,34 @@ const Campañas = () => {
         axios.get('http://localhost:8000/campañas/estadisticas', config)
       ]);
       
-      setCampañas(campañasRes.data);
+      // Mapear los tipos del backend a los valores del frontend para mostrar
+      const backendToFrontendMapping = {
+        'SAC': 'SAC',
+        'TMG': 'TMC',  // Backend TMG -> Frontend TMC
+        'OTRO': 'TVT', // Backend OTRO -> Frontend TVT
+        'CBI': 'CBZ'   // Backend CBI -> Frontend CBZ
+      };
+      
+      // Mapear los tipos en las campañas recibidas
+      const campañasMapeadas = campañasRes.data.map(campaña => ({
+        ...campaña,
+        tipo: backendToFrontendMapping[campaña.tipo] || campaña.tipo
+      }));
+      
+      // También mapear las estadísticas si es necesario
+      const estadisticasMapeadas = {
+        ...estadisticasRes.data,
+        por_servicio: {
+          SAC: estadisticasRes.data.por_servicio.SAC || 0,
+          TMC: estadisticasRes.data.por_servicio.TMG || 0, // Backend TMG -> Frontend TMC
+          TVT: estadisticasRes.data.por_servicio.OTRO || 0, // Backend OTRO -> Frontend TVT
+          CBZ: estadisticasRes.data.por_servicio.CBI || 0   // Backend CBI -> Frontend CBZ
+        }
+      };
+      
+      setCampañas(campañasMapeadas);
       setClientes(clientesRes.data);
-      setEstadisticas(estadisticasRes.data);
+      setEstadisticas(estadisticasMapeadas);
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast.error('Error al cargar los datos');
@@ -94,13 +119,25 @@ const Campañas = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
+      // Mapear los tipos del frontend a los valores que espera el backend
+      const tipoMapping = {
+        'SAC': 'SAC',
+        'TMC': 'TMG',  // Frontend TMC -> Backend TMG
+        'TVT': 'OTRO', // Frontend TVT -> Backend OTRO
+        'CBZ': 'CBI'   // Frontend CBZ -> Backend CBI
+      };
+      
       const datosEnvio = {
         ...formCampaña,
         cliente_id: parseInt(formCampaña.cliente_id),
+        tipo: tipoMapping[formCampaña.tipo] || formCampaña.tipo, // Mapear el tipo
         cje: formCampaña.ejecutivo, // Mapear ejecutivo a cje para el backend
         fecha_inicio: formCampaña.fecha_inicio || null,
         estado: 'Activa'
       };
+
+      console.log('Datos originales del formulario:', formCampaña);
+      console.log('Datos que se envían al backend:', datosEnvio);
 
       await axios.post('http://localhost:8000/campañas/', datosEnvio, config);
       
