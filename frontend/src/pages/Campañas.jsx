@@ -11,7 +11,7 @@ const Campañas = () => {
   const [estadisticas, setEstadisticas] = useState({
     total_clientes: 0,
     total_campañas: 0,
-    por_servicio: { SAC: 0, TMG: 0, CBI: 0, OTRO: 0 }
+    por_servicio: { SAC: 0, TMC: 0, TVT: 0, CBZ: 0 }
   });
   
   // Estados para modales
@@ -155,38 +155,112 @@ const Campañas = () => {
       </div>
 
       {/* Tarjetas de estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
-          <div className="flex items-center">
-            <FaUsers className="text-blue-500 text-2xl mr-3" />
-            <div>
-              <p className="text-gray-600 text-sm">Clientes</p>
-              <p className="text-2xl font-bold text-blue-600">{estadisticas.total_clientes}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
-          <div className="flex items-center">
-            <FaBullhorn className="text-green-500 text-2xl mr-3" />
-            <div>
-              <p className="text-gray-600 text-sm">Campañas</p>
-              <p className="text-2xl font-bold text-green-600">{estadisticas.total_campañas}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
-          <div className="flex items-center">
-            <FaChartBar className="text-purple-500 text-2xl mr-3" />
-            <div>
-              <p className="text-gray-600 text-sm">Por Servicio</p>
-              <div className="text-sm">
-                <span className="font-semibold">SAC: {estadisticas.por_servicio.SAC}</span>
-                <span className="ml-2 font-semibold">TMG: {estadisticas.por_servicio.TMG}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+        {/* Columna izquierda - Tarjetas apiladas */}
+        <div className="flex flex-col h-full space-y-3">
+          {/* Tarjeta Clientes */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 flex-1">
+            <div className="flex items-center justify-between h-full">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <FaUsers className="text-blue-600 text-2xl" />
+                </div>
+                <div>
+                  <p className="text-gray-600 text-lg font-medium">Clientes</p>
+                  <p className="text-gray-500 text-base">Registrados en sistema</p>
+                </div>
               </div>
-              <div className="text-sm">
-                <span className="font-semibold">CBI: {estadisticas.por_servicio.CBI}</span>
+              <div className="text-right">
+                <p className="text-4xl font-bold text-blue-600">{estadisticas.total_clientes}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tarjeta Campañas */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 flex-1">
+            <div className="flex items-center justify-between h-full">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <FaBullhorn className="text-green-600 text-2xl" />
+                </div>
+                <div>
+                  <p className="text-gray-600 text-lg font-medium">Campañas</p>
+                  <p className="text-gray-500 text-base">Activas en sistema</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-4xl font-bold text-green-600">{estadisticas.total_campañas}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tarjeta Por Servicio - Más grande (2 columnas) */}
+        <div className="lg:col-span-2">
+          <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow duration-200 h-full">
+            {/* Título superior */}
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="p-1.5 bg-purple-50 rounded-lg">
+                <FaChartBar className="text-purple-600 text-lg" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Distribución por Servicio</h3>
+                <p className="text-gray-500 text-base">Campañas actuales por tipo</p>
+              </div>
+            </div>
+            
+            {/* Grid 2x2 con mini tarjetas */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Mini tarjeta SAC */}
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-2 hover:shadow-sm transition-shadow duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-600 text-base font-semibold">SAC</p>
+                    <p className="text-blue-800 text-base mt-1">Servicio de Atención</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-blue-800">{estadisticas.por_servicio.SAC}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mini tarjeta TMC */}
+              <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-2 hover:shadow-sm transition-shadow duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-green-600 text-base font-semibold">TMC</p>
+                    <p className="text-green-800 text-base mt-1">Telemarketing Central</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-green-800">{estadisticas.por_servicio.TMC}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mini tarjeta TVT */}
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-2 hover:shadow-sm transition-shadow duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-600 text-base font-semibold">TVT</p>
+                    <p className="text-purple-800 text-base mt-1">Televentas Total</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-purple-800">{estadisticas.por_servicio.TVT}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mini tarjeta CBZ */}
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-2 hover:shadow-sm transition-shadow duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-orange-600 text-base font-semibold">CBZ</p>
+                    <p className="text-orange-800 text-base mt-1">Call Back Zone</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-orange-800">{estadisticas.por_servicio.CBZ}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -194,7 +268,7 @@ const Campañas = () => {
       </div>
 
       {/* Botones de acción */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-3 mb-4">
         <button
           onClick={() => setModalCliente(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
@@ -239,8 +313,9 @@ const Campañas = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                       campaña.tipo === 'SAC' ? 'bg-blue-100 text-blue-800' :
-                      campaña.tipo === 'TMG' ? 'bg-green-100 text-green-800' :
-                      campaña.tipo === 'CBI' ? 'bg-purple-100 text-purple-800' :
+                      campaña.tipo === 'TMC' ? 'bg-green-100 text-green-800' :
+                      campaña.tipo === 'TVT' ? 'bg-purple-100 text-purple-800' :
+                      campaña.tipo === 'CBZ' ? 'bg-orange-100 text-orange-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
                       {campaña.tipo}
@@ -428,9 +503,9 @@ const Campañas = () => {
                 className="w-full p-2 border border-gray-300 rounded-md"
               >
                 <option value="SAC">SAC</option>
-                <option value="TMG">TMG</option>
-                <option value="CBI">CBI</option>
-                <option value="OTRO">OTRO</option>
+                <option value="TMC">TMC</option>
+                <option value="TVT">TVT</option>
+                <option value="CBZ">CBZ</option>
               </select>
             </div>
             <div>
