@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaHistory, FaUsers, FaBullhorn, FaChartBar } from 'react-icons/fa';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import Modal from '../components/Modal';
+import Swal from 'sweetalert2';
 
 const Campañas = () => {
   // Estados principales
@@ -12,26 +12,6 @@ const Campañas = () => {
     total_clientes: 0,
     total_campañas: 0,
     por_servicio: { SAC: 0, TMC: 0, TVT: 0, CBZ: 0 }
-  });
-  
-  // Estados para modales
-  const [modalCliente, setModalCliente] = useState(false);
-  const [modalCampaña, setModalCampaña] = useState(false);
-  
-  // Estados para formularios
-  const [formCliente, setFormCliente] = useState({
-    nombre: '',
-    telefono: '',
-    correo: ''
-  });
-  
-  const [formCampaña, setFormCampaña] = useState({
-    nombre: '',
-    tipo: 'SAC',
-    cliente_id: '',
-    lider: '',
-    ejecutivo: '',
-    fecha_inicio: ''
   });
   
   const [loading, setLoading] = useState(false);
@@ -64,62 +44,6 @@ const Campañas = () => {
     }
   };
 
-  const handleClienteSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      
-      await axios.post('http://localhost:8000/clientes/', formCliente, config);
-      
-      toast.success('Cliente creado exitosamente');
-      setModalCliente(false);
-      setFormCliente({
-        nombre: '',
-        telefono: '',
-        correo: ''
-      });
-      cargarDatos();
-    } catch (error) {
-      console.error('Error creando cliente:', error);
-      toast.error('Error al crear el cliente');
-    }
-  };
-
-  const handleCampañaSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      
-      // Preparar datos para envío
-      const datosEnvio = {
-        ...formCampaña,
-        cliente_id: parseInt(formCampaña.cliente_id),
-        cje: formCampaña.ejecutivo, // Mapear ejecutivo a cje para el backend
-        fecha_inicio: formCampaña.fecha_inicio || null,
-        estado: 'Activa'
-      };
-      
-      await axios.post('http://localhost:8000/campañas/', datosEnvio, config);
-      
-      toast.success('Campaña creada exitosamente');
-      setModalCampaña(false);
-      setFormCampaña({
-        nombre: '',
-        tipo: 'SAC',
-        cliente_id: '',
-        lider: '',
-        ejecutivo: '',
-        fecha_inicio: ''
-      });
-      cargarDatos();
-    } catch (error) {
-      console.error('Error creando campaña:', error);
-      toast.error('Error al crear la campaña');
-    }
-  };
-
   const handleAdministrar = (campaña) => {
     toast.info(`Administrando campaña: ${campaña.nombre}`);
     // Aquí puedes implementar la lógica de administración
@@ -128,6 +52,223 @@ const Campañas = () => {
   const handleHistorial = (campaña) => {
     toast.info(`Ver historial de: ${campaña.nombre}`);
     // Aquí puedes implementar la lógica del historial
+  };
+
+  // Función para mostrar formulario de cliente con SweetAlert2
+  const mostrarFormularioCliente = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: '👥 Agregar Nuevo Cliente',
+      html: `
+        <div class="space-y-4">
+          <div class="text-left">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo *</label>
+            <input id="swal-input1" class="swal2-input w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="Ingrese el nombre del cliente">
+          </div>
+          <div class="text-left">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+            <input id="swal-input2" class="swal2-input w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="Ej: +1 234 567 8900">
+          </div>
+          <div class="text-left">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico *</label>
+            <input id="swal-input3" type="email" class="swal2-input w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="cliente@empresa.com">
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: '✅ Crear Cliente',
+      cancelButtonText: '❌ Cancelar',
+      confirmButtonColor: '#3b82f6',
+      cancelButtonColor: '#6b7280',
+      customClass: {
+        popup: 'rounded-2xl',
+        title: 'text-lg font-semibold text-gray-800',
+        confirmButton: 'font-medium px-6 py-3 rounded-lg',
+        cancelButton: 'font-medium px-6 py-3 rounded-lg',
+      },
+      preConfirm: () => {
+        const nombre = document.getElementById('swal-input1').value;
+        const telefono = document.getElementById('swal-input2').value;
+        const correo = document.getElementById('swal-input3').value;
+        
+        if (!nombre || !telefono || !correo) {
+          Swal.showValidationMessage('Por favor complete todos los campos');
+          return false;
+        }
+        
+        if (!correo.includes('@')) {
+          Swal.showValidationMessage('Por favor ingrese un correo válido');
+          return false;
+        }
+        
+        return { nombre, telefono, correo };
+      }
+    });
+
+    if (formValues) {
+      await crearCliente(formValues);
+    }
+  };
+
+  // Función para mostrar formulario de campaña con SweetAlert2
+  const mostrarFormularioCampaña = async () => {
+    const clientesOptions = clientes.map(cliente => 
+      `<option value="${cliente.id}">${cliente.nombre}</option>`
+    ).join('');
+
+    const { value: formValues } = await Swal.fire({
+      title: '📢 Agregar Nueva Campaña',
+      html: `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="text-left">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Campaña *</label>
+            <input id="swal-nombre" class="swal2-input w-full p-2.5 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200" placeholder="Ingrese el nombre de la campaña">
+          </div>
+          <div class="text-left">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Servicio *</label>
+            <select id="swal-tipo" class="swal2-select w-full p-2.5 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200">
+              <option value="SAC">SAC - Servicio de Atención</option>
+              <option value="TMC">TMC - Telemarketing Central</option>
+              <option value="TVT">TVT - Televentas Total</option>
+              <option value="CBZ">CBZ - Cobranza</option>
+            </select>
+          </div>
+          <div class="text-left">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
+            <select id="swal-cliente" class="swal2-select w-full p-2.5 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200">
+              <option value="">Seleccionar cliente</option>
+              ${clientesOptions}
+            </select>
+          </div>
+          <div class="text-left">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Líder de Campaña *</label>
+            <input id="swal-lider" class="swal2-input w-full p-2.5 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200" placeholder="Nombre del líder">
+          </div>
+          <div class="text-left">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ejecutivo *</label>
+            <input id="swal-ejecutivo" class="swal2-input w-full p-2.5 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200" placeholder="Nombre del ejecutivo">
+          </div>
+          <div class="text-left">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio *</label>
+            <input id="swal-fecha" type="datetime-local" class="swal2-input w-full p-2.5 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200">
+          </div>
+        </div>
+      `,
+      width: '800px',
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: '✅ Crear Campaña',
+      cancelButtonText: '❌ Cancelar',
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#6b7280',
+      customClass: {
+        popup: 'rounded-2xl',
+        title: 'text-lg font-semibold text-gray-800',
+        confirmButton: 'font-medium px-6 py-3 rounded-lg',
+        cancelButton: 'font-medium px-6 py-3 rounded-lg',
+      },
+      preConfirm: () => {
+        const nombre = document.getElementById('swal-nombre').value;
+        const tipo = document.getElementById('swal-tipo').value;
+        const cliente_id = document.getElementById('swal-cliente').value;
+        const lider = document.getElementById('swal-lider').value;
+        const ejecutivo = document.getElementById('swal-ejecutivo').value;
+        const fecha_inicio = document.getElementById('swal-fecha').value;
+        
+        if (!nombre || !cliente_id || !lider || !ejecutivo || !fecha_inicio) {
+          Swal.showValidationMessage('Por favor complete todos los campos');
+          return false;
+        }
+        
+        return { nombre, tipo, cliente_id, lider, ejecutivo, fecha_inicio };
+      }
+    });
+
+    if (formValues) {
+      await crearCampaña(formValues);
+    }
+  };
+
+  // Función para crear cliente
+  const crearCliente = async (datosCliente) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      await axios.post('http://localhost:8000/clientes/', datosCliente, config);
+      
+      await Swal.fire({
+        title: '¡Éxito! 🎉',
+        text: 'Cliente creado exitosamente',
+        icon: 'success',
+        confirmButtonText: 'Continuar',
+        confirmButtonColor: '#3b82f6',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'font-medium px-6 py-3 rounded-lg',
+        }
+      });
+      
+      cargarDatos();
+    } catch (error) {
+      console.error('Error creando cliente:', error);
+      await Swal.fire({
+        title: '¡Error! ❌',
+        text: 'Hubo un problema al crear el cliente',
+        icon: 'error',
+        confirmButtonText: 'Intentar de nuevo',
+        confirmButtonColor: '#dc2626',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'font-medium px-6 py-3 rounded-lg',
+        }
+      });
+    }
+  };
+
+  // Función para crear campaña
+  const crearCampaña = async (datosCampaña) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      const datosEnvio = {
+        ...datosCampaña,
+        cliente_id: parseInt(datosCampaña.cliente_id),
+        cje: datosCampaña.ejecutivo,
+        fecha_inicio: datosCampaña.fecha_inicio || null,
+        estado: 'Activa'
+      };
+      
+      await axios.post('http://localhost:8000/campañas/', datosEnvio, config);
+      
+      await Swal.fire({
+        title: '¡Éxito! 🎉',
+        text: 'Campaña creada exitosamente',
+        icon: 'success',
+        confirmButtonText: 'Continuar',
+        confirmButtonColor: '#16a34a',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'font-medium px-6 py-3 rounded-lg',
+        }
+      });
+      
+      cargarDatos();
+    } catch (error) {
+      console.error('Error creando campaña:', error);
+      await Swal.fire({
+        title: '¡Error! ❌',
+        text: 'Hubo un problema al crear la campaña',
+        icon: 'error',
+        confirmButtonText: 'Intentar de nuevo',
+        confirmButtonColor: '#dc2626',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'font-medium px-6 py-3 rounded-lg',
+        }
+      });
+    }
   };
 
   return (
@@ -238,7 +379,7 @@ const Campañas = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-orange-600 text-base font-semibold">CBZ</p>
-                    <p className="text-orange-800 text-base mt-1">Call Back Zone</p>
+                    <p className="text-orange-800 text-base mt-1">Cobranza</p>
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-bold text-orange-800">{estadisticas.por_servicio.CBZ}</span>
@@ -253,14 +394,14 @@ const Campañas = () => {
       {/* Botones de acción */}
       <div className="flex gap-3 mb-4">
         <button
-          onClick={() => setModalCliente(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          onClick={mostrarFormularioCliente}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
         >
           <FaPlus /> Agregar Cliente
         </button>
         <button
-          onClick={() => setModalCampaña(true)}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          onClick={mostrarFormularioCampaña}
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
         >
           <FaPlus /> Agregar Campaña
         </button>
@@ -269,283 +410,113 @@ const Campañas = () => {
       {/* Tabla de campañas */}
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="text-gray-500">Cargando...</div>
+          <div className="text-gray-500 text-lg">Cargando...</div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full table-auto">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campaña</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ejecutivo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Líder</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {campañas.map((campaña) => (
-                <tr key={campaña.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {campaña.cliente_nombre}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {campaña.nombre}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      campaña.tipo === 'SAC' ? 'bg-blue-100 text-blue-800' :
-                      campaña.tipo === 'TMC' ? 'bg-green-100 text-green-800' :
-                      campaña.tipo === 'TVT' ? 'bg-purple-100 text-purple-800' :
-                      campaña.tipo === 'CBZ' ? 'bg-orange-100 text-orange-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {campaña.tipo}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {campaña.cje || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {campaña.lider || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAdministrar(campaña)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
-                      >
-                        <FaEdit /> Administrar
-                      </button>
-                      <button
-                        onClick={() => handleHistorial(campaña)}
-                        className="text-green-600 hover:text-green-900 flex items-center gap-1"
-                      >
-                        <FaHistory /> Historial
-                      </button>
-                    </div>
-                  </td>
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+          {/* Encabezado de la tabla */}
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-800">Campañas Registradas</h2>
+            <p className="text-gray-600 text-sm mt-1">Lista completa de todas las campañas activas</p>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-gray-100 to-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    Cliente
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    Campaña
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    Tipo de Servicio
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    Ejecutivo
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    Líder
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    Acciones
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {campañas.map((campaña, index) => (
+                  <tr 
+                    key={campaña.id} 
+                    className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-25 transition-all duration-200 ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                    }`}
+                  >
+                    <td className="px-6 py-4 text-center">
+                      <div className="text-sm font-medium text-gray-900">
+                        {campaña.cliente_nombre}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="text-sm font-medium text-gray-900">
+                        {campaña.nombre}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-lg border ${
+                        campaña.tipo === 'SAC' ? 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 border-blue-200' :
+                        campaña.tipo === 'TMC' ? 'bg-gradient-to-br from-green-50 to-green-100 text-green-800 border-green-200' :
+                        campaña.tipo === 'TVT' ? 'bg-gradient-to-br from-purple-50 to-purple-100 text-purple-800 border-purple-200' :
+                        campaña.tipo === 'CBZ' ? 'bg-gradient-to-br from-orange-50 to-orange-100 text-orange-800 border-orange-200' :
+                        'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border-gray-200'
+                      }`}>
+                        {campaña.tipo}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="text-sm text-gray-900 font-medium">
+                        {campaña.cje || <span className="text-gray-400 italic">Sin asignar</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="text-sm text-gray-900 font-medium">
+                        {campaña.lider || <span className="text-gray-400 italic">Sin asignar</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={() => handleAdministrar(campaña)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                        >
+                          <FaEdit className="text-xs" />
+                          Administrar
+                        </button>
+                        <button
+                          onClick={() => handleHistorial(campaña)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 hover:border-green-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                        >
+                          <FaHistory className="text-xs" />
+                          Historial
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Footer de la tabla */}
+          {campañas.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <FaBullhorn className="mx-auto text-4xl mb-2 opacity-50" />
+              <p className="text-lg font-medium">No hay campañas registradas</p>
+              <p className="text-sm">Comienza agregando tu primera campaña</p>
+            </div>
+          )}
         </div>
       )}
-
-      {/* Modal Agregar Cliente */}
-      <Modal
-        isOpen={modalCliente}
-        onClose={() => setModalCliente(false)}
-        title="Agregar Nuevo Cliente"
-      >
-        <div className="p-8">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 mb-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-blue-600 rounded-lg">
-                <FaUsers className="text-white text-xl" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-blue-800">Información del Cliente</h3>
-                <p className="text-blue-600">Complete los datos básicos del nuevo cliente</p>
-              </div>
-            </div>
-          </div>
-          
-          <form onSubmit={handleClienteSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre Completo *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formCliente.nombre}
-                  onChange={(e) => setFormCliente({...formCliente, nombre: e.target.value})}
-                  className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-                  placeholder="Ingrese el nombre del cliente"
-                />
-              </div>
-              
-              <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Teléfono *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={formCliente.telefono}
-                  onChange={(e) => setFormCliente({...formCliente, telefono: e.target.value})}
-                  className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-                  placeholder="Ej: +1 234 567 8900"
-                />
-              </div>
-              
-              <div className="relative md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Correo Electrónico *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={formCliente.correo}
-                  onChange={(e) => setFormCliente({...formCliente, correo: e.target.value})}
-                  className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-                  placeholder="cliente@empresa.com"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-4 pt-6 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => setModalCliente(false)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                Crear Cliente
-              </button>
-            </div>
-          </form>
-        </div>
-      </Modal>
-
-      {/* Modal Agregar Campaña */}
-      <Modal
-        isOpen={modalCampaña}
-        onClose={() => setModalCampaña(false)}
-        title="Agregar Nueva Campaña"
-      >
-        <div className="p-6">
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 mb-4">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-green-600 rounded-lg">
-                <FaBullhorn className="text-white text-xl" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-green-800">Nueva Campaña</h3>
-                <p className="text-green-600">Configure los detalles de la campaña</p>
-              </div>
-            </div>
-          </div>
-          
-          <form onSubmit={handleCampañaSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre de la Campaña *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formCampaña.nombre}
-                  onChange={(e) => setFormCampaña({...formCampaña, nombre: e.target.value})}
-                  className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                  placeholder="Ingrese el nombre de la campaña"
-                />
-              </div>
-              
-              <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Tipo de Servicio *
-                </label>
-                <select
-                  value={formCampaña.tipo}
-                  onChange={(e) => setFormCampaña({...formCampaña, tipo: e.target.value})}
-                  className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                >
-                  <option value="SAC">SAC - Servicio de Atención</option>
-                  <option value="TMC">TMC - Telemarketing Central</option>
-                  <option value="TVT">TVT - Televentas Total</option>
-                  <option value="CBZ">CBZ - Call Back Zone</option>
-                </select>
-              </div>
-              
-              <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Cliente *
-                </label>
-                <select
-                  required
-                  value={formCampaña.cliente_id}
-                  onChange={(e) => setFormCampaña({...formCampaña, cliente_id: e.target.value})}
-                  className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                >
-                  <option value="">Seleccionar cliente</option>
-                  {clientes.map(cliente => (
-                    <option key={cliente.id} value={cliente.id}>
-                      {cliente.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Líder de Campaña *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formCampaña.lider}
-                  onChange={(e) => setFormCampaña({...formCampaña, lider: e.target.value})}
-                  className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                  placeholder="Nombre del líder"
-                />
-              </div>
-              
-              <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Ejecutivo *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formCampaña.ejecutivo}
-                  onChange={(e) => setFormCampaña({...formCampaña, ejecutivo: e.target.value})}
-                  className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                  placeholder="Nombre del ejecutivo"
-                />
-              </div>
-              
-              <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Fecha de Inicio *
-                </label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={formCampaña.fecha_inicio}
-                  onChange={(e) => setFormCampaña({...formCampaña, fecha_inicio: e.target.value})}
-                  className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-4 pt-4 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => setModalCampaña(false)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                Crear Campaña
-              </button>
-            </div>
-          </form>
-        </div>
-      </Modal>
     </div>
   );
 };
