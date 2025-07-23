@@ -1,22 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
+
 from typing import List
-from schemas.campaña import CampañaCreate, CampañaUpdate, CampañaOut
-from app.models.campana import Campaña, TipoCampaña
-from app.models.cliente import Cliente
 from app.dependencies import get_db
 from core.security import get_current_user, UserInDB
+
+# MODELOS Y ESQUEMAS NECESARIOS
+from app.models.campana import Campaña, TipoCampaña
+from app.models.cliente import Cliente
+from app.schemas.campaña import CampañaOut, CampañaCreate, CampañaUpdate
 
 router = APIRouter(prefix="/campañas", tags=["Campañas"])
 
 
 @router.post("/", response_model=CampañaOut)
-def crear_campaña(
+def crear_campania(
     campaña: CampañaCreate,
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    """Crear una nueva campaña"""
+    """Crear una nueva campania"""
     # Verificar que el cliente existe
     cliente = db.query(Cliente).filter(Cliente.id == campaña.cliente_id).first()
     if not cliente:
@@ -42,7 +45,7 @@ def listar_campañas(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    """Listar todas las campañas con información del cliente"""
+    """Listar todas las campanias con información del cliente"""
     campañas = db.query(Campaña).options(joinedload(Campaña.cliente)).all()
     
     result = []
@@ -65,18 +68,18 @@ def obtener_estadisticas(
     
     # Contar por tipo de servicio
     sac_count = db.query(Campaña).filter(Campaña.tipo == TipoCampaña.SAC).count()
-    tmg_count = db.query(Campaña).filter(Campaña.tipo == TipoCampaña.TMG).count()
-    cbi_count = db.query(Campaña).filter(Campaña.tipo == TipoCampaña.CBI).count()
-    otro_count = db.query(Campaña).filter(Campaña.tipo == TipoCampaña.OTRO).count()
-    
+    tmc_count = db.query(Campaña).filter(Campaña.tipo == TipoCampaña.TMC).count()
+    tvt_count = db.query(Campaña).filter(Campaña.tipo == TipoCampaña.TVT).count()
+    cbz_count = db.query(Campaña).filter(Campaña.tipo == TipoCampaña.CBZ).count()
+
     return {
         "total_clientes": total_clientes,
         "total_campañas": total_campañas,
         "por_servicio": {
             "SAC": sac_count,
-            "TMG": tmg_count,
-            "CBI": cbi_count,
-            "OTRO": otro_count
+            "TMC": tmc_count,
+            "TVT": tvt_count,
+            "CBZ": cbz_count
         }
     }
 
@@ -87,7 +90,7 @@ def obtener_campaña(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    """Obtener una campaña específica"""
+    """Obtener una campania específica"""
     campaña = db.query(Campaña).options(
         joinedload(Campaña.cliente)
     ).filter(Campaña.id == campaña_id).first()
@@ -107,28 +110,35 @@ def actualizar_campaña(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    """Actualizar una campaña"""
+    """Actualizar una campania"""
+    # LOG de depuración
+    print("[DEBUG] PUT /campañas/{campaña_id}")
+    print(f"ID recibido: {campaña_id}")
+    print(f"Payload recibido: {campaña.dict()}")
+
     campaña_db = db.query(Campaña).filter(Campaña.id == campaña_id).first()
     if not campaña_db:
+        print("[DEBUG] Campaña no encontrada en la base de datos")
         raise HTTPException(status_code=404, detail="Campaña no encontrada")
-    
+
     # Si se está actualizando el cliente, verificar que existe
     if campaña.cliente_id and campaña.cliente_id != campaña_db.cliente_id:
         cliente = db.query(Cliente).filter(Cliente.id == campaña.cliente_id).first()
         if not cliente:
+            print("[DEBUG] Cliente no encontrado para el cliente_id proporcionado")
             raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    
+
     for campo, valor in campaña.dict(exclude_unset=True).items():
         setattr(campaña_db, campo, valor)
-    
+
     db.commit()
     db.refresh(campaña_db)
-    
+
     # Cargar el cliente para la respuesta
     campaña_con_cliente = db.query(Campaña).options(
         joinedload(Campaña.cliente)
     ).filter(Campaña.id == campaña_id).first()
-    
+
     response = CampañaOut.from_orm(campaña_con_cliente)
     response.cliente_nombre = campaña_con_cliente.cliente.nombre
     return response
@@ -140,7 +150,7 @@ def eliminar_campaña(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    """Eliminar una campaña"""
+    """Eliminar una campania"""
     campaña = db.query(Campaña).filter(Campaña.id == campaña_id).first()
     if not campaña:
         raise HTTPException(status_code=404, detail="Campaña no encontrada")
