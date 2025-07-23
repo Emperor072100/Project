@@ -88,9 +88,10 @@ const Campañas = () => {
         axios.get('http://localhost:8000/clientes', config),
         axios.get('http://localhost:8000/campañas/estadisticas', config)
       ]);
+
       setCampañas(campañasRes.data);
       setClientes(clientesRes.data);
-      setEstadisticas(estadisticasRes.data);
+      setEstadisticas(estadisticasRes.data); // Usar la data real de la respuesta
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast.error('Error al cargar los datos');
@@ -128,16 +129,15 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-
-      // Construir el objeto a enviar, mapeando ejecutivo -> cje y eliminando ejecutivo
-      const { ejecutivo, ...rest } = formCampaña;
+      
       const datosEnvio = {
         ...rest,
         cliente_id: parseInt(formCampaña.cliente_id),
-        cje: ejecutivo, // Mapear ejecutivo a cje para el backend
+        cje: formCampaña.ejecutivo, // Mapear ejecutivo a cje para el backend
         fecha_inicio: formCampaña.fecha_inicio || null,
         estado: 'Activa'
       };
+
       await axios.post('http://localhost:8000/campañas/', datosEnvio, config);
       toast.success('Campaña creada exitosamente');
       setModalCampaña(false);
