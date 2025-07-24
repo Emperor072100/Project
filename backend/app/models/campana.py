@@ -1,31 +1,39 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from core.database import Base
-from datetime import datetime
 import enum
+
 
 class TipoCampaña(str, enum.Enum):
     SAC = "SAC"
-    TMG = "TMG"
-    CBI = "CBI"
-    OTRO = "OTRO"
+    TMC = "TMC"
+    TVT = "TVT"
+    CBZ = "CBZ"
+
 
 class Campaña(Base):
     __tablename__ = "campañas_campañas"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
-    descripcion = Column(Text, nullable=True)
-    tipo = Column(Enum(TipoCampaña), nullable=False, default=TipoCampaña.OTRO)
-    cje = Column(String, nullable=True)  # Campo CJE del diseño
-    lider = Column(String, nullable=True)  # Líder de la campaña
-    cliente_id = Column(Integer, ForeignKey("campañas_clientes.id"), nullable=False)
-    fecha_inicio = Column(DateTime, nullable=True)
-    fecha_fin = Column(DateTime, nullable=True)
-    estado = Column(String, default="Activa")  # Activa, Pausada, Finalizada
-    presupuesto = Column(String, nullable=True)
-    observaciones = Column(Text, nullable=True)
-    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+    tipo = Column(Enum(TipoCampaña), nullable=False, default=TipoCampaña.SAC)
+    cliente_corporativo_id = Column(
+        Integer,
+        ForeignKey("campañas_clientes_corporativos.id"),
+        nullable=False
+    )
+    contacto_id = Column(
+        Integer,
+        ForeignKey("campañas_contacto.id"),
+        nullable=False
+    )
+    lider_de_campaña = Column(String, nullable=False)
+    ejecutivo = Column(String, nullable=False)
+    fecha_de_produccion = Column(Date, nullable=False)  # Solo fecha, sin hora
     
-    # Relación con cliente
-    cliente = relationship("Cliente", back_populates="campañas")
+    # Relaciones
+    cliente_corporativo = relationship(
+        "ClienteCorporativo",
+        back_populates="campañas"
+    )
+    contacto = relationship("Cliente", back_populates="campañas")
