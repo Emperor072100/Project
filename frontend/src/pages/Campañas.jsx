@@ -8,15 +8,18 @@ import dayjs from 'dayjs';
 const Campañas = () => {
   // Estados principales
   const [campañas, setCampañas] = useState([]);
-  const [clientes, setClientes] = useState([]);
+  const [clientesCorporativos, setClientesCorporativos] = useState([]);
+  const [contactos, setContactos] = useState([]);
   const [estadisticas, setEstadisticas] = useState({
-    total_clientes: 0,
+    total_clientes_corporativos: 0,
+    total_contactos: 0,
     total_campañas: 0,
     por_servicio: { SAC: 0, TMC: 0, TVT: 0, CBZ: 0 }
   });
 
   // Estados para modales
-  const [modalCliente, setModalCliente] = useState(false);
+  const [modalClienteCorporativo, setModalClienteCorporativo] = useState(false);
+  const [modalContacto, setModalContacto] = useState(false);
   const [modalCampaña, setModalCampaña] = useState(false);
   const [modalAdministrar, setModalAdministrar] = useState(false);
   const [modalHistorial, setModalHistorial] = useState(false);
@@ -56,19 +59,27 @@ const Campañas = () => {
   });
   
   // Estados para formularios
-  const [formCliente, setFormCliente] = useState({
+  const [formClienteCorporativo, setFormClienteCorporativo] = useState({
+    nombre: '',
+    logo: '',
+    sector: ''
+  });
+
+  const [formContacto, setFormContacto] = useState({
     nombre: '',
     telefono: '',
-    correo: ''
+    correo: '',
+    cliente_corporativo_id: ''
   });
 
   const [formCampaña, setFormCampaña] = useState({
     nombre: '',
     tipo: 'SAC',
-    cliente_id: '',
-    lider: '',
+    cliente_corporativo_id: '',
+    contacto_id: '',
+    lider_de_campaña: '',
     ejecutivo: '',
-    fecha_inicio: ''
+    fecha_de_produccion: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -83,15 +94,36 @@ const Campañas = () => {
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const [campañasRes, clientesRes, estadisticasRes] = await Promise.all([
+      const [campañasRes, clientesCorporativosRes, contactosRes, estadisticasRes] = await Promise.all([
         axios.get('http://localhost:8000/campañas', config),
-        axios.get('http://localhost:8000/clientes', config),
+        axios.get('http://localhost:8000/clientes-corporativos', config),
+        axios.get('http://localhost:8000/contactos', config),
         axios.get('http://localhost:8000/campañas/estadisticas', config)
       ]);
 
-      setCampañas(campañasRes.data);
-      setClientes(clientesRes.data);
-      setEstadisticas(estadisticasRes.data); // Usar la data real de la respuesta
+      // Mapear los datos de campañas con información relacionada
+      const campañasConDatos = campañasRes.data.map(campaña => {
+        const clienteCorporativo = clientesCorporativosRes.data.find(
+          cliente => cliente.id === campaña.cliente_corporativo_id
+        );
+        const contacto = contactosRes.data.find(
+          cont => cont.id === campaña.contacto_id
+        );
+
+        return {
+          ...campaña,
+          cliente_nombre: clienteCorporativo?.nombre || 'Sin asignar',
+          contacto_nombre: contacto?.nombre || 'Sin asignar',
+          // Mapear campos para compatibilidad con la tabla existente
+          cje: campaña.ejecutivo,
+          lider: campaña.lider_de_campaña
+        };
+      });
+
+      setCampañas(campañasConDatos);
+      setClientesCorporativos(clientesCorporativosRes.data);
+      setContactos(contactosRes.data);
+      setEstadisticas(estadisticasRes.data);
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast.error('Error al cargar los datos');
@@ -100,26 +132,50 @@ const Campañas = () => {
     }
   };
 
-  // Función para crear cliente
-  const handleClienteSubmit = async (e) => {
+  // Función para crear cliente corporativo
+  const handleClienteCorporativoSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      await axios.post('http://localhost:8000/clientes/', formCliente, config);
+      await axios.post('http://localhost:8000/clientes-corporativos/', formClienteCorporativo, config);
       
-      toast.success('Cliente creado exitosamente');
-      setModalCliente(false);
-      setFormCliente({
+      toast.success('Cliente corporativo creado exitosamente');
+      setModalClienteCorporativo(false);
+      setFormClienteCorporativo({
         nombre: '',
-        telefono: '',
-        correo: ''
+        logo: '',
+        sector: ''
       });
       cargarDatos();
     } catch (error) {
-      console.error('Error creando cliente:', error);
-      toast.error('Error al crear el cliente');
+      console.error('Error creando cliente corporativo:', error);
+      toast.error('Error al crear el cliente corporativo');
+    }
+  };
+
+  // Función para crear contacto
+  const handleContactoSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      await axios.post('http://localhost:8000/contactos/', formContacto, config);
+      
+      toast.success('Contacto creado exitosamente');
+      setModalContacto(false);
+      setFormContacto({
+        nombre: '',
+        telefono: '',
+        correo: '',
+        cliente_corporativo_id: ''
+      });
+      cargarDatos();
+    } catch (error) {
+      console.error('Error creando contacto:', error);
+      toast.error('Error al crear el contacto');
     }
   };
 
@@ -130,15 +186,14 @@ const Campañas = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      const { cliente_id, ejecutivo, ...rest } = formCampaña;
-      
       const datosEnvio = {
-        ...rest,
-        cliente_corporativo_id: parseInt(cliente_id),
-        contacto_id: parseInt(cliente_id), // Ajustar según tu lógica de negocio
-        lider_de_campaña: formCampaña.lider,
-        ejecutivo: ejecutivo,
-        fecha_de_produccion: formCampaña.fecha_inicio || null
+        nombre: formCampaña.nombre,
+        tipo: formCampaña.tipo,
+        cliente_corporativo_id: parseInt(formCampaña.cliente_corporativo_id),
+        contacto_id: parseInt(formCampaña.contacto_id),
+        lider_de_campaña: formCampaña.lider_de_campaña,
+        ejecutivo: formCampaña.ejecutivo,
+        fecha_de_produccion: formCampaña.fecha_de_produccion || null
       };
 
       await axios.post('http://localhost:8000/campañas/', datosEnvio, config);
@@ -147,10 +202,11 @@ const Campañas = () => {
       setFormCampaña({
         nombre: '',
         tipo: 'SAC',
-        cliente_id: '',
-        lider: '',
+        cliente_corporativo_id: '',
+        contacto_id: '',
+        lider_de_campaña: '',
         ejecutivo: '',
-        fecha_inicio: ''
+        fecha_de_produccion: ''
       });
       cargarDatos();
     } catch (error) {
@@ -169,10 +225,10 @@ const Campañas = () => {
       nombre: campaña.nombre || '',
       descripcion: campaña.descripcion || '',
       tipo: campaña.tipo || '',
-      cje: campaña.cje || '',
-      lider: campaña.lider || '',
-      cliente_id: campaña.cliente_id || '',
-      fecha_inicio: campaña.fecha_inicio ? campaña.fecha_inicio.slice(0, 16) : '',
+      cje: campaña.ejecutivo || '', // Usar el campo correcto
+      lider: campaña.lider_de_campaña || '', // Usar el campo correcto
+      cliente_id: campaña.cliente_corporativo_id || '', // Usar el campo correcto
+      fecha_inicio: campaña.fecha_de_produccion ? campaña.fecha_de_produccion : '',
       fecha_fin: campaña.fecha_fin ? campaña.fecha_fin.slice(0, 16) : '',
       estado: campaña.estado || '',
       presupuesto: campaña.presupuesto || '',
@@ -343,10 +399,10 @@ const Campañas = () => {
                       <span className="font-semibold">Campaña:</span> {campañaSeleccionada.nombre}
                     </div>
                     <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Ejecutivo:</span> {campañaSeleccionada.cje || <span className='italic text-gray-400'>Sin asignar</span>}
+                      <span className="font-semibold">Ejecutivo:</span> {campañaSeleccionada.ejecutivo || <span className='italic text-gray-400'>Sin asignar</span>}
                     </div>
                     <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Líder:</span> {campañaSeleccionada.lider || <span className='italic text-gray-400'>Sin asignar</span>}
+                      <span className="font-semibold">Líder:</span> {campañaSeleccionada.lider_de_campaña || <span className='italic text-gray-400'>Sin asignar</span>}
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -661,12 +717,12 @@ const Campañas = () => {
                   <FaUsers className="text-blue-600 text-2xl" />
                 </div>
                 <div>
-                  <p className="text-gray-600 text-lg font-medium">Clientes</p>
-                  <p className="text-gray-500 text-base">Registrados en sistema</p>
+                  <p className="text-gray-600 text-lg font-medium">Clientes Corporativos</p>
+                  <p className="text-gray-500 text-base">Empresas registradas</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-4xl font-bold text-blue-600">{estadisticas.total_clientes}</p>
+                <p className="text-4xl font-bold text-blue-600">{estadisticas.total_clientes_corporativos}</p>
               </div>
             </div>
           </div>
@@ -684,7 +740,7 @@ const Campañas = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-4xl font-bold text-green-600">{estadisticas.total_campanias}</p>
+                <p className="text-4xl font-bold text-green-600">{estadisticas.total_campañas}</p>
               </div>
             </div>
           </div>
@@ -765,10 +821,16 @@ const Campañas = () => {
       {/* Botones de acción */}
       <div className="flex gap-3 mb-4">
         <button
-          onClick={() => setModalCliente(true)}
+          onClick={() => setModalClienteCorporativo(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
         >
-          <FaPlus /> Agregar Cliente
+          <FaPlus /> Agregar Cliente Corporativo
+        </button>
+        <button
+          onClick={() => setModalContacto(true)}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+        >
+          <FaPlus /> Agregar Contacto
         </button>
         <button
           onClick={() => setModalCampaña(true)}
@@ -889,11 +951,11 @@ const Campañas = () => {
         </div>
       )}
 
-      {/* Modal Agregar Cliente */}
+      {/* Modal Agregar Cliente Corporativo */}
       <Modal
-        isOpen={modalCliente}
-        onClose={() => setModalCliente(false)}
-        title="Agregar Nuevo Cliente"
+        isOpen={modalClienteCorporativo}
+        onClose={() => setModalClienteCorporativo(false)}
+        title="Agregar Nuevo Cliente Corporativo"
       >
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 mb-6">
           <div className="flex items-center space-x-4">
@@ -901,13 +963,93 @@ const Campañas = () => {
               <FaUsers className="text-white text-xl" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-blue-800">Información del Cliente</h3>
-              <p className="text-blue-600">Complete los datos básicos del nuevo cliente</p>
+              <h3 className="text-lg font-semibold text-blue-800">Información del Cliente Corporativo</h3>
+              <p className="text-blue-600">Complete los datos de la empresa</p>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleClienteSubmit} className="space-y-6">
+        <form onSubmit={handleClienteCorporativoSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Nombre de la Empresa *
+              </label>
+              <input
+                type="text"
+                required
+                value={formClienteCorporativo.nombre}
+                onChange={(e) => setFormClienteCorporativo({...formClienteCorporativo, nombre: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+                placeholder="Ingrese el nombre de la empresa"
+              />
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Sector
+              </label>
+              <input
+                type="text"
+                required
+                value={formClienteCorporativo.sector}
+                onChange={(e) => setFormClienteCorporativo({...formClienteCorporativo, sector: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+                placeholder="Ej: Tecnología, Salud, Financiero"
+              />
+            </div>
+
+            <div className="relative md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Logo (URL)
+              </label>
+              <input
+                type="url"
+                value={formClienteCorporativo.logo}
+                onChange={(e) => setFormClienteCorporativo({...formClienteCorporativo, logo: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+                placeholder="https://empresa.com/logo.png"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-4 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setModalClienteCorporativo(false)}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              Crear Cliente Corporativo
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Agregar Contacto */}
+      <Modal
+        isOpen={modalContacto}
+        onClose={() => setModalContacto(false)}
+        title="Agregar Nuevo Contacto"
+      >
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 mb-6">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-purple-600 rounded-lg">
+              <FaUsers className="text-white text-xl" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-purple-800">Información del Contacto</h3>
+              <p className="text-purple-600">Complete los datos del contacto</p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleContactoSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -916,11 +1058,30 @@ const Campañas = () => {
               <input
                 type="text"
                 required
-                value={formCliente.nombre}
-                onChange={(e) => setFormCliente({...formCliente, nombre: e.target.value})}
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-                placeholder="Ingrese el nombre del cliente"
+                value={formContacto.nombre}
+                onChange={(e) => setFormContacto({...formContacto, nombre: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white"
+                placeholder="Ingrese el nombre del contacto"
               />
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Cliente Corporativo *
+              </label>
+              <select
+                required
+                value={formContacto.cliente_corporativo_id}
+                onChange={(e) => setFormContacto({...formContacto, cliente_corporativo_id: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white"
+              >
+                <option value="">Seleccionar empresa</option>
+                {clientesCorporativos.map(cliente => (
+                  <option key={cliente.id} value={cliente.id}>
+                    {cliente.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="relative">
@@ -930,24 +1091,24 @@ const Campañas = () => {
               <input
                 type="tel"
                 required
-                value={formCliente.telefono}
-                onChange={(e) => setFormCliente({...formCliente, telefono: e.target.value})}
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+                value={formContacto.telefono}
+                onChange={(e) => setFormContacto({...formContacto, telefono: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white"
                 placeholder="Ej: +1 234 567 8900"
               />
             </div>
 
-            <div className="relative md:col-span-2">
+            <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Correo Electrónico *
               </label>
               <input
                 type="email"
                 required
-                value={formCliente.correo}
-                onChange={(e) => setFormCliente({...formCliente, correo: e.target.value})}
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-                placeholder="cliente@empresa.com"
+                value={formContacto.correo}
+                onChange={(e) => setFormContacto({...formContacto, correo: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white"
+                placeholder="contacto@empresa.com"
               />
             </div>
           </div>
@@ -955,16 +1116,16 @@ const Campañas = () => {
           <div className="flex gap-4 pt-6 border-t border-gray-200">
             <button
               type="button"
-              onClick={() => setModalCliente(false)}
+              onClick={() => setModalContacto(false)}
               className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              Crear Cliente
+              Crear Contacto
             </button>
           </div>
         </form>
@@ -1022,18 +1183,40 @@ const Campañas = () => {
 
             <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Cliente *
+                Cliente Corporativo *
               </label>
               <select
                 required
-                value={formCampaña.cliente_id}
-                onChange={(e) => setFormCampaña({...formCampaña, cliente_id: e.target.value})}
+                value={formCampaña.cliente_corporativo_id}
+                onChange={(e) => setFormCampaña({...formCampaña, cliente_corporativo_id: e.target.value})}
                 className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               >
-                <option value="">Seleccionar cliente</option>
-                {clientes.map(cliente => (
+                <option value="">Seleccionar empresa</option>
+                {clientesCorporativos.map(cliente => (
                   <option key={cliente.id} value={cliente.id}>
                     {cliente.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Contacto *
+              </label>
+              <select
+                required
+                value={formCampaña.contacto_id}
+                onChange={(e) => setFormCampaña({...formCampaña, contacto_id: e.target.value})}
+                className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+              >
+                <option value="">Seleccionar contacto</option>
+                {contactos.filter(contacto => 
+                  !formCampaña.cliente_corporativo_id || 
+                  contacto.cliente_corporativo_id.toString() === formCampaña.cliente_corporativo_id
+                ).map(contacto => (
+                  <option key={contacto.id} value={contacto.id}>
+                    {contacto.nombre}
                   </option>
                 ))}
               </select>
@@ -1046,8 +1229,8 @@ const Campañas = () => {
               <input
                 type="text"
                 required
-                value={formCampaña.lider}
-                onChange={(e) => setFormCampaña({...formCampaña, lider: e.target.value})}
+                value={formCampaña.lider_de_campaña}
+                onChange={(e) => setFormCampaña({...formCampaña, lider_de_campaña: e.target.value})}
                 className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
                 placeholder="Nombre del líder"
               />
@@ -1067,15 +1250,15 @@ const Campañas = () => {
               />
             </div>
 
-            <div className="relative">
+            <div className="relative md:col-span-2">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Fecha de Inicio *
+                Fecha de Producción *
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 required
-                value={formCampaña.fecha_inicio}
-                onChange={(e) => setFormCampaña({...formCampaña, fecha_inicio: e.target.value})}
+                value={formCampaña.fecha_de_produccion}
+                onChange={(e) => setFormCampaña({...formCampaña, fecha_de_produccion: e.target.value})}
                 className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               />
             </div>
