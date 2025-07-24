@@ -108,38 +108,91 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      // Cargar todos los datos necesarios en paralelo
-      const [usuariosRes, estadosRes, prioridadesRes, tiposRes, equiposRes] = await Promise.all([
-        axios.get('http://localhost:8000/usuarios', config),
-        axios.get('http://localhost:8000/estados', config),
-        axios.get('http://localhost:8000/prioridades', config),
-        axios.get('http://localhost:8000/tipos', config),
-        axios.get('http://localhost:8000/equipos', config)
-      ]);
-
-      setUsuarios(usuariosRes.data);
-      setEstados(estadosRes.data);
-      setPrioridades(prioridadesRes.data);
-      setTiposDisponibles(tiposRes.data);
-      setEquiposDisponibles(equiposRes.data);
-      
-      // Establecer valores predeterminados usando IDs
-      if (estadosRes.data.length > 0) {
-        const estadoDefault = estadosRes.data.find((e: Estado) => e.nombre === 'Sin Empezar') || estadosRes.data[0];
-        const prioridadDefault = prioridadesRes.data.find((p: Prioridad) => p.nivel === 'Media') || prioridadesRes.data[0];
-        
-        setFormulario(prev => ({
-          ...prev,
-          estado_id: estadoDefault.id,
-          prioridad_id: prioridadDefault.id
-        }));
+      if (!token) {
+        showAlert('Sesión expirada', 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning');
+        // Redirigir al login después de 2 segundos
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+        return;
       }
       
-    } catch (error) {
-      console.error('Error al cargar datos:', error);
-      toast.error('No se pudieron cargar los datos necesarios');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      console.log('🔍 Iniciando carga de datos...');
+      console.log('🔑 Token:', token ? 'Presente' : 'Ausente');
+      console.log('🌐 API Base:', 'http://localhost:8000');
+      
+      // Cargar cada endpoint individualmente para mejor debug
+      try {
+        console.log('📡 Cargando usuarios...');
+        const usuariosRes = await axios.get('http://localhost:8000/usuarios/', config);
+        console.log('✅ Usuarios cargados:', usuariosRes.data.length);
+        setUsuarios(usuariosRes.data);
+      } catch (error: any) {
+        console.error('❌ Error cargando usuarios:', error.response?.status, error.message);
+        throw error;
+      }
+
+      try {
+        console.log('📡 Cargando estados...');
+        const estadosRes = await axios.get('http://localhost:8000/estados/', config);
+        console.log('✅ Estados cargados:', estadosRes.data.length);
+        setEstados(estadosRes.data);
+      } catch (error: any) {
+        console.error('❌ Error cargando estados:', error.response?.status, error.message);
+        throw error;
+      }
+
+      try {
+        console.log('📡 Cargando prioridades...');
+        const prioridadesRes = await axios.get('http://localhost:8000/prioridades/', config);
+        console.log('✅ Prioridades cargadas:', prioridadesRes.data.length, prioridadesRes.data);
+        setPrioridades(prioridadesRes.data);
+      } catch (error: any) {
+        console.error('❌ Error cargando prioridades:', error.response?.status, error.message);
+        throw error;
+      }
+
+      try {
+        console.log('📡 Cargando tipos...');
+        const tiposRes = await axios.get('http://localhost:8000/tipos/', config);
+        console.log('✅ Tipos cargados:', tiposRes.data.length);
+        setTiposDisponibles(tiposRes.data);
+      } catch (error: any) {
+        console.error('❌ Error cargando tipos:', error.response?.status, error.message);
+        throw error;
+      }
+
+      try {
+        console.log('📡 Cargando equipos...');
+        const equiposRes = await axios.get('http://localhost:8000/equipos/', config);
+        console.log('✅ Equipos cargados:', equiposRes.data.length);
+        setEquiposDisponibles(equiposRes.data);
+      } catch (error: any) {
+        console.error('❌ Error cargando equipos:', error.response?.status, error.message);
+        throw error;
+      }
+
+      console.log('🎉 Todos los datos cargados exitosamente');
+      
+    } catch (error: any) {
+      console.error('💥 Error general al cargar datos:', error);
+      
+      if (error.response?.status === 401) {
+        showAlert('Sesión expirada', 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning');
+        // Limpiar tokens y redirigir al login
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else if (error.response?.status === 405) {
+        showAlert('Error del servidor', 'El servidor backend no tiene las rutas configuradas correctamente. Verifica que el servidor esté funcionando.', 'error');
+      } else {
+        toast.error('No se pudieron cargar los datos necesarios');
+      }
     } finally {
       setLoading(false);
     }
@@ -260,6 +313,17 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
     } catch (error: any) {
       console.error('Error al crear proyecto:', error);
       
+      if (error.response?.status === 401) {
+        showAlert('Sesión expirada', 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning');
+        // Limpiar tokens y redirigir al login
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+        return;
+      }
+      
       if (error.response?.data?.detail) {
         console.log('Detalles del error:', error.response.data.detail);
         
@@ -352,14 +416,14 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
                   </label>
                   <select
                     name="responsable_id"
-                    value={formulario.responsable_id}
+                    value={formulario.responsable_id?.toString() || ''}
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
                     required
                   >
                     <option value="">Selecciona responsable</option>
                     {usuarios.map((usuario) => (
-                      <option key={usuario.id} value={usuario.id}>
+                      <option key={usuario.id} value={usuario.id.toString()}>
                         {usuario.nombre} {usuario.apellido}
                       </option>
                     ))}
@@ -373,14 +437,14 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
                   </label>
                   <select
                     name="estado_id"
-                    value={formulario.estado_id}
+                    value={formulario.estado_id?.toString() || ''}
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
                     required
                   >
                     <option value="">Selecciona estado</option>
                     {estados.map((estado) => (
-                      <option key={estado.id} value={estado.id}>
+                      <option key={estado.id} value={estado.id.toString()}>
                         {estado.nombre}
                       </option>
                     ))}
@@ -394,13 +458,13 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
                   </label>
                   <select
                     name="prioridad_id"
-                    value={formulario.prioridad_id}
+                    value={formulario.prioridad_id?.toString() || ''}
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
                   >
                     <option value="">Selecciona prioridad</option>
                     {prioridades.map((prioridad) => (
-                      <option key={prioridad.id} value={prioridad.id}>
+                      <option key={prioridad.id} value={prioridad.id.toString()}>
                         {prioridad.nivel}
                       </option>
                     ))}

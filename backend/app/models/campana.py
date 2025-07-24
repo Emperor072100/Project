@@ -12,7 +12,7 @@ class TipoCampaña(str, enum.Enum):
 
 
 class Campaña(Base):
-    __tablename__ = "campañas_campañas"
+    __tablename__ = "campañas"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)

@@ -3,6 +3,7 @@ import { FaPlus, FaEdit, FaHistory, FaUsers, FaBullhorn, FaChartBar } from 'reac
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
+import dayjs from 'dayjs';
 
 const Campañas = () => {
   // Estados principales
@@ -17,6 +18,42 @@ const Campañas = () => {
   // Estados para modales
   const [modalCliente, setModalCliente] = useState(false);
   const [modalCampaña, setModalCampaña] = useState(false);
+  const [modalAdministrar, setModalAdministrar] = useState(false);
+  const [modalHistorial, setModalHistorial] = useState(false);
+  const [historial, setHistorial] = useState([]);
+  const [campañaSeleccionada, setCampañaSeleccionada] = useState(null);
+  const [mostrarProductos, setMostrarProductos] = useState(false);
+  const [formProducto, setFormProducto] = useState({
+    tipo: 'Producto',
+    proveedor: '',
+    propiedad: 'Propia',
+    cantidad: 1
+  });
+  const [mostrarFacturacion, setMostrarFacturacion] = useState(false);
+  const [formFacturacion, setFormFacturacion] = useState({
+    unidad: '',
+    cantidad: 1,
+    valor: ''
+  });
+  const [facturacionGuardada, setFacturacionGuardada] = useState(null);
+
+  const [productoGuardado, setProductoGuardado] = useState(null);
+
+  // Estado para edición de campania
+  const [editando, setEditando] = useState(false);
+  const [formEditar, setFormEditar] = useState({
+    nombre: '',
+    descripcion: '',
+    tipo: '',
+    cje: '',
+    lider: '',
+    cliente_id: '',
+    fecha_inicio: '',
+    fecha_fin: '',
+    estado: '',
+    presupuesto: '',
+    observaciones: ''
+  });
   
   // Estados para formularios
   const [formCliente, setFormCliente] = useState({
@@ -46,41 +83,15 @@ const Campañas = () => {
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      
       const [campañasRes, clientesRes, estadisticasRes] = await Promise.all([
         axios.get('http://localhost:8000/campañas', config),
         axios.get('http://localhost:8000/clientes', config),
         axios.get('http://localhost:8000/campañas/estadisticas', config)
       ]);
-      
-      // Mapear los tipos del backend a los valores del frontend para mostrar
-      const backendToFrontendMapping = {
-        'SAC': 'SAC',
-        'TMG': 'TMC',  // Backend TMG -> Frontend TMC
-        'OTRO': 'TVT', // Backend OTRO -> Frontend TVT
-        'CBI': 'CBZ'   // Backend CBI -> Frontend CBZ
-      };
-      
-      // Mapear los tipos en las campañas recibidas
-      const campañasMapeadas = campañasRes.data.map(campaña => ({
-        ...campaña,
-        tipo: backendToFrontendMapping[campaña.tipo] || campaña.tipo
-      }));
-      
-      // También mapear las estadísticas si es necesario
-      const estadisticasMapeadas = {
-        ...estadisticasRes.data,
-        por_servicio: {
-          SAC: estadisticasRes.data.por_servicio.SAC || 0,
-          TMC: estadisticasRes.data.por_servicio.TMG || 0, // Backend TMG -> Frontend TMC
-          TVT: estadisticasRes.data.por_servicio.OTRO || 0, // Backend OTRO -> Frontend TVT
-          CBZ: estadisticasRes.data.por_servicio.CBI || 0   // Backend CBI -> Frontend CBZ
-        }
-      };
-      
-      setCampañas(campañasMapeadas);
+
+      setCampañas(campañasRes.data);
       setClientes(clientesRes.data);
-      setEstadisticas(estadisticasMapeadas);
+      setEstadisticas(estadisticasRes.data); // Usar la data real de la respuesta
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast.error('Error al cargar los datos');
@@ -112,35 +123,22 @@ const Campañas = () => {
     }
   };
 
-  // Función para crear campaña
+  // Función para crear campania
   const handleCampañaSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      // Mapear los tipos del frontend a los valores que espera el backend
-      const tipoMapping = {
-        'SAC': 'SAC',
-        'TMC': 'TMG',  // Frontend TMC -> Backend TMG
-        'TVT': 'OTRO', // Frontend TVT -> Backend OTRO
-        'CBZ': 'CBI'   // Frontend CBZ -> Backend CBI
-      };
-      
       const datosEnvio = {
-        ...formCampaña,
+        ...rest,
         cliente_id: parseInt(formCampaña.cliente_id),
-        tipo: tipoMapping[formCampaña.tipo] || formCampaña.tipo, // Mapear el tipo
         cje: formCampaña.ejecutivo, // Mapear ejecutivo a cje para el backend
         fecha_inicio: formCampaña.fecha_inicio || null,
         estado: 'Activa'
       };
 
-      console.log('Datos originales del formulario:', formCampaña);
-      console.log('Datos que se envían al backend:', datosEnvio);
-
       await axios.post('http://localhost:8000/campañas/', datosEnvio, config);
-      
       toast.success('Campaña creada exitosamente');
       setModalCampaña(false);
       setFormCampaña({
@@ -159,17 +157,490 @@ const Campañas = () => {
   };
 
   const handleAdministrar = (campaña) => {
-    toast.info(`Administrando campaña: ${campaña.nombre}`);
-    // Aquí puedes implementar la lógica de administración
+    setCampañaSeleccionada(campaña);
+    setModalAdministrar(true);
+    setMostrarProductos(false);
+    setMostrarFacturacion(false);
+    setEditando(false);
+    setFormEditar({
+      nombre: campaña.nombre || '',
+      descripcion: campaña.descripcion || '',
+      tipo: campaña.tipo || '',
+      cje: campaña.cje || '',
+      lider: campaña.lider || '',
+      cliente_id: campaña.cliente_id || '',
+      fecha_inicio: campaña.fecha_inicio ? campaña.fecha_inicio.slice(0, 16) : '',
+      fecha_fin: campaña.fecha_fin ? campaña.fecha_fin.slice(0, 16) : '',
+      estado: campaña.estado || '',
+      presupuesto: campaña.presupuesto || '',
+      observaciones: campaña.observaciones || ''
+    });
+    setProductoGuardado(null);
+    setFacturacionGuardada(null);
   };
 
-  const handleHistorial = (campaña) => {
-    toast.info(`Ver historial de: ${campaña.nombre}`);
-    // Aquí puedes implementar la lógica del historial
+  const handleEditarChange = (e) => {
+    const { name, value } = e.target;
+    setFormEditar((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleGuardarEdicion = async () => {
+    if (!campañaSeleccionada?.id) {
+      toast.error('ID de campaña inválido. No se puede guardar.');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const payload = {
+        nombre: formEditar.nombre,
+        descripcion: formEditar.descripcion,
+        tipo: formEditar.tipo,
+        cje: formEditar.cje,
+        lider: formEditar.lider,
+        cliente_id: parseInt(formEditar.cliente_id),
+        fecha_inicio: formEditar.fecha_inicio || null,
+        fecha_fin: formEditar.fecha_fin || null,
+        estado: formEditar.estado,
+        presupuesto: formEditar.presupuesto,
+        observaciones: formEditar.observaciones
+      };
+      await axios.put(encodeURI(`http://localhost:8000/campañas/${campañaSeleccionada.id}`), payload, config);
+      setCampañaSeleccionada((prev) => ({ ...prev, ...payload }));
+      await axios.post(`http://localhost:8000/campañas/${campañaSeleccionada.id}/historial`, {
+        fecha: new Date().toISOString(),
+        cambios: { ...payload },
+      }, config);
+      setEditando(false);
+      toast.success('Datos de campaña actualizados');
+      cargarDatos(); // Refresca la lista tras editar
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        toast.error('No se encontró la campaña. Puede que haya sido eliminada o el ID es incorrecto.');
+      } else {
+        toast.error('Error al guardar los cambios');
+      }
+    }
+  };
+
+  const handleFacturacionChange = (e) => {
+    const { name, value } = e.target;
+    setFormFacturacion((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleGuardarFacturacion = (e) => {
+    e.preventDefault();
+    setFacturacionGuardada(formFacturacion);
+    setTimeout(() => toast.success('Unidad de facturación guardada correctamente'), 100); // toast después de render
+    // No cierres el formulario automáticamente
+  };
+
+  const handleProductoChange = (e) => {
+    const { name, value } = e.target;
+    setFormProducto((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleGuardarProducto = (e) => {
+    e.preventDefault();
+    setProductoGuardado(formProducto);
+    setTimeout(() => toast.success('Producto/servicio guardado correctamente'), 100); // toast después de render
+    // No cierres el formulario automáticamente
+  };
+
+  const handleHistorial = async (campaña) => {
+    setCampañaSeleccionada(campaña);
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`http://localhost:8000/campañas/${campaña.id}/historial`, config);
+      setHistorial(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      setHistorial([]);
+      toast.error('No se pudo cargar el historial');
+    }
+    setModalHistorial(true);
   };
 
   return (
     <div className="container mx-auto p-6">
+      {/* Modal Historial de Campaña */}
+      <Modal
+        isOpen={modalHistorial}
+        onClose={() => setModalHistorial(false)}
+        title={
+          <div className="flex items-center justify-between w-full">
+            <span className="font-semibold text-lg">Historial de Cambios</span>
+          </div>
+        }
+      >
+        <div className="p-4">
+          <h3 className="font-semibold mb-2">{campañaSeleccionada?.nombre || 'Campaña'}</h3>
+          {historial.length === 0 ? (
+            <div className="text-gray-500 italic">No hay historial de cambios para esta campaña.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border border-gray-200 rounded">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-3 py-2 border-b border-gray-200 text-left">Fecha</th>
+                    <th className="px-3 py-2 border-b border-gray-200 text-left">Cambios</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historial.map((h, idx) => (
+                    <tr key={idx}>
+                      <td className="px-3 py-2 border-b border-gray-100">{dayjs(h.fecha).format('DD/MM/YYYY HH:mm')}</td>
+                      <td className="px-3 py-2 border-b border-gray-100">
+                        <ul className="list-disc ml-4">
+                          {Object.entries(h.cambios).map(([k, v]) => (
+                            <li key={k}><b>{k}:</b> {v}</li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Modal Administrar Campaña */}
+      <Modal
+        isOpen={modalAdministrar}
+        onClose={() => setModalAdministrar(false)}
+        title={
+          <div className="flex items-center justify-between w-full">
+            <span className="font-semibold text-lg">Administrar Campaña</span>
+          </div>
+        }
+      >
+        {campañaSeleccionada && (
+          <div className="p-6">
+            <div className="relative">
+              {/* Información principal y botones SIEMPRE visibles */}
+              {/* Vista o edición de datos principales */}
+              {!editando ? (
+                <>
+                  {/* Mostrar datos de la campaña seleccionada */}
+                  <div className="flex flex-wrap items-center gap-4 mb-6">
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Cliente:</span> {campañaSeleccionada.cliente_nombre || <span className='italic text-gray-400'>Sin asignar</span>}
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Tipo:</span> {campañaSeleccionada.tipo || <span className='italic text-gray-400'>Sin asignar</span>}
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Estado:</span> {campañaSeleccionada.estado || <span className='italic text-gray-400'>Sin estado</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 mb-6">
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Campaña:</span> {campañaSeleccionada.nombre}
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Ejecutivo:</span> {campañaSeleccionada.cje || <span className='italic text-gray-400'>Sin asignar</span>}
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Líder:</span> {campañaSeleccionada.lider || <span className='italic text-gray-400'>Sin asignar</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 mb-6">
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Descripción:</span> {campañaSeleccionada.descripcion || <span className='italic text-gray-400'>Sin descripción</span>}
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Presupuesto:</span> {campañaSeleccionada.presupuesto || <span className='italic text-gray-400'>Sin presupuesto</span>}
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Observaciones:</span> {campañaSeleccionada.observaciones || <span className='italic text-gray-400'>Sin observaciones</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 mb-6">
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Fecha inicio:</span> {campañaSeleccionada.fecha_inicio ? dayjs(campañaSeleccionada.fecha_inicio).format('DD/MM/YYYY HH:mm') : <span className='italic text-gray-400'>Sin fecha</span>}
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Fecha fin:</span> {campañaSeleccionada.fecha_fin ? dayjs(campañaSeleccionada.fecha_fin).format('DD/MM/YYYY HH:mm') : <span className='italic text-gray-400'>Sin fecha</span>}
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Creación:</span> {campañaSeleccionada.fecha_creacion ? dayjs(campañaSeleccionada.fecha_creacion).format('DD/MM/YYYY HH:mm') : <span className='italic text-gray-400'>Sin fecha</span>}
+                    </div>
+                  </div>
+                  {/* Botones inferiores */}
+                  <div className="flex justify-end gap-3 mt-8">
+                    <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition" onClick={() => setEditando(true)}>Editar</button>
+                    <button
+                      className={`px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition ${mostrarProductos ? 'ring-2 ring-yellow-300' : ''}`}
+                      onClick={() => setMostrarProductos((prev) => !prev)}
+                    >
+                      Productos
+                    </button>
+                    <button
+                      className={`px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition ${mostrarFacturacion ? 'ring-2 ring-green-300' : ''}`}
+                      onClick={() => setMostrarFacturacion((prev) => !prev)}
+                    >
+                      Facturación
+                    </button>
+                  </div>
+                  {/* Formulario de Facturación expandible */}
+                  {mostrarFacturacion && (
+                    <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
+                      {/* ...existing code... */}
+                    </div>
+                  )}
+                  {/* Formulario de Productos expandible */}
+                  {mostrarProductos && (
+                    <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
+                      {/* ...existing code... */}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <form onSubmit={e => { e.preventDefault(); handleGuardarEdicion(); }}>
+                  <div className="flex flex-wrap items-center gap-4 mb-6">
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Nombre:</span>
+                      <input
+                        name="nombre"
+                        value={formEditar.nombre}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                        required
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Descripción:</span>
+                      <input
+                        name="descripcion"
+                        value={formEditar.descripcion}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Tipo:</span>
+                      <select
+                        name="tipo"
+                        value={formEditar.tipo}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                        required
+                      >
+                        <option value="SAC">SAC - Servicio de Atención</option>
+                        <option value="TMC">TMC - Telemarketing Central</option>
+                        <option value="TVT">TVT - Televentas Total</option>
+                        <option value="CBZ">CBZ - Cobranza</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 mb-6">
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Ejecutivo:</span>
+                      <input
+                        name="cje"
+                        value={formEditar.cje}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Líder:</span>
+                      <input
+                        name="lider"
+                        value={formEditar.lider}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Cliente ID:</span>
+                      <input
+                        name="cliente_id"
+                        value={formEditar.cliente_id}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                        type="number"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 mb-6">
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Fecha inicio:</span>
+                      <input
+                        name="fecha_inicio"
+                        value={formEditar.fecha_inicio}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                        type="datetime-local"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Fecha fin:</span>
+                      <input
+                        name="fecha_fin"
+                        value={formEditar.fecha_fin}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                        type="datetime-local"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Estado:</span>
+                      <input
+                        name="estado"
+                        value={formEditar.estado}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 mb-6">
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Presupuesto:</span>
+                      <input
+                        name="presupuesto"
+                        value={formEditar.presupuesto}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="font-semibold">Observaciones:</span>
+                      <input
+                        name="observaciones"
+                        value={formEditar.observaciones}
+                        onChange={handleEditarChange}
+                        className="w-full border rounded px-2 py-1 mt-1"
+                      />
+                    </div>
+                  </div>
+                  {/* Botones de guardar/cancelar */}
+                  <div className="flex justify-end gap-3 mt-8">
+                    <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition" type="submit">Guardar</button>
+                    <button className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition" type="button" onClick={() => setEditando(false)}>Cancelar</button>
+                  </div>
+                </form>
+              )}
+              {/* Formulario de Facturación expandible */}
+              {mostrarFacturacion && (
+                <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
+                  <form className="space-y-6" onSubmit={handleGuardarFacturacion}>
+                    <h3 className="text-lg font-semibold mb-4">Unidades de facturación</h3>
+                    <div className="flex flex-wrap gap-4 mb-4">
+                      <div className="flex-1 min-w-[180px]">
+                        <label className="block text-sm font-medium mb-1">Unidad de facturación</label>
+                        <input name="unidad" value={formFacturacion.unidad} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
+                      </div>
+                      <div className="flex-1 min-w-[120px]">
+                        <label className="block text-sm font-medium mb-1">Cantidad</label>
+                        <input type="number" name="cantidad" value={formFacturacion.cantidad} min={1} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
+                      </div>
+                      <div className="flex-1 min-w-[180px]">
+                        <label className="block text-sm font-medium mb-1">Valor</label>
+                        <div className="flex items-center">
+                          <span className="mr-2 text-gray-500 font-semibold">$</span>
+                          <input type="number" name="valor" value={formFacturacion.valor} min={0} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3">
+                      <button type="button" className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition" onClick={() => { setMostrarFacturacion(false); setFacturacionGuardada(null); }}>Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">Guardar</button>
+                    </div>
+                  </form>
+                  {facturacionGuardada && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                      <h4 className="font-semibold text-green-700 mb-2">Última facturación guardada:</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-green-900 text-sm border border-green-200 rounded">
+                          <thead>
+                            <tr className="bg-green-100">
+                              <th className="px-3 py-2 border-b border-green-200 text-left">Unidad</th>
+                              <th className="px-3 py-2 border-b border-green-200 text-left">Cantidad</th>
+                              <th className="px-3 py-2 border-b border-green-200 text-left">Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.unidad}</td>
+                              <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.cantidad}</td>
+                              <td className="px-3 py-2 border-b border-green-100">${facturacionGuardada.valor}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Formulario de Productos expandible */}
+              {mostrarProductos && (
+                <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
+                  <form className="space-y-6" onSubmit={handleGuardarProducto}>
+                    <h3 className="text-lg font-semibold mb-4">Productos y/o servicios</h3>
+                    <div className="flex flex-wrap gap-4 mb-4">
+                      <div className="flex-1 min-w-[180px]">
+                        <label className="block text-sm font-medium mb-1">Tipo</label>
+                        <select name="tipo" value={formProducto.tipo} onChange={handleProductoChange} className="w-full border rounded px-3 py-2">
+                          <option value="Producto">Producto</option>
+                          <option value="Servicio">Servicio</option>
+                        </select>
+                      </div>
+                      <div className="flex-1 min-w-[180px]">
+                        <label className="block text-sm font-medium mb-1">Proveedor</label>
+                        <input name="proveedor" value={formProducto.proveedor} onChange={handleProductoChange} className="w-full border rounded px-3 py-2" required />
+                      </div>
+                      <div className="flex-1 min-w-[180px]">
+                        <label className="block text-sm font-medium mb-1">Propiedad</label>
+                        <select name="propiedad" value={formProducto.propiedad} onChange={handleProductoChange} className="w-full border rounded px-3 py-2">
+                          <option value="Propia">Propia</option>
+                          <option value="Alquilada">Alquilada</option>
+                        </select>
+                      </div>
+                      <div className="flex-1 min-w-[120px]">
+                        <label className="block text-sm font-medium mb-1">Cantidad</label>
+                        <input type="number" name="cantidad" value={formProducto.cantidad} min={1} onChange={handleProductoChange} className="w-full border rounded px-3 py-2" required />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3">
+                      <button type="button" className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition">Guardar</button>
+                    </div>
+                  </form>
+                  {productoGuardado && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                      <h4 className="font-semibold text-yellow-700 mb-2">Último producto/servicio guardado:</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-yellow-900 text-sm border border-yellow-200 rounded">
+                          <thead>
+                            <tr className="bg-yellow-100">
+                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Tipo</th>
+                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Proveedor</th>
+                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Propiedad</th>
+                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Cantidad</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.tipo}</td>
+                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.proveedor}</td>
+                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.propiedad}</td>
+                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.cantidad}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
       {/* Encabezado */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Gestión de Campañas</h1>
@@ -210,7 +681,7 @@ const Campañas = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-4xl font-bold text-green-600">{estadisticas.total_campañas}</p>
+                <p className="text-4xl font-bold text-green-600">{estadisticas.total_campanias}</p>
               </div>
             </div>
           </div>
