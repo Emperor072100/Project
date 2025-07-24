@@ -5,7 +5,9 @@ import {
   useSensors,
   useSensor,
   PointerSensor,
-  KeyboardSensor
+  KeyboardSensor,
+  DragOverlay,
+  useDroppable
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -16,53 +18,140 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useProyectos } from '../context/ProyectosContext';
 
+
 const KanbanView = () => {
   const { proyectos, loading, updateProyectoFromKanban } = useProyectos();
-  
+
   const [columns, setColumns] = useState([
     { id: 'pendientes', title: 'PENDIENTES', color: 'bg-yellow-50' },
     { id: 'enProceso', title: 'EN PROCESO', color: 'bg-blue-50' },
     { id: 'terminados', title: 'TERMINADOS', color: 'bg-green-50' }
   ]);
 
+  // Estado local para el orden de los proyectos por columna
+  const [columnProjects, setColumnProjects] = useState({
+    pendientes: [],
+    enProceso: [],
+    terminados: []
+  });
+
   const [columnCounts, setColumnCounts] = useState({});
+  const [activeProject, setActiveProject] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor)
   );
 
+
+  // Sincronizar el estado local con los proyectos del contexto
   useEffect(() => {
-    // Actualizar contadores de columnas cuando cambian los proyectos
+    // Evitar duplicados al sincronizar, manteniendo solo una instancia de cada proyecto en la columna correcta
+    const uniqueProyectos = [...proyectos];
+    
+    const newColumnProjects = {
+      pendientes: uniqueProyectos.filter(p => p.column === 'pendientes'),
+      enProceso: uniqueProyectos.filter(p => p.column === 'enProceso'),
+      terminados: uniqueProyectos.filter(p => p.column === 'terminados'),
+    };
+    setColumnProjects(newColumnProjects);
+
+    // Actualizar contadores de columnas
     const counts = {};
     columns.forEach(col => {
-      counts[col.id] = proyectos.filter(p => p.column === col.id).length;
+      counts[col.id] = newColumnProjects[col.id].length;
     });
     setColumnCounts(counts);
   }, [proyectos, columns]);
 
-  const handleDragEnd = async (event) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    // Encontrar los proyectos involucrados
-    const activeProject = proyectos.find(p => p.id.toString() === active.id.toString());
-    const overProject = proyectos.find(p => p.id.toString() === over.id.toString());
-
-    if (!activeProject || !overProject) return;
-
-    const sameColumn = activeProject.column === overProject.column;
-
-    if (!sameColumn) {
-      // Si se mueve a otra columna, actualizar el estado del proyecto
-      await updateProyectoFromKanban(activeProject.id, overProject.column);
-    }
-    // No necesitamos manejar el reordenamiento dentro de la misma columna
-    // ya que no afecta al estado del proyecto
+  const handleDragStart = (event) => {
+    const { active } = event;
+    const project = proyectos.find(p => p.id.toString() === active.id.toString());
+    setActiveProject(project);
   };
 
-  const getProjectsByColumn = (columnId) =>
-    proyectos.filter((project) => project.column === columnId);
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    setActiveProject(null);
+    
+    if (!over) return;
+
+    const activeProject = proyectos.find(p => p.id.toString() === active.id.toString());
+    if (!activeProject) return;
+
+    const fromColumn = activeProject.column;
+    let toColumn = fromColumn;
+
+    // Verificar si se soltó directamente sobre una columna
+    if (columns.find(col => col.id === over.id)) {
+      toColumn = over.id;
+    } else {
+      // Si se soltó sobre otro proyecto, obtener su columna
+      const overProject = proyectos.find(p => p.id.toString() === over.id.toString());
+      if (overProject) {
+        toColumn = overProject.column;
+      }
+    }
+
+    // Si se mueve a otra columna
+    if (fromColumn !== toColumn) {
+      try {
+        // Actualizar primero el estado local para un efecto visual inmediato
+        setColumnProjects(prev => {
+          // Eliminar el proyecto de cualquier columna donde pudiera estar
+          const newColumnProjects = {};
+          Object.keys(prev).forEach(colKey => {
+            newColumnProjects[colKey] = prev[colKey].filter(p => p.id !== activeProject.id);
+          });
+          
+          // Agregar a la columna destino
+          newColumnProjects[toColumn] = [
+            ...newColumnProjects[toColumn],
+            { ...activeProject, column: toColumn }
+          ];
+          
+          return newColumnProjects;
+        });
+        
+        // Luego enviar la actualización al backend
+        await updateProyectoFromKanban({
+          ...activeProject,
+          column: toColumn
+        });
+      } catch (error) {
+        console.error("Error al mover proyecto:", error);
+        // Revertir cambio visual si hay error en el backend
+        setColumnProjects(prev => {
+          // Volver a sincronizar con los datos originales
+          const updatedColumns = { ...prev };
+          // Quitar el proyecto de todas las columnas
+          Object.keys(updatedColumns).forEach(colKey => {
+            updatedColumns[colKey] = updatedColumns[colKey].filter(p => p.id !== activeProject.id);
+          });
+          // Ponerlo en su columna original
+          updatedColumns[fromColumn] = [...updatedColumns[fromColumn], activeProject];
+          return updatedColumns;
+        });
+      }
+      return;
+    }
+
+    // Si es la misma columna y no es el mismo elemento, reordenar
+    if (active.id !== over.id) {
+      const columnList = [...columnProjects[fromColumn]];
+      const oldIndex = columnList.findIndex(p => p.id.toString() === active.id.toString());
+      const newIndex = columnList.findIndex(p => p.id.toString() === over.id.toString());
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newColumnList = arrayMove(columnList, oldIndex, newIndex);
+        setColumnProjects(prev => ({ ...prev, [fromColumn]: newColumnList }));
+      }
+    }
+  };
+
+
+  // Usar el estado local para el orden visual
+  const getProjectsByColumn = (columnId) => columnProjects[columnId] || [];
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -122,9 +211,16 @@ const KanbanView = () => {
   });
 
   const Column = ({ column, projects }) => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: column.id,
+    });
+
     return (
       <div
-        className={`${column.color} p-4 rounded-lg shadow-sm flex-1 min-w-[300px] max-w-[350px]`}
+        ref={setNodeRef}
+        className={`${column.color} p-4 rounded-lg shadow-sm flex-1 min-w-[300px] max-w-[350px] min-h-[500px] transition-colors ${
+          isOver ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+        }`}
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-semibold text-gray-700">{column.title}</h2>
@@ -136,10 +232,15 @@ const KanbanView = () => {
           items={projects.map((p) => p.id.toString())}
           strategy={verticalListSortingStrategy}
         >
-          <div className="space-y-2">
+          <div className="space-y-2 min-h-[400px]">
             {projects.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
+            {projects.length === 0 && (
+              <div className="flex items-center justify-center h-32 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-lg">
+                Arrastra aquí las tarjetas
+              </div>
+            )}
           </div>
         </SortableContext>
       </div>
@@ -160,6 +261,7 @@ const KanbanView = () => {
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
         <div className="flex space-x-4 overflow-x-auto pb-4">
@@ -171,6 +273,30 @@ const KanbanView = () => {
             />
           ))}
         </div>
+        <DragOverlay>
+          {activeProject ? (
+            <div className="bg-white p-3 rounded-md shadow-lg mb-2 border-l-4 border-blue-500 opacity-90 transform rotate-3">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-medium text-sm">{activeProject.nombre}</h3>
+                <span className={`${getPriorityColor(activeProject.prioridad)} px-2 py-0.5 rounded-full text-xs font-medium`}>
+                  {activeProject.prioridad}
+                </span>
+              </div>
+              <div className="flex items-center mb-2">
+                <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 mr-2 text-xs">
+                  {(activeProject.responsable_nombre || activeProject.responsable || 'S/A').charAt(0).toUpperCase()}
+                </div>
+                <span className="text-xs text-gray-500">{Array.isArray(activeProject.equipo) ? activeProject.equipo[0] : activeProject.equipo}</span>
+              </div>
+              <div className="text-xs bg-gray-100 px-2 py-1 rounded mb-2">
+                {activeProject.subcolumn}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${activeProject.progreso}%` }}></div>
+              </div>
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
