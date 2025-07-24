@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-
 from typing import List
 from schemas.campaña import CampañaCreate, CampañaUpdate, CampañaOut
 from app.models.campana import Campaña, TipoCampaña
@@ -9,16 +8,11 @@ from app.models.cliente_corporativo import ClienteCorporativo
 from app.dependencies import get_db
 from core.security import get_current_user, UserInDB
 
-# MODELOS Y ESQUEMAS NECESARIOS
-from app.models.campana import Campaña, TipoCampaña
-from app.models.cliente import Cliente
-from app.schemas.campaña import CampañaOut, CampañaCreate, CampañaUpdate
-
 router = APIRouter(prefix="/campañas", tags=["Campañas"])
 
 
 @router.post("/", response_model=CampañaOut)
-def crear_campania(
+def crear_campaña(
     campaña: CampañaCreate,
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
@@ -96,9 +90,6 @@ def obtener_estadisticas(
             "TMC": tmc_count,
             "TVT": tvt_count,
             "CBZ": cbz_count
-            "TMC": tmc_count,
-            "TVT": tvt_count,
-            "CBZ": cbz_count
         }
     }
 
@@ -109,7 +100,7 @@ def obtener_campaña(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    """Obtener una campania específica"""
+    """Obtener una campaña específica"""
     campaña = db.query(Campaña).options(
         joinedload(Campaña.cliente_corporativo),
         joinedload(Campaña.contacto)
@@ -172,7 +163,7 @@ def eliminar_campaña(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    """Eliminar una campania"""
+    """Eliminar una campaña"""
     campaña = db.query(Campaña).filter(Campaña.id == campaña_id).first()
     if not campaña:
         raise HTTPException(status_code=404, detail="Campaña no encontrada")

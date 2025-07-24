@@ -56,7 +56,7 @@ def crear_usuario(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
-@router.get("/", response_model=List[UsuarioOut])
+@router.get("", response_model=List[UsuarioOut])
 def listar_usuarios(nombre: Optional[str] = Query(None), db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     query = db.query(Usuario)
     if nombre:
