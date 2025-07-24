@@ -1,14 +1,8 @@
 """empty message
 
-<<<<<<<< HEAD:backend/alembic/versions/fda52130131f_.py
-Revision ID: fda52130131f
-Revises: 
-Create Date: 2025-07-22 11:25:53.560186
-========
-Revision ID: 2a1b0d9acf50
-Revises: 
-Create Date: 2025-07-22 11:31:19.655297
->>>>>>>> 1028cc37cd6f7907e43a1990eac23442437aa8af:backend/alembic/versions/2a1b0d9acf50_.py
+Revision ID: 11edd8420e21
+Revises: 2a1b0d9acf50
+Create Date: 2025-07-22 11:32:47.370870
 
 """
 from typing import Sequence, Union
@@ -18,12 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-<<<<<<<< HEAD:backend/alembic/versions/fda52130131f_.py
-revision: str = 'fda52130131f'
-========
-revision: str = '2a1b0d9acf50'
->>>>>>>> 1028cc37cd6f7907e43a1990eac23442437aa8af:backend/alembic/versions/2a1b0d9acf50_.py
-down_revision: Union[str, Sequence[str], None] = None
+revision: str = '11edd8420e21'
+down_revision: Union[str, Sequence[str], None] = '2a1b0d9acf50'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

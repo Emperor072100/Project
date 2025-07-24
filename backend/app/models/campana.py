@@ -6,26 +6,25 @@ import enum
 
 class TipoCampaña(str, enum.Enum):
     SAC = "SAC"
-    TMG = "TMG"
-    CBI = "CBI"
-    OTRO = "OTRO"
+    TMC = "TMC"
+    TVT = "TVT"
+    CBZ = "CBZ"
 
 class Campaña(Base):
-    __tablename__ = "campañas_campañas"
+    __tablename__ = "campañas"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
     descripcion = Column(Text, nullable=True)
-    tipo = Column(Enum(TipoCampaña), nullable=False, default=TipoCampaña.OTRO)
-    cje = Column(String, nullable=True)  # Campo CJE del diseño
-    lider = Column(String, nullable=True)  # Líder de la campaña
+    tipo = Column(Enum(TipoCampaña), nullable=False, default=TipoCampaña.SAC)
+    cje = Column(String, nullable=True)
+    lider = Column(String, nullable=True)
     cliente_id = Column(Integer, ForeignKey("campañas_clientes.id"), nullable=False)
     fecha_inicio = Column(DateTime, nullable=True)
     fecha_fin = Column(DateTime, nullable=True)
-    estado = Column(String, default="Activa")  # Activa, Pausada, Finalizada
+    estado = Column(String, default="Activa")
     presupuesto = Column(String, nullable=True)
     observaciones = Column(Text, nullable=True)
     fecha_creacion = Column(DateTime, default=datetime.utcnow)
-    
-    # Relación con cliente
+
     cliente = relationship("Cliente", back_populates="campañas")

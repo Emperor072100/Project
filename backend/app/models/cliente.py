@@ -15,6 +15,5 @@ class Cliente(Base):
     contacto_principal = Column(String, nullable=True)
     observaciones = Column(Text, nullable=True)
     fecha_creacion = Column(DateTime, default=datetime.utcnow)
-    
-    # Relación con campañas
+
     campañas = relationship("Campaña", back_populates="cliente")
