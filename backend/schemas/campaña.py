@@ -1,37 +1,35 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import date
 from app.models.campana import TipoCampaña
 
 
 class CampañaBase(BaseModel):
     nombre: str
-    descripcion: Optional[str] = None
     tipo: TipoCampaña
-    cje: Optional[str] = None
-    lider: Optional[str] = None
-    cliente_id: int
-    fecha_inicio: Optional[datetime] = None
-    fecha_fin: Optional[datetime] = None
-    estado: Optional[str] = "Activa"
-    presupuesto: Optional[str] = None
-    observaciones: Optional[str] = None
+    cliente_corporativo_id: int
+    contacto_id: int
+    lider_de_campaña: str
+    ejecutivo: str
+    fecha_de_produccion: date  # Solo fecha, sin hora
 
 
 class CampañaCreate(CampañaBase):
     pass
 
 
-class CampañaUpdate(CampañaBase):
+class CampañaUpdate(BaseModel):
     nombre: Optional[str] = None
-    cliente_id: Optional[int] = None
     tipo: Optional[TipoCampaña] = None
+    cliente_corporativo_id: Optional[int] = None
+    contacto_id: Optional[int] = None
+    lider_de_campaña: Optional[str] = None
+    ejecutivo: Optional[str] = None
+    fecha_de_produccion: Optional[date] = None
 
 
 class CampañaOut(CampañaBase):
     id: int
-    fecha_creacion: datetime
-    cliente_nombre: Optional[str] = None  # Para mostrar el nombre del cliente en la tabla
     
     class Config:
         from_attributes = True

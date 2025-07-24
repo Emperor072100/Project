@@ -1,30 +1,41 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from schemas.cliente import ClienteCreate, ClienteUpdate, ClienteOut
 from app.models.cliente import Cliente
+from app.models.cliente_corporativo import ClienteCorporativo
 from app.dependencies import get_db
 from core.security import get_current_user, UserInDB
 
-router = APIRouter(prefix="/clientes", tags=["Clientes"])
+router = APIRouter(prefix="/contactos", tags=["Contactos"])
 
 
 @router.post("/", response_model=ClienteOut)
-def crear_cliente(
-    cliente: ClienteCreate,
+def crear_contacto(
+    contacto: ClienteCreate,
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):
-    """Crear un nuevo cliente"""
-    nuevo_cliente = Cliente(**cliente.dict())
-    db.add(nuevo_cliente)
+    """Crear un nuevo contacto"""
+    # Verificar que el cliente corporativo existe
+    cliente_corp = db.query(ClienteCorporativo).filter(
+        ClienteCorporativo.id == contacto.cliente_corporativo_id
+    ).first()
+    if not cliente_corp:
+        raise HTTPException(
+            status_code=404,
+            detail="Cliente corporativo no encontrado"
+        )
+    
+    nuevo_contacto = Cliente(**contacto.dict())
+    db.add(nuevo_contacto)
     db.commit()
-    db.refresh(nuevo_cliente)
-    return nuevo_cliente
+    db.refresh(nuevo_contacto)
+    return nuevo_contacto
 
 
 @router.get("/", response_model=List[ClienteOut])
-def listar_clientes(
+def listar_contactos(
     db: Session = Depends(get_db),
     usuario: UserInDB = Depends(get_current_user)
 ):

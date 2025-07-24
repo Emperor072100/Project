@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import proyectos, tareas, auth, usuarios
 from core.config import DATABASE_URL
-from routers import tipos, equipos, prioridades, estados, clientes, campañas
+from routers import tipos, equipos, prioridades, estados, contactos, campañas, clientes_corporativos
 
 app = FastAPI()
 
@@ -23,8 +23,9 @@ app.include_router(tipos.router)
 app.include_router(equipos.router)
 app.include_router(prioridades.router)
 app.include_router(estados.router)
-app.include_router(clientes.router)
+app.include_router(contactos.router)
 app.include_router(campañas.router)
+app.include_router(clientes_corporativos.router)
 
 @app.get("/")
 def root():

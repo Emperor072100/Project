@@ -130,12 +130,15 @@ const Campañas = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
+      const { cliente_id, ejecutivo, ...rest } = formCampaña;
+      
       const datosEnvio = {
         ...rest,
-        cliente_id: parseInt(formCampaña.cliente_id),
-        cje: formCampaña.ejecutivo, // Mapear ejecutivo a cje para el backend
-        fecha_inicio: formCampaña.fecha_inicio || null,
-        estado: 'Activa'
+        cliente_corporativo_id: parseInt(cliente_id),
+        contacto_id: parseInt(cliente_id), // Ajustar según tu lógica de negocio
+        lider_de_campaña: formCampaña.lider,
+        ejecutivo: ejecutivo,
+        fecha_de_produccion: formCampaña.fecha_inicio || null
       };
 
       await axios.post('http://localhost:8000/campañas/', datosEnvio, config);
@@ -256,7 +259,7 @@ const Campañas = () => {
       setHistorial(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       setHistorial([]);
-      toast.error('No se pudo cargar el historial');
+      toast.error('No se pudo cargar el historial', error);
     }
     setModalHistorial(true);
   };
