@@ -1,7 +1,7 @@
 // components/TablaProyectos.tsx
 import React, { useState, useMemo } from 'react';
 import { Proyecto } from '../views';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import PanelDetalleProyecto from './PanelDetalleProyecto';
 import NuevoProyecto from './NuevoProyecto';
 import CustomTable from './CustomTable';
@@ -30,8 +30,10 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   onVerDetalle,
   onEliminar
 }) => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState<Proyecto | null>(null);
+  const [proyectoEditar, setProyectoEditar] = useState<Proyecto | null>(null);
+  const [modalEditarOpen, setModalEditarOpen] = useState(false);
 
   // Configuración de columnas para la tabla modular
   const tableColumns = useMemo(() => [
@@ -58,7 +60,12 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
       value: 'tipo',
       text: 'Tipo',
       selected: true,
-      type: 'text' as const
+      type: 'text' as const,
+      render: (row: Proyecto) => (
+        <span style={{background:'#D1FADF', color:'#039855', borderRadius:'9999px', padding:'2px 12px', fontSize:'14px', fontWeight:500, display:'inline-block'}}>
+          {Array.isArray(row.tipo) ? row.tipo.join(', ') : row.tipo}
+        </span>
+      )
     },
     {
       value: 'equipo',
@@ -130,7 +137,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
         onVerDetalle(row);
         break;
       case 'edit':
-        navigate(`/proyecto/${row.id}`);
+        setProyectoEditar(row);
+        setModalEditarOpen(true);
         break;
       case 'delete':
         if (onEliminar) {
@@ -159,9 +167,26 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
           <h2 className="text-xl font-semibold text-gray-800">Gestión de Proyectos</h2>
         </div>
         
-        <div>
-          <NuevoProyecto onCreado={handleProyectoCreado} />
-        </div>
+      <div>
+        <NuevoProyecto onCreado={handleProyectoCreado} />
+      </div>
+      {/* Modal de edición de proyecto */}
+      {proyectoEditar && (
+        <NuevoProyecto
+          onCreado={() => {
+            handleProyectoCreado();
+            setModalEditarOpen(false);
+            setProyectoEditar(null);
+          }}
+          onCancel={() => {
+            setModalEditarOpen(false);
+            setProyectoEditar(null);
+          }}
+          proyectoEditar={proyectoEditar}
+          openExternally={modalEditarOpen}
+          setOpenExternally={setModalEditarOpen}
+        />
+      )}
       </div>
 
       {/* Tabla Modular */}
