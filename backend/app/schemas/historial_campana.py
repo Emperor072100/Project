@@ -3,7 +3,6 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 
 class HistorialBase(BaseModel):
-    campaña_id: int
     usuario_id: Optional[int] = None
     accion: str
     cambios: Optional[Dict[str, Any]] = None
@@ -14,6 +13,7 @@ class HistorialCreate(HistorialBase):
 
 class HistorialOut(HistorialBase):
     id: int
+    campaña_id: int
     fecha: datetime
 
     class Config:
