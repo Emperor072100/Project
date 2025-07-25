@@ -1,50 +1,35 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import date
+from app.models.campana import TipoCampaña
+
 
 class CampañaBase(BaseModel):
     nombre: str
-    descripcion: Optional[str] = None
-    tipo: str
+    tipo: TipoCampaña
+    cliente_corporativo_id: int
+    contacto_id: int
+    lider_de_campaña: str
+    ejecutivo: str
+    fecha_de_produccion: date  # Solo fecha, sin hora
+
 
 class CampañaCreate(CampañaBase):
-    cliente_id: int
-    cje: Optional[str] = None
-    lider: Optional[str] = None
-    fecha_inicio: Optional[str] = None
-    fecha_fin: Optional[str] = None
-    estado: Optional[str] = None
-    presupuesto: Optional[str] = None
-    observaciones: Optional[str] = None
+    pass
 
-class CampañaUpdate(CampañaBase):
-    cliente_id: Optional[int] = None
-    cje: Optional[str] = None
-    lider: Optional[str] = None
-    fecha_inicio: Optional[str] = None
-    fecha_fin: Optional[str] = None
-    estado: Optional[str] = None
-    presupuesto: Optional[str] = None
-    observaciones: Optional[str] = None
+
+class CampañaUpdate(BaseModel):
+    nombre: Optional[str] = None
+    tipo: Optional[TipoCampaña] = None
+    cliente_corporativo_id: Optional[int] = None
+    contacto_id: Optional[int] = None
+    lider_de_campaña: Optional[str] = None
+    ejecutivo: Optional[str] = None
+    fecha_de_produccion: Optional[date] = None
+
 
 class CampañaOut(CampañaBase):
     id: int
-    cliente_nombre: Optional[str] = None
-    cje: Optional[str] = None
-    lider: Optional[str] = None
-    class Config:
-        from_attributes = True
-
-class TipoCampañaBase(BaseModel):
-    nombre: str
-    descripcion: Optional[str] = None
-
-class TipoCampañaCreate(TipoCampañaBase):
-    pass
-
-class TipoCampañaUpdate(TipoCampañaBase):
-    pass
-
-class TipoCampañaOut(TipoCampañaBase):
-    id: int
+    
     class Config:
         from_attributes = True

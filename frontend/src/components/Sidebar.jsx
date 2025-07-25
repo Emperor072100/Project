@@ -53,7 +53,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   };
 
   return (
-    <aside className={`${collapsed ? 'w-20' : 'w-64'} h-screen bg-gray-800 text-white flex flex-col shadow-lg fixed transition-all duration-300 ease-in-out`}>
+    <aside className={`${collapsed ? 'w-20' : 'w-64'} h-screen bg-gray-800 text-white flex flex-col shadow-lg fixed transition-all duration-300 ease-in-out`} style={{zIndex: 50, position: 'fixed', left: 0, top: 0}}>
       {/* Botón para colapsar/expandir */}
       <button 
         onClick={toggleSidebar}

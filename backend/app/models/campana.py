@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from core.database import Base
-from datetime import datetime
 import enum
+
 
 class TipoCampaña(str, enum.Enum):
     SAC = "SAC"
@@ -10,21 +10,30 @@ class TipoCampaña(str, enum.Enum):
     TVT = "TVT"
     CBZ = "CBZ"
 
+
 class Campaña(Base):
-    __tablename__ = "campañas"
+    __tablename__ = "campañas_campañas"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
-    descripcion = Column(Text, nullable=True)
     tipo = Column(Enum(TipoCampaña), nullable=False, default=TipoCampaña.SAC)
-    cje = Column(String, nullable=True)
-    lider = Column(String, nullable=True)
-    cliente_id = Column(Integer, ForeignKey("campañas_clientes.id"), nullable=False)
-    fecha_inicio = Column(DateTime, nullable=True)
-    fecha_fin = Column(DateTime, nullable=True)
-    estado = Column(String, default="Activa")
-    presupuesto = Column(String, nullable=True)
-    observaciones = Column(Text, nullable=True)
-    fecha_creacion = Column(DateTime, default=datetime.utcnow)
-
-    cliente = relationship("Cliente", back_populates="campañas")
+    cliente_corporativo_id = Column(
+        Integer,
+        ForeignKey("campañas_clientes_corporativos.id"),
+        nullable=False
+    )
+    contacto_id = Column(
+        Integer,
+        ForeignKey("campañas_contacto.id"),
+        nullable=False
+    )
+    lider_de_campaña = Column(String, nullable=False)
+    ejecutivo = Column(String, nullable=False)
+    fecha_de_produccion = Column(Date, nullable=False)  # Solo fecha, sin hora
+    
+    # Relaciones
+    cliente_corporativo = relationship(
+        "ClienteCorporativo",
+        back_populates="campañas"
+    )
+    contacto = relationship("Cliente", back_populates="campañas")

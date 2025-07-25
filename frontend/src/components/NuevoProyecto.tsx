@@ -49,9 +49,29 @@ interface FormularioProyecto {
   observaciones: string;
 }
 
+interface ProyectoEditar {
+  id: number;
+  nombre: string;
+  responsable: string;
+  responsable_id: number;
+  estado_id: number;
+  prioridad_id: number;
+  tipos: number[];
+  equipos: number[];
+  objetivo: string;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  progreso: number;
+  enlace: string;
+  observaciones: string;
+}
+
 interface Props {
   onCreado: () => void;
   onCancel?: () => void;
+  proyectoEditar?: ProyectoEditar | null;
+  openExternally?: boolean;
+  setOpenExternally?: (open: boolean) => void;
 }
 
 // Constantes para opciones
@@ -59,9 +79,16 @@ const opcionesTipo = ['Otro', 'Informe', 'Automatización', 'Desarrollo'];
 const opcionesEquipo = ['Dirección TI', 'Estrategia CX', 'Dirección Financiera', 'Dirección de Servicios', 'Dirección Comercial', 'Dirección GH', 'Desarrollo CX'];
 const opcionesPrioridad = ['Alta', 'Media', 'Baja'];
 
-const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
+const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel, proyectoEditar, openExternally, setOpenExternally }) => {
   // Un solo estado para controlar el modal
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Permitir control externo del modal (para integración con tabla/lista)
+  useEffect(() => {
+    if (typeof openExternally === 'boolean') {
+      setModalOpen(openExternally);
+    }
+  }, [openExternally]);
   
   // Estado para cargar estados, prioridades, tipos y equipos desde la API
   const [estados, setEstados] = useState<Estado[]>([]);
@@ -84,6 +111,29 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
     enlace: '',
     observaciones: ''
   });
+
+  // Pre-cargar datos si es edición
+  useEffect(() => {
+    if (proyectoEditar && modalOpen) {
+      setFormulario({
+        nombre: proyectoEditar.nombre || '',
+        responsable: proyectoEditar.responsable || '',
+        responsable_id: proyectoEditar.responsable_id || '',
+        estado_id: proyectoEditar.estado_id || 0,
+        prioridad_id: proyectoEditar.prioridad_id || 0,
+        tipos: proyectoEditar.tipos || [],
+        equipos: proyectoEditar.equipos || [],
+        objetivo: proyectoEditar.objetivo || '',
+        fecha_inicio: proyectoEditar.fecha_inicio ? proyectoEditar.fecha_inicio.split('T')[0] : new Date().toISOString().split('T')[0],
+        fecha_fin: proyectoEditar.fecha_fin ? proyectoEditar.fecha_fin.split('T')[0] : null,
+        progreso: proyectoEditar.progreso || 0,
+        enlace: proyectoEditar.enlace || '',
+        observaciones: proyectoEditar.observaciones || ''
+      });
+    } else if (!proyectoEditar && modalOpen) {
+      resetForm();
+    }
+  }, [proyectoEditar, modalOpen]);
   
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(false);
@@ -260,62 +310,93 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    // Validación estricta de campos obligatorios
     if (!formulario.nombre.trim()) {
       showAlert('Información!', 'El nombre del proyecto es obligatorio', 'warning');
       return;
     }
-
-    if (!formulario.responsable_id) {
+    if (!formulario.responsable_id || isNaN(Number(formulario.responsable_id))) {
       showAlert('Información!', 'Debes seleccionar un responsable', 'warning');
       return;
     }
-    
+    if (!formulario.estado_id || isNaN(Number(formulario.estado_id))) {
+      showAlert('Información!', 'Debes seleccionar un estado', 'warning');
+      return;
+    }
+    if (!formulario.prioridad_id || isNaN(Number(formulario.prioridad_id))) {
+      showAlert('Información!', 'Debes seleccionar una prioridad', 'warning');
+      return;
+    }
+    // Si el backend requiere al menos un tipo o equipo, descomenta las siguientes líneas:
+    // if (!formulario.tipos.length) {
+    //   showAlert('Información!', 'Debes seleccionar al menos un tipo de proyecto', 'warning');
+    //   return;
+    // }
+    // if (!formulario.equipos.length) {
+    //   showAlert('Información!', 'Debes seleccionar al menos un equipo', 'warning');
+    //   return;
+    // }
     try {
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-
+      // Asegurar que todos los IDs sean number y los campos requeridos estén presentes
+      // Buscar el nombre del estado y prioridad seleccionados
+      const estadoObj = estados.find(e => e.id === Number(formulario.estado_id));
+      const prioridadObj = prioridades.find(p => p.id === Number(formulario.prioridad_id));
       const datosAEnviar = {
         nombre: formulario.nombre.trim(),
         responsable_id: Number(formulario.responsable_id),
         estado_id: Number(formulario.estado_id),
+        estado: estadoObj ? estadoObj.nombre : '',
         prioridad_id: Number(formulario.prioridad_id),
-        tipos: formulario.tipos.length > 0 ? formulario.tipos : [],
-        equipos: formulario.equipos.length > 0 ? formulario.equipos : [],
+        prioridad: prioridadObj ? prioridadObj.nivel : '',
+        tipos: Array.isArray(formulario.tipos) ? formulario.tipos.map(Number) : [],
+        equipos: Array.isArray(formulario.equipos) ? formulario.equipos.map(Number) : [],
         objetivo: formulario.objetivo?.trim() || '',
         fecha_inicio: formulario.fecha_inicio,
-        fecha_fin: formulario.fecha_fin || null,
+        fecha_fin: formulario.fecha_fin && formulario.fecha_fin !== '' ? formulario.fecha_fin : null,
         progreso: Number(formulario.progreso),
         enlace: formulario.enlace?.trim() || '',
         observaciones: formulario.observaciones?.trim() || ''
       };
-      
-      console.log('Datos enviados al backend:', JSON.stringify(datosAEnviar, null, 2));
-      
-      const response = await axios.post('http://localhost:8000/proyectos/', datosAEnviar, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      // Validar que no haya ningún campo requerido vacío o nulo
+      for (const [key, value] of Object.entries(datosAEnviar)) {
+        if ((value === null || value === '' || (Array.isArray(value) && value.length === 0)) && ['nombre','responsable_id','estado_id','prioridad_id'].includes(key)) {
+          showAlert('Información!', `El campo ${key} es obligatorio`, 'warning');
+          setLoading(false);
+          return;
         }
-      });
-
+      }
+      console.log('Datos enviados al backend:', JSON.stringify(datosAEnviar, null, 2));
+      let response;
+      if (proyectoEditar && proyectoEditar.id) {
+        // Modo edición
+        response = await axios.put(`http://localhost:8000/proyectos/${proyectoEditar.id}`, datosAEnviar, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } else {
+        // Modo creación
+        response = await axios.post('http://localhost:8000/proyectos/', datosAEnviar, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
       if (response.status === 201 || response.status === 200) {
-        // Mostrar mensaje personalizado de éxito
-        showAlert('Exitoso!', '¡Proyecto creado con éxito!', 'success');
-        
-        // Cerrar el modal y resetear el formulario
+        showAlert('Exitoso!', proyectoEditar ? '¡Proyecto editado con éxito!' : '¡Proyecto creado con éxito!', 'success');
         setModalOpen(false);
+        if (setOpenExternally) setOpenExternally(false);
         resetForm();
-        
-        // Llamar a la función onCreado
         onCreado();
       }
     } catch (error: any) {
-      console.error('Error al crear proyecto:', error);
-      
+      console.error('Error al crear/editar proyecto:', error);
       if (error.response?.status === 401) {
         showAlert('Sesión expirada', 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning');
-        // Limpiar tokens y redirigir al login
         localStorage.removeItem('token');
         sessionStorage.removeItem('token');
         setTimeout(() => {
@@ -323,22 +404,19 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
         }, 2000);
         return;
       }
-      
       if (error.response?.data?.detail) {
         console.log('Detalles del error:', error.response.data.detail);
-        
         if (Array.isArray(error.response.data.detail)) {
           const mensajes = error.response.data.detail.map((err: any) => {
             const campo = err.loc[1];
             return `Error en ${campo}: ${err.msg}`;
           }).join('\n');
-          
           showAlert('Error!', mensajes, 'error');
         } else {
           showAlert('Error!', error.response.data.detail, 'error');
         }
       } else {
-        showAlert('Error!', 'Error al crear el proyecto', 'error');
+        showAlert('Error!', proyectoEditar ? 'Error al editar el proyecto' : 'Error al crear el proyecto', 'error');
       }
     } finally {
       setLoading(false);
@@ -369,25 +447,27 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
   
   const closeModal = () => {
     setModalOpen(false);
+    if (setOpenExternally) setOpenExternally(false);
     resetForm();
     onCancel?.();
   };
 
   return (
     <>
-      {/* Único botón para abrir el modal */}
-      <button 
-        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-        onClick={() => setModalOpen(true)}
-      >
-        + Nuevo Proyecto
-      </button>
-      
+      {/* Botón para abrir modal de nuevo o editar proyecto */}
+      {!proyectoEditar && !openExternally && (
+        <button 
+          className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+          onClick={() => setModalOpen(true)}
+        >
+          + Nuevo Proyecto
+        </button>
+      )}
       {/* Modal con fondo difuminado */}
       <Modal 
         isOpen={modalOpen} 
         onClose={closeModal}
-        title="Nuevo Proyecto"
+        title={proyectoEditar ? 'Editar Proyecto' : 'Nuevo Proyecto'}
       >
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -529,28 +609,27 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
               
               {/* Segunda columna */}
               <div className="space-y-4">
-                {/* Tipo */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de proyecto
-                  </label>
-                  <div className="space-y-2">
-                    {tiposDisponibles.map(tipo => (
-                      <div key={tipo.id} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={`tipo-${tipo.id}`}
-                          checked={formulario.tipos.includes(tipo.id)}
-                          onChange={(e) => handleCheckboxChange('tipos', tipo.id, e.target.checked)}
-                          className="h-4 w-4 text-green-600 border-gray-300 rounded"
-                        />
-                        <label htmlFor={`tipo-${tipo.id}`} className="ml-2 text-sm text-gray-700">
-                          {tipo.nombre}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {/* Tipo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de proyecto <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="tipos"
+                  value={formulario.tipos[0]?.toString() || ''}
+                  onChange={e => {
+                    const selected = Number(e.target.value);
+                    setFormulario({ ...formulario, tipos: selected ? [selected] : [] });
+                  }}
+                  className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                  required
+                >
+                  <option value="">Selecciona tipo</option>
+                  {tiposDisponibles.map(tipo => (
+                    <option key={tipo.id} value={tipo.id}>{tipo.nombre}</option>
+                  ))}
+                </select>
+              </div>
                 
                 {/* Equipo */}
                 <div>
@@ -636,7 +715,7 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
                 disabled={loading}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
-                {loading ? 'Creando...' : 'Crear Proyecto'}
+                {loading ? (proyectoEditar ? 'Guardando...' : 'Creando...') : (proyectoEditar ? 'Guardar Cambios' : 'Crear Proyecto')}
               </button>
             </div>
           </form>

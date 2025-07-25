@@ -8,15 +8,18 @@ import dayjs from 'dayjs';
 const Campañas = () => {
   // Estados principales
   const [campañas, setCampañas] = useState([]);
-  const [clientes, setClientes] = useState([]);
+  const [clientesCorporativos, setClientesCorporativos] = useState([]);
+  const [contactos, setContactos] = useState([]);
   const [estadisticas, setEstadisticas] = useState({
-    total_clientes: 0,
+    total_clientes_corporativos: 0,
+    total_contactos: 0,
     total_campañas: 0,
     por_servicio: { SAC: 0, TMC: 0, TVT: 0, CBZ: 0 }
   });
 
   // Estados para modales
-  const [modalCliente, setModalCliente] = useState(false);
+  const [modalClienteCorporativo, setModalClienteCorporativo] = useState(false);
+  const [modalContacto, setModalContacto] = useState(false);
   const [modalCampaña, setModalCampaña] = useState(false);
   const [modalAdministrar, setModalAdministrar] = useState(false);
   const [modalHistorial, setModalHistorial] = useState(false);
@@ -56,19 +59,27 @@ const Campañas = () => {
   });
   
   // Estados para formularios
-  const [formCliente, setFormCliente] = useState({
+  const [formClienteCorporativo, setFormClienteCorporativo] = useState({
+    nombre: '',
+    logo: '',
+    sector: ''
+  });
+
+  const [formContacto, setFormContacto] = useState({
     nombre: '',
     telefono: '',
-    correo: ''
+    correo: '',
+    cliente_corporativo_id: ''
   });
 
   const [formCampaña, setFormCampaña] = useState({
     nombre: '',
     tipo: 'SAC',
-    cliente_id: '',
-    lider: '',
+    cliente_corporativo_id: '',
+    contacto_id: '',
+    lider_de_campaña: '',
     ejecutivo: '',
-    fecha_inicio: ''
+    fecha_de_produccion: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -83,15 +94,37 @@ const Campañas = () => {
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const [campañasRes, clientesRes, estadisticasRes] = await Promise.all([
+      const [campañasRes, clientesCorporativosRes, contactosRes, estadisticasRes] = await Promise.all([
         axios.get('http://localhost:8000/campañas', config),
-        axios.get('http://localhost:8000/clientes', config),
+        axios.get('http://localhost:8000/clientes-corporativos', config),
+        axios.get('http://localhost:8000/contactos', config),
         axios.get('http://localhost:8000/campañas/estadisticas', config)
       ]);
 
-      setCampañas(campañasRes.data);
-      setClientes(clientesRes.data);
-      setEstadisticas(estadisticasRes.data); // Usar la data real de la respuesta
+      // Mapear los datos de campañas con información relacionada
+      const campañasConDatos = campañasRes.data.map(campaña => {
+        const clienteCorporativo = clientesCorporativosRes.data.find(
+          cliente => cliente.id === campaña.cliente_corporativo_id
+        );
+        const contacto = contactosRes.data.find(
+          cont => cont.id === campaña.contacto_id
+        );
+
+        return {
+          ...campaña,
+          cliente_nombre: clienteCorporativo?.nombre || 'Sin asignar',
+          contacto_nombre: contacto?.nombre || 'Sin asignar',
+          contacto_telefono: contacto?.telefono || '',
+          // Mapear campos para compatibilidad con la tabla existente
+          cje: campaña.ejecutivo,
+          lider: campaña.lider_de_campaña
+        };
+      });
+
+      setCampañas(campañasConDatos);
+      setClientesCorporativos(clientesCorporativosRes.data);
+      setContactos(contactosRes.data);
+      setEstadisticas(estadisticasRes.data);
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast.error('Error al cargar los datos');
@@ -100,26 +133,50 @@ const Campañas = () => {
     }
   };
 
-  // Función para crear cliente
-  const handleClienteSubmit = async (e) => {
+  // Función para crear cliente corporativo
+  const handleClienteCorporativoSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      await axios.post('http://localhost:8000/clientes/', formCliente, config);
+      await axios.post('http://localhost:8000/clientes-corporativos/', formClienteCorporativo, config);
       
-      toast.success('Cliente creado exitosamente');
-      setModalCliente(false);
-      setFormCliente({
+      toast.success('Cliente corporativo creado exitosamente');
+      setModalClienteCorporativo(false);
+      setFormClienteCorporativo({
         nombre: '',
-        telefono: '',
-        correo: ''
+        logo: '',
+        sector: ''
       });
       cargarDatos();
     } catch (error) {
-      console.error('Error creando cliente:', error);
-      toast.error('Error al crear el cliente');
+      console.error('Error creando cliente corporativo:', error);
+      toast.error('Error al crear el cliente corporativo');
+    }
+  };
+
+  // Función para crear contacto
+  const handleContactoSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      await axios.post('http://localhost:8000/contactos/', formContacto, config);
+      
+      toast.success('Contacto creado exitosamente');
+      setModalContacto(false);
+      setFormContacto({
+        nombre: '',
+        telefono: '',
+        correo: '',
+        cliente_corporativo_id: ''
+      });
+      cargarDatos();
+    } catch (error) {
+      console.error('Error creando contacto:', error);
+      toast.error('Error al crear el contacto');
     }
   };
 
@@ -131,11 +188,13 @@ const Campañas = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       const datosEnvio = {
-        ...rest,
-        cliente_id: parseInt(formCampaña.cliente_id),
-        cje: formCampaña.ejecutivo, // Mapear ejecutivo a cje para el backend
-        fecha_inicio: formCampaña.fecha_inicio || null,
-        estado: 'Activa'
+        nombre: formCampaña.nombre,
+        tipo: formCampaña.tipo,
+        cliente_corporativo_id: parseInt(formCampaña.cliente_corporativo_id),
+        contacto_id: parseInt(formCampaña.contacto_id),
+        lider_de_campaña: formCampaña.lider_de_campaña,
+        ejecutivo: formCampaña.ejecutivo,
+        fecha_de_produccion: formCampaña.fecha_de_produccion || null
       };
 
       await axios.post('http://localhost:8000/campañas/', datosEnvio, config);
@@ -144,10 +203,11 @@ const Campañas = () => {
       setFormCampaña({
         nombre: '',
         tipo: 'SAC',
-        cliente_id: '',
-        lider: '',
+        cliente_corporativo_id: '',
+        contacto_id: '',
+        lider_de_campaña: '',
         ejecutivo: '',
-        fecha_inicio: ''
+        fecha_de_produccion: ''
       });
       cargarDatos();
     } catch (error) {
@@ -166,10 +226,10 @@ const Campañas = () => {
       nombre: campaña.nombre || '',
       descripcion: campaña.descripcion || '',
       tipo: campaña.tipo || '',
-      cje: campaña.cje || '',
-      lider: campaña.lider || '',
-      cliente_id: campaña.cliente_id || '',
-      fecha_inicio: campaña.fecha_inicio ? campaña.fecha_inicio.slice(0, 16) : '',
+      cje: campaña.ejecutivo || '', // Usar el campo correcto
+      lider: campaña.lider_de_campaña || '', // Usar el campo correcto
+      cliente_id: campaña.cliente_corporativo_id || '', // Usar el campo correcto
+      fecha_inicio: campaña.fecha_de_produccion ? campaña.fecha_de_produccion : '',
       fecha_fin: campaña.fecha_fin ? campaña.fecha_fin.slice(0, 16) : '',
       estado: campaña.estado || '',
       presupuesto: campaña.presupuesto || '',
@@ -179,10 +239,6 @@ const Campañas = () => {
     setFacturacionGuardada(null);
   };
 
-  const handleEditarChange = (e) => {
-    const { name, value } = e.target;
-    setFormEditar((prev) => ({ ...prev, [name]: value }));
-  };
 
   const handleGuardarEdicion = async () => {
     if (!campañaSeleccionada?.id) {
@@ -256,7 +312,7 @@ const Campañas = () => {
       setHistorial(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       setHistorial([]);
-      toast.error('No se pudo cargar el historial');
+      toast.error('No se pudo cargar el historial', error);
     }
     setModalHistorial(true);
   };
@@ -322,233 +378,87 @@ const Campañas = () => {
               {/* Información principal y botones SIEMPRE visibles */}
               {/* Vista o edición de datos principales */}
               {!editando ? (
-                <>
-                  {/* Mostrar datos de la campaña seleccionada */}
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Cliente:</span> {campañaSeleccionada.cliente_nombre || <span className='italic text-gray-400'>Sin asignar</span>}
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  {/* Info principal */}
+                  <div className="flex-1 space-y-3 w-full">
+                    <div>
+                      <span className="font-semibold">Cliente Corporativo:</span> {campañaSeleccionada.cliente_nombre || <span className='italic text-gray-400'>Sin asignar</span>}
                     </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Tipo:</span> {campañaSeleccionada.tipo || <span className='italic text-gray-400'>Sin asignar</span>}
+                    <div>
+                      <span className="font-semibold">Tipo de Servicio:</span> {campañaSeleccionada.tipo || <span className='italic text-gray-400'>Sin asignar</span>}
                     </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Estado:</span> {campañaSeleccionada.estado || <span className='italic text-gray-400'>Sin estado</span>}
+                    <div>
+                      <span className="font-semibold">Nombre de la Campaña:</span> {campañaSeleccionada.nombre || <span className='italic text-gray-400'>Sin nombre</span>}
                     </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Campaña:</span> {campañaSeleccionada.nombre}
+                    <div>
+                      <span className="font-semibold">Contacto Asociado:</span> {campañaSeleccionada.contacto_nombre || <span className='italic text-gray-400'>Sin contacto</span>}
                     </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Ejecutivo:</span> {campañaSeleccionada.cje || <span className='italic text-gray-400'>Sin asignar</span>}
+                    <div>
+                      <span className="font-semibold">Número de Contacto:</span> {campañaSeleccionada.contacto_telefono || <span className='italic text-gray-400'>Sin número</span>}
                     </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Líder:</span> {campañaSeleccionada.lider || <span className='italic text-gray-400'>Sin asignar</span>}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Descripción:</span> {campañaSeleccionada.descripcion || <span className='italic text-gray-400'>Sin descripción</span>}
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Presupuesto:</span> {campañaSeleccionada.presupuesto || <span className='italic text-gray-400'>Sin presupuesto</span>}
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Observaciones:</span> {campañaSeleccionada.observaciones || <span className='italic text-gray-400'>Sin observaciones</span>}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Fecha inicio:</span> {campañaSeleccionada.fecha_inicio ? dayjs(campañaSeleccionada.fecha_inicio).format('DD/MM/YYYY HH:mm') : <span className='italic text-gray-400'>Sin fecha</span>}
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Fecha fin:</span> {campañaSeleccionada.fecha_fin ? dayjs(campañaSeleccionada.fecha_fin).format('DD/MM/YYYY HH:mm') : <span className='italic text-gray-400'>Sin fecha</span>}
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Creación:</span> {campañaSeleccionada.fecha_creacion ? dayjs(campañaSeleccionada.fecha_creacion).format('DD/MM/YYYY HH:mm') : <span className='italic text-gray-400'>Sin fecha</span>}
+                    {/* Botones de acción para Productos y Facturación */}
+                    <div className="flex flex-col md:flex-row gap-3 mt-6">
+                      <button
+                        type="button"
+                        className="flex-1 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white py-2 px-4 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg border border-blue-200"
+                        onClick={() => setMostrarProductos((prev) => !prev)}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <FaUsers className="text-white text-base" /> Productos y/o Servicio
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="flex-1 bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white py-2 px-4 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg border border-green-200"
+                        onClick={() => setMostrarFacturacion((prev) => !prev)}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <FaBullhorn className="text-white text-base" /> Unidades de Facturación
+                        </span>
+                      </button>
                     </div>
                   </div>
-                  {/* Botones inferiores */}
-                  <div className="flex justify-end gap-3 mt-8">
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition" onClick={() => setEditando(true)}>Editar</button>
-                    <button
-                      className={`px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition ${mostrarProductos ? 'ring-2 ring-yellow-300' : ''}`}
-                      onClick={() => setMostrarProductos((prev) => !prev)}
-                    >
-                      Productos
-                    </button>
-                    <button
-                      className={`px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition ${mostrarFacturacion ? 'ring-2 ring-green-300' : ''}`}
-                      onClick={() => setMostrarFacturacion((prev) => !prev)}
-                    >
-                      Facturación
-                    </button>
+                  {/* Logo */}
+                  <div className="flex-shrink-0 flex flex-col items-center justify-center w-32 h-32 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                    {campañaSeleccionada.logo ? (
+                      <img src={campañaSeleccionada.logo} alt="Logo cliente" className="object-contain w-full h-full" />
+                    ) : (
+                      <span className="text-gray-400 italic">Sin logo</span>
+                    )}
                   </div>
-                  {/* Formulario de Facturación expandible */}
-                  {mostrarFacturacion && (
-                    <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
-                      {/* ...existing code... */}
-                    </div>
-                  )}
-                  {/* Formulario de Productos expandible */}
-                  {mostrarProductos && (
-                    <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
-                      {/* ...existing code... */}
-                    </div>
-                  )}
-                </>
+                </div>
               ) : (
                 <form onSubmit={e => { e.preventDefault(); handleGuardarEdicion(); }}>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Nombre:</span>
-                      <input
-                        name="nombre"
-                        value={formEditar.nombre}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        required
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Descripción:</span>
-                      <input
-                        name="descripcion"
-                        value={formEditar.descripcion}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Tipo:</span>
-                      <select
-                        name="tipo"
-                        value={formEditar.tipo}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        required
-                      >
-                        <option value="SAC">SAC - Servicio de Atención</option>
-                        <option value="TMC">TMC - Telemarketing Central</option>
-                        <option value="TVT">TVT - Televentas Total</option>
-                        <option value="CBZ">CBZ - Cobranza</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Ejecutivo:</span>
-                      <input
-                        name="cje"
-                        value={formEditar.cje}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Líder:</span>
-                      <input
-                        name="lider"
-                        value={formEditar.lider}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Cliente ID:</span>
-                      <input
-                        name="cliente_id"
-                        value={formEditar.cliente_id}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        type="number"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Fecha inicio:</span>
-                      <input
-                        name="fecha_inicio"
-                        value={formEditar.fecha_inicio}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        type="datetime-local"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Fecha fin:</span>
-                      <input
-                        name="fecha_fin"
-                        value={formEditar.fecha_fin}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        type="datetime-local"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Estado:</span>
-                      <input
-                        name="estado"
-                        value={formEditar.estado}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Presupuesto:</span>
-                      <input
-                        name="presupuesto"
-                        value={formEditar.presupuesto}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Observaciones:</span>
-                      <input
-                        name="observaciones"
-                        value={formEditar.observaciones}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                  </div>
-                  {/* Botones de guardar/cancelar */}
-                  <div className="flex justify-end gap-3 mt-8">
-                    <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition" type="submit">Guardar</button>
-                    <button className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition" type="button" onClick={() => setEditando(false)}>Cancelar</button>
-                  </div>
+                  {/* ...formulario de edición aquí si editando... */}
                 </form>
               )}
               {/* Formulario de Facturación expandible */}
               {mostrarFacturacion && (
                 <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
                   <form className="space-y-6" onSubmit={handleGuardarFacturacion}>
-                    <h3 className="text-lg font-semibold mb-4">Unidades de facturación</h3>
-                    <div className="flex flex-wrap gap-4 mb-4">
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Unidad de facturación</label>
-                        <input name="unidad" value={formFacturacion.unidad} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
+                    <h3 className="text-lg font-bold mb-4 text-green-800 flex items-center gap-2">
+                      <FaBullhorn className="text-green-500" /> Unidades de facturación
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-green-50 border border-green-100 rounded-xl p-4 mb-4 shadow-sm">
+                      <div>
+                        <label className="block text-sm font-semibold text-green-800 mb-1">Unidad de facturación</label>
+                        <input name="unidad" value={formFacturacion.unidad} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: Horas, Llamadas, etc." />
                       </div>
-                      <div className="flex-1 min-w-[120px]">
-                        <label className="block text-sm font-medium mb-1">Cantidad</label>
-                        <input type="number" name="cantidad" value={formFacturacion.cantidad} min={1} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
+                      <div>
+                        <label className="block text-sm font-semibold text-green-800 mb-1">Cantidad</label>
+                        <input type="number" name="cantidad" value={formFacturacion.cantidad} min={1} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: 1" />
                       </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Valor</label>
+                      <div>
+                        <label className="block text-sm font-semibold text-green-800 mb-1">Valor</label>
                         <div className="flex items-center">
-                          <span className="mr-2 text-gray-500 font-semibold">$</span>
-                          <input type="number" name="valor" value={formFacturacion.valor} min={0} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
+                          <span className="mr-2 text-green-500 font-semibold">$</span>
+                          <input type="number" name="valor" value={formFacturacion.valor} min={0} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: 1000" />
                         </div>
                       </div>
                     </div>
                     <div className="flex justify-end gap-3">
-                      <button type="button" className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition" onClick={() => { setMostrarFacturacion(false); setFacturacionGuardada(null); }}>Cancelar</button>
-                      <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">Guardar</button>
+                      <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarFacturacion(false); setFacturacionGuardada(null); }}>Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
                     </div>
                   </form>
                   {facturacionGuardada && (
@@ -580,55 +490,57 @@ const Campañas = () => {
               {mostrarProductos && (
                 <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
                   <form className="space-y-6" onSubmit={handleGuardarProducto}>
-                    <h3 className="text-lg font-semibold mb-4">Productos y/o servicios</h3>
-                    <div className="flex flex-wrap gap-4 mb-4">
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Tipo</label>
-                        <select name="tipo" value={formProducto.tipo} onChange={handleProductoChange} className="w-full border rounded px-3 py-2">
+                    <h3 className="text-lg font-bold mb-4 text-blue-800 flex items-center gap-2">
+                      <FaUsers className="text-blue-500" /> Productos y/o servicios
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4 shadow-sm">
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Tipo</label>
+                        <select name="tipo" value={formProducto.tipo} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white">
                           <option value="Producto">Producto</option>
                           <option value="Servicio">Servicio</option>
                         </select>
                       </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Proveedor</label>
-                        <input name="proveedor" value={formProducto.proveedor} onChange={handleProductoChange} className="w-full border rounded px-3 py-2" required />
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Proveedor</label>
+                        <input name="proveedor" value={formProducto.proveedor} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white" required placeholder="Nombre del proveedor" />
                       </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Propiedad</label>
-                        <select name="propiedad" value={formProducto.propiedad} onChange={handleProductoChange} className="w-full border rounded px-3 py-2">
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Propiedad</label>
+                        <select name="propiedad" value={formProducto.propiedad} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white">
                           <option value="Propia">Propia</option>
                           <option value="Alquilada">Alquilada</option>
                         </select>
                       </div>
-                      <div className="flex-1 min-w-[120px]">
-                        <label className="block text-sm font-medium mb-1">Cantidad</label>
-                        <input type="number" name="cantidad" value={formProducto.cantidad} min={1} onChange={handleProductoChange} className="w-full border rounded px-3 py-2" required />
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Cantidad</label>
+                        <input type="number" name="cantidad" value={formProducto.cantidad} min={1} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white" required placeholder="Ej: 1" />
                       </div>
                     </div>
                     <div className="flex justify-end gap-3">
-                      <button type="button" className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
-                      <button type="submit" className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition">Guardar</button>
+                      <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
                     </div>
                   </form>
                   {productoGuardado && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                      <h4 className="font-semibold text-yellow-700 mb-2">Último producto/servicio guardado:</h4>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                      <h4 className="font-semibold text-blue-700 mb-2">Último producto/servicio guardado:</h4>
                       <div className="overflow-x-auto">
-                        <table className="min-w-full text-yellow-900 text-sm border border-yellow-200 rounded">
+                        <table className="min-w-full text-blue-900 text-sm border border-blue-200 rounded">
                           <thead>
-                            <tr className="bg-yellow-100">
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Tipo</th>
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Proveedor</th>
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Propiedad</th>
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Cantidad</th>
+                            <tr className="bg-blue-100">
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Tipo</th>
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Proveedor</th>
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Propiedad</th>
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Cantidad</th>
                             </tr>
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.tipo}</td>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.proveedor}</td>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.propiedad}</td>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.cantidad}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.tipo}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.proveedor}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.propiedad}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.cantidad}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -658,12 +570,12 @@ const Campañas = () => {
                   <FaUsers className="text-blue-600 text-2xl" />
                 </div>
                 <div>
-                  <p className="text-gray-600 text-lg font-medium">Clientes</p>
-                  <p className="text-gray-500 text-base">Registrados en sistema</p>
+                  <p className="text-gray-600 text-lg font-medium">Clientes Corporativos</p>
+                  <p className="text-gray-500 text-base">Empresas registradas</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-4xl font-bold text-blue-600">{estadisticas.total_clientes}</p>
+                <p className="text-4xl font-bold text-blue-600">{estadisticas.total_clientes_corporativos}</p>
               </div>
             </div>
           </div>
@@ -681,7 +593,7 @@ const Campañas = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-4xl font-bold text-green-600">{estadisticas.total_campanias}</p>
+                <p className="text-4xl font-bold text-green-600">{estadisticas.total_campañas}</p>
               </div>
             </div>
           </div>
@@ -708,7 +620,7 @@ const Campañas = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-blue-600 text-base font-semibold">SAC</p>
-                    <p className="text-blue-800 text-base mt-1">Servicio de Atención</p>
+                    <p className="text-blue-800 text-base mt-1">Atención al Cliente</p>
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-bold text-blue-800">{estadisticas.por_servicio.SAC}</span>
@@ -721,7 +633,7 @@ const Campañas = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-green-600 text-base font-semibold">TMC</p>
-                    <p className="text-green-800 text-base mt-1">Telemarketing Central</p>
+                    <p className="text-green-800 text-base mt-1">Telemarketing</p>
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-bold text-green-800">{estadisticas.por_servicio.TMC}</span>
@@ -734,7 +646,7 @@ const Campañas = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-purple-600 text-base font-semibold">TVT</p>
-                    <p className="text-purple-800 text-base mt-1">Televentas Total</p>
+                    <p className="text-purple-800 text-base mt-1">Televentas</p>
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-bold text-purple-800">{estadisticas.por_servicio.TVT}</span>
@@ -762,10 +674,16 @@ const Campañas = () => {
       {/* Botones de acción */}
       <div className="flex gap-3 mb-4">
         <button
-          onClick={() => setModalCliente(true)}
+          onClick={() => setModalClienteCorporativo(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
         >
-          <FaPlus /> Agregar Cliente
+          <FaPlus /> Agregar Cliente Corporativo
+        </button>
+        <button
+          onClick={() => setModalContacto(true)}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+        >
+          <FaPlus /> Agregar Contacto
         </button>
         <button
           onClick={() => setModalCampaña(true)}
@@ -886,11 +804,11 @@ const Campañas = () => {
         </div>
       )}
 
-      {/* Modal Agregar Cliente */}
+      {/* Modal Agregar Cliente Corporativo */}
       <Modal
-        isOpen={modalCliente}
-        onClose={() => setModalCliente(false)}
-        title="Agregar Nuevo Cliente"
+        isOpen={modalClienteCorporativo}
+        onClose={() => setModalClienteCorporativo(false)}
+        title="Agregar Nuevo Cliente Corporativo"
       >
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 mb-6">
           <div className="flex items-center space-x-4">
@@ -898,13 +816,93 @@ const Campañas = () => {
               <FaUsers className="text-white text-xl" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-blue-800">Información del Cliente</h3>
-              <p className="text-blue-600">Complete los datos básicos del nuevo cliente</p>
+              <h3 className="text-lg font-semibold text-blue-800">Información del Cliente Corporativo</h3>
+              <p className="text-blue-600">Complete los datos de la empresa</p>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleClienteSubmit} className="space-y-6">
+        <form onSubmit={handleClienteCorporativoSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Nombre de la Empresa *
+              </label>
+              <input
+                type="text"
+                required
+                value={formClienteCorporativo.nombre}
+                onChange={(e) => setFormClienteCorporativo({...formClienteCorporativo, nombre: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+                placeholder="Ingrese el nombre de la empresa"
+              />
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Sector
+              </label>
+              <input
+                type="text"
+                required
+                value={formClienteCorporativo.sector}
+                onChange={(e) => setFormClienteCorporativo({...formClienteCorporativo, sector: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+                placeholder="Ej: Tecnología, Salud, Financiero"
+              />
+            </div>
+
+            <div className="relative md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Logo (URL)
+              </label>
+              <input
+                type="url"
+                value={formClienteCorporativo.logo}
+                onChange={(e) => setFormClienteCorporativo({...formClienteCorporativo, logo: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+                placeholder="https://empresa.com/logo.png"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-4 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setModalClienteCorporativo(false)}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              Crear Cliente Corporativo
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Agregar Contacto */}
+      <Modal
+        isOpen={modalContacto}
+        onClose={() => setModalContacto(false)}
+        title="Agregar Nuevo Contacto"
+      >
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 mb-6">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-purple-600 rounded-lg">
+              <FaUsers className="text-white text-xl" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-purple-800">Información del Contacto</h3>
+              <p className="text-purple-600">Complete los datos del contacto</p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleContactoSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -913,11 +911,30 @@ const Campañas = () => {
               <input
                 type="text"
                 required
-                value={formCliente.nombre}
-                onChange={(e) => setFormCliente({...formCliente, nombre: e.target.value})}
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-                placeholder="Ingrese el nombre del cliente"
+                value={formContacto.nombre}
+                onChange={(e) => setFormContacto({...formContacto, nombre: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white"
+                placeholder="Ingrese el nombre del contacto"
               />
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Cliente Corporativo *
+              </label>
+              <select
+                required
+                value={formContacto.cliente_corporativo_id}
+                onChange={(e) => setFormContacto({...formContacto, cliente_corporativo_id: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white"
+              >
+                <option value="">Seleccionar empresa</option>
+                {clientesCorporativos.map(cliente => (
+                  <option key={cliente.id} value={cliente.id}>
+                    {cliente.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="relative">
@@ -927,24 +944,24 @@ const Campañas = () => {
               <input
                 type="tel"
                 required
-                value={formCliente.telefono}
-                onChange={(e) => setFormCliente({...formCliente, telefono: e.target.value})}
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+                value={formContacto.telefono}
+                onChange={(e) => setFormContacto({...formContacto, telefono: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white"
                 placeholder="Ej: +1 234 567 8900"
               />
             </div>
 
-            <div className="relative md:col-span-2">
+            <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Correo Electrónico *
               </label>
               <input
                 type="email"
                 required
-                value={formCliente.correo}
-                onChange={(e) => setFormCliente({...formCliente, correo: e.target.value})}
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-                placeholder="cliente@empresa.com"
+                value={formContacto.correo}
+                onChange={(e) => setFormContacto({...formContacto, correo: e.target.value})}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 bg-white"
+                placeholder="contacto@empresa.com"
               />
             </div>
           </div>
@@ -952,16 +969,16 @@ const Campañas = () => {
           <div className="flex gap-4 pt-6 border-t border-gray-200">
             <button
               type="button"
-              onClick={() => setModalCliente(false)}
+              onClick={() => setModalContacto(false)}
               className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              Crear Cliente
+              Crear Contacto
             </button>
           </div>
         </form>
@@ -1010,27 +1027,49 @@ const Campañas = () => {
                 onChange={(e) => setFormCampaña({...formCampaña, tipo: e.target.value})}
                 className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               >
-                <option value="SAC">SAC - Servicio de Atención</option>
-                <option value="TMC">TMC - Telemarketing Central</option>
-                <option value="TVT">TVT - Televentas Total</option>
+                <option value="SAC">SAC - Atención al Cliente</option>
+                <option value="TMC">TMC - Telemarketing</option>
+                <option value="TVT">TVT - Televentas</option>
                 <option value="CBZ">CBZ - Cobranza</option>
               </select>
             </div>
 
             <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Cliente *
+                Cliente Corporativo *
               </label>
               <select
                 required
-                value={formCampaña.cliente_id}
-                onChange={(e) => setFormCampaña({...formCampaña, cliente_id: e.target.value})}
+                value={formCampaña.cliente_corporativo_id}
+                onChange={(e) => setFormCampaña({...formCampaña, cliente_corporativo_id: e.target.value})}
                 className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               >
-                <option value="">Seleccionar cliente</option>
-                {clientes.map(cliente => (
+                <option value="">Seleccionar empresa</option>
+                {clientesCorporativos.map(cliente => (
                   <option key={cliente.id} value={cliente.id}>
                     {cliente.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Contacto *
+              </label>
+              <select
+                required
+                value={formCampaña.contacto_id}
+                onChange={(e) => setFormCampaña({...formCampaña, contacto_id: e.target.value})}
+                className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+              >
+                <option value="">Seleccionar contacto</option>
+                {contactos.filter(contacto => 
+                  !formCampaña.cliente_corporativo_id || 
+                  contacto.cliente_corporativo_id.toString() === formCampaña.cliente_corporativo_id
+                ).map(contacto => (
+                  <option key={contacto.id} value={contacto.id}>
+                    {contacto.nombre}
                   </option>
                 ))}
               </select>
@@ -1043,8 +1082,8 @@ const Campañas = () => {
               <input
                 type="text"
                 required
-                value={formCampaña.lider}
-                onChange={(e) => setFormCampaña({...formCampaña, lider: e.target.value})}
+                value={formCampaña.lider_de_campaña}
+                onChange={(e) => setFormCampaña({...formCampaña, lider_de_campaña: e.target.value})}
                 className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
                 placeholder="Nombre del líder"
               />
@@ -1064,15 +1103,15 @@ const Campañas = () => {
               />
             </div>
 
-            <div className="relative">
+            <div className="relative md:col-span-2">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Fecha de Inicio *
+                Fecha de Producción *
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 required
-                value={formCampaña.fecha_inicio}
-                onChange={(e) => setFormCampaña({...formCampaña, fecha_inicio: e.target.value})}
+                value={formCampaña.fecha_de_produccion}
+                onChange={(e) => setFormCampaña({...formCampaña, fecha_de_produccion: e.target.value})}
                 className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               />
             </div>

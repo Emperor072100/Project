@@ -1,19 +1,24 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from core.database import Base
-from datetime import datetime
+
 
 class Cliente(Base):
-    __tablename__ = "campañas_clientes"
+    __tablename__ = "campañas_contacto"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
-    empresa = Column(String, nullable=True)
-    correo = Column(String, nullable=True)
-    telefono = Column(String, nullable=True)
-    direccion = Column(Text, nullable=True)
-    contacto_principal = Column(String, nullable=True)
-    observaciones = Column(Text, nullable=True)
-    fecha_creacion = Column(DateTime, default=datetime.utcnow)
-
-    campañas = relationship("Campaña", back_populates="cliente")
+    telefono = Column(String, nullable=False)
+    correo = Column(String, nullable=False)
+    cliente_corporativo_id = Column(
+        Integer,
+        ForeignKey("campañas_clientes_corporativos.id"),
+        nullable=False
+    )
+    
+    # Relaciones
+    cliente_corporativo = relationship(
+        "ClienteCorporativo",
+        back_populates="contactos"
+    )
+    campañas = relationship("Campaña", back_populates="contacto")
