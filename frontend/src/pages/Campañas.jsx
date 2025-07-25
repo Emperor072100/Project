@@ -57,6 +57,7 @@ const Campañas = () => {
     cje: '',
     lider: '',
     cliente_id: '',
+    contacto_id: '',
     fecha_inicio: '',
     fecha_fin: '',
     estado: '',
@@ -85,7 +86,8 @@ const Campañas = () => {
     contacto_id: '',
     lider_de_campaña: '',
     ejecutivo: '',
-    fecha_de_produccion: ''
+    fecha_de_produccion: '',
+    estado: 'activo'
   });
 
   const [loading, setLoading] = useState(false);
@@ -123,7 +125,9 @@ const Campañas = () => {
           contacto_telefono: contacto?.telefono || '',
           // Mapear campos para compatibilidad con la tabla existente
           cje: campaña.ejecutivo,
-          lider: campaña.lider_de_campaña
+          lider: campaña.lider_de_campaña,
+          // Asegurar que el estado tenga un valor por defecto
+          estado: campaña.estado || 'activo'
         };
       });
 
@@ -200,7 +204,8 @@ const Campañas = () => {
         contacto_id: parseInt(formCampaña.contacto_id),
         lider_de_campaña: formCampaña.lider_de_campaña,
         ejecutivo: formCampaña.ejecutivo,
-        fecha_de_produccion: formCampaña.fecha_de_produccion || null
+        fecha_de_produccion: formCampaña.fecha_de_produccion || null,
+        estado: formCampaña.estado
       };
 
       await axios.post('http://localhost:8000/campanas/', datosEnvio, config);
@@ -213,7 +218,8 @@ const Campañas = () => {
         contacto_id: '',
         lider_de_campaña: '',
         ejecutivo: '',
-        fecha_de_produccion: ''
+        fecha_de_produccion: '',
+        estado: 'activo'
       });
       cargarDatos();
     } catch (error) {
@@ -234,10 +240,11 @@ const Campañas = () => {
       tipo: campaña.tipo || '',
       cje: campaña.ejecutivo || '', // Usar el campo correcto
       lider: campaña.lider_de_campaña || '', // Usar el campo correcto
-      cliente_id: campaña.cliente_corporativo_id || '', // Usar el campo correcto
+      cliente_id: campaña.cliente_corporativo_id ? campaña.cliente_corporativo_id.toString() : '', // Convertir a string para el select
+      contacto_id: campaña.contacto_id ? campaña.contacto_id.toString() : '', // Convertir a string para el select
       fecha_inicio: campaña.fecha_de_produccion ? campaña.fecha_de_produccion : '',
       fecha_fin: campaña.fecha_fin ? campaña.fecha_fin.slice(0, 16) : '',
-      estado: campaña.estado || '',
+      estado: campaña.estado || 'activo',
       presupuesto: campaña.presupuesto || '',
       observaciones: campaña.observaciones || ''
     });
@@ -256,16 +263,13 @@ const Campañas = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const payload = {
         nombre: formEditar.nombre,
-        descripcion: formEditar.descripcion,
         tipo: formEditar.tipo,
-        cje: formEditar.cje,
-        lider: formEditar.lider,
-        cliente_id: parseInt(formEditar.cliente_id),
-        fecha_inicio: formEditar.fecha_inicio || null,
-        fecha_fin: formEditar.fecha_fin || null,
-        estado: formEditar.estado,
-        presupuesto: formEditar.presupuesto,
-        observaciones: formEditar.observaciones
+        cliente_corporativo_id: parseInt(formEditar.cliente_id),
+        contacto_id: parseInt(formEditar.contacto_id),
+        lider_de_campaña: formEditar.lider,
+        ejecutivo: formEditar.cje,
+        fecha_de_produccion: formEditar.fecha_inicio || null,
+        estado: formEditar.estado
       };
       await axios.put(encodeURI(`http://localhost:8000/campanas/${campañaSeleccionada.id}`), payload, config);
       setCampañaSeleccionada((prev) => ({ ...prev, ...payload }));
@@ -519,55 +523,391 @@ const Campañas = () => {
               {/* Información principal y botones SIEMPRE visibles */}
               {/* Vista o edición de datos principales */}
               {!editando ? (
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                  {/* Info principal */}
-                  <div className="flex-1 space-y-3 w-full">
-                    <div>
-                      <span className="font-semibold">Cliente Corporativo:</span> {campañaSeleccionada.cliente_nombre || <span className='italic text-gray-400'>Sin asignar</span>}
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  {/* Info principal organizada en grid */}
+                  <div className="flex-1 w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Cliente Corporativo</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.cliente_nombre || <span className='italic text-gray-400'>Sin asignar</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Tipo de Servicio</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.tipo || <span className='italic text-gray-400'>Sin asignar</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Nombre de la Campaña</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.nombre || <span className='italic text-gray-400'>Sin nombre</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Contacto Asociado</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.contacto_nombre || <span className='italic text-gray-400'>Sin contacto</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Número de Contacto</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.contacto_telefono || <span className='italic text-gray-400'>Sin número</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Líder de Campaña</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.lider_de_campaña || <span className='italic text-gray-400'>Sin asignar</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Ejecutivo</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.ejecutivo || <span className='italic text-gray-400'>Sin asignar</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Fecha de Producción</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.fecha_de_produccion || <span className='italic text-gray-400'>Sin fecha</span>}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-semibold">Tipo de Servicio:</span> {campañaSeleccionada.tipo || <span className='italic text-gray-400'>Sin asignar</span>}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Nombre de la Campaña:</span> {campañaSeleccionada.nombre || <span className='italic text-gray-400'>Sin nombre</span>}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Contacto Asociado:</span> {campañaSeleccionada.contacto_nombre || <span className='italic text-gray-400'>Sin contacto</span>}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Número de Contacto:</span> {campañaSeleccionada.contacto_telefono || <span className='italic text-gray-400'>Sin número</span>}
+                    {/* Botón de Editar Campaña */}
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                      <button
+                        type="button"
+                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-4 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg border border-orange-200"
+                        onClick={() => setEditando(true)}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <FaEdit className="text-white text-base" /> Editar Campaña
+                        </span>
+                      </button>
                     </div>
                     {/* Botones de acción para Productos y Facturación */}
                     <div className="flex flex-col md:flex-row gap-3 mt-6">
                       <button
                         type="button"
-                        className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
-                        onClick={() => handleAbrirProductos(campañaSeleccionada)}
+                        className="flex-1 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white py-2 px-4 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg border border-blue-200"
+                        onClick={() => setMostrarProductos((prev) => !prev)}
                       >
-                        Productos y/o Servicio
+                        <span className="inline-flex items-center gap-2">
+                          <FaUsers className="text-white text-base" /> Productos y/o Servicio
+                        </span>
                       </button>
                       <button
                         type="button"
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
-                        onClick={() => handleAbrirFacturacion(campañaSeleccionada)}
+                        className="flex-1 bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white py-2 px-4 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg border border-green-200"
+                        onClick={() => setMostrarFacturacion((prev) => !prev)}
                       >
-                        Unidades de Facturación
+                        <span className="inline-flex items-center gap-2">
+                          <FaBullhorn className="text-white text-base" /> Unidades de Facturación
+                        </span>
                       </button>
                     </div>
                   </div>
-                  {/* Logo */}
-                  <div className="flex-shrink-0 flex flex-col items-center justify-center w-32 h-32 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
-                    {campañaSeleccionada.logo ? (
-                      <img src={campañaSeleccionada.logo} alt="Logo cliente" className="object-contain w-full h-full" />
-                    ) : (
-                      <span className="text-gray-400 italic">Sin logo</span>
-                    )}
+                  {/* Logo y Estado */}
+                  <div className="flex-shrink-0 flex flex-col items-center justify-start space-y-2 mt-2">
+                    {/* Logo */}
+                    <div className="w-28 h-28 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center">
+                      {campañaSeleccionada.logo ? (
+                        <img src={campañaSeleccionada.logo} alt="Logo cliente" className="object-contain w-full h-full" />
+                      ) : (
+                        <span className="text-gray-400 italic text-sm">Sin logo</span>
+                      )}
+                    </div>
+                    {/* Estado */}
+                    <div className="text-center">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Estado</p>
+                      <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ${
+                        campañaSeleccionada.estado === 'activo' ? 
+                          'bg-green-100 text-green-800 border border-green-200' :
+                        campañaSeleccionada.estado === 'inactivo' ? 
+                          'bg-red-100 text-red-800 border border-red-200' :
+                          'bg-gray-100 text-gray-800 border border-gray-200'
+                      }`}>
+                        {campañaSeleccionada.estado === 'activo' ? 'Activo' : 
+                         campañaSeleccionada.estado === 'inactivo' ? 'Inactivo' : 
+                         'Sin estado'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <form onSubmit={e => { e.preventDefault(); handleGuardarEdicion(); }}>
-                  {/* ...formulario de edición aquí si editando... */}
-                </form>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-orange-700">Editar Campaña</h3>
+                    <button
+                      onClick={() => setEditando(false)}
+                      className="text-gray-500 hover:text-gray-700 text-xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  
+                  <form onSubmit={e => { e.preventDefault(); handleGuardarEdicion(); }} className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Nombre de la Campaña */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Nombre de la Campaña *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formEditar.nombre}
+                          onChange={(e) => setFormEditar({...formEditar, nombre: e.target.value})}
+                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                          placeholder="Nombre de la campaña"
+                        />
+                      </div>
+
+                      {/* Tipo de Servicio */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Tipo de Servicio *
+                        </label>
+                        <select
+                          required
+                          value={formEditar.tipo}
+                          onChange={(e) => setFormEditar({...formEditar, tipo: e.target.value})}
+                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                        >
+                          <option value="">Seleccionar tipo</option>
+                          <option value="SAC">SAC - Atención al Cliente</option>
+                          <option value="TMC">TMC - Telemarketing</option>
+                          <option value="TVT">TVT - Televentas</option>
+                          <option value="CBZ">CBZ - Cobranza</option>
+                        </select>
+                      </div>
+
+                      {/* Cliente Corporativo */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Cliente Corporativo *
+                        </label>
+                        <select
+                          required
+                          value={formEditar.cliente_id}
+                          onChange={(e) => setFormEditar({...formEditar, cliente_id: e.target.value})}
+                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                        >
+                          <option value="">Seleccionar empresa</option>
+                          {clientesCorporativos.map(cliente => (
+                            <option key={cliente.id} value={cliente.id}>
+                              {cliente.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Contacto */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Contacto *
+                        </label>
+                        <select
+                          required
+                          value={formEditar.contacto_id}
+                          onChange={(e) => setFormEditar({...formEditar, contacto_id: e.target.value})}
+                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                        >
+                          <option value="">Seleccionar contacto</option>
+                          {contactos.filter(contacto => 
+                            !formEditar.cliente_id || 
+                            contacto.cliente_corporativo_id.toString() === formEditar.cliente_id
+                          ).map(contacto => (
+                            <option key={contacto.id} value={contacto.id}>
+                              {contacto.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Líder de Campaña */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Líder de Campaña *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formEditar.lider}
+                          onChange={(e) => setFormEditar({...formEditar, lider: e.target.value})}
+                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                          placeholder="Nombre del líder"
+                        />
+                      </div>
+
+                      {/* Ejecutivo */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Ejecutivo *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formEditar.cje}
+                          onChange={(e) => setFormEditar({...formEditar, cje: e.target.value})}
+                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                          placeholder="Nombre del ejecutivo"
+                        />
+                      </div>
+
+                      {/* Fecha de Producción */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Fecha de Producción *
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={formEditar.fecha_inicio}
+                          onChange={(e) => setFormEditar({...formEditar, fecha_inicio: e.target.value})}
+                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                        />
+                      </div>
+
+                      {/* Estado */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Estado *
+                        </label>
+                        <select
+                          required
+                          value={formEditar.estado}
+                          onChange={(e) => setFormEditar({...formEditar, estado: e.target.value})}
+                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                        >
+                          <option value="activo">Activo</option>
+                          <option value="inactivo">Inactivo</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Botones */}
+                    <div className="flex gap-3 pt-3 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => setEditando(false)}
+                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 px-4 rounded-lg font-medium transition-colors duration-200"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-4 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+                      >
+                        Guardar Cambios
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+              {/* Formulario de Facturación expandible */}
+              {mostrarFacturacion && (
+                <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
+                  <form className="space-y-6" onSubmit={handleGuardarFacturacion}>
+                    <h3 className="text-lg font-bold mb-4 text-green-800 flex items-center gap-2">
+                      <FaBullhorn className="text-green-500" /> Unidades de facturación
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-green-50 border border-green-100 rounded-xl p-4 mb-4 shadow-sm">
+                      <div>
+                        <label className="block text-sm font-semibold text-green-800 mb-1">Unidad de facturación</label>
+                        <input name="unidad" value={formFacturacion.unidad} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: Horas, Llamadas, etc." />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-green-800 mb-1">Cantidad</label>
+                        <input type="number" name="cantidad" value={formFacturacion.cantidad} min={1} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: 1" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-green-800 mb-1">Valor</label>
+                        <div className="flex items-center">
+                          <span className="mr-2 text-green-500 font-semibold">$</span>
+                          <input type="number" name="valor" value={formFacturacion.valor} min={0} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: 1000" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3">
+                      <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarFacturacion(false); setFacturacionGuardada(null); }}>Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
+                    </div>
+                  </form>
+                  {facturacionGuardada && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                      <h4 className="font-semibold text-green-700 mb-2">Última facturación guardada:</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-green-900 text-sm border border-green-200 rounded">
+                          <thead>
+                            <tr className="bg-green-100">
+                              <th className="px-3 py-2 border-b border-green-200 text-left">Unidad</th>
+                              <th className="px-3 py-2 border-b border-green-200 text-left">Cantidad</th>
+                              <th className="px-3 py-2 border-b border-green-200 text-left">Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.unidad}</td>
+                              <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.cantidad}</td>
+                              <td className="px-3 py-2 border-b border-green-100">${facturacionGuardada.valor}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Formulario de Productos expandible */}
+              {mostrarProductos && (
+                <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
+                  <form className="space-y-6" onSubmit={handleGuardarProducto}>
+                    <h3 className="text-lg font-bold mb-4 text-blue-800 flex items-center gap-2">
+                      <FaUsers className="text-blue-500" /> Productos y/o servicios
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4 shadow-sm">
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Tipo</label>
+                        <select name="tipo" value={formProducto.tipo} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white">
+                          <option value="Producto">Producto</option>
+                          <option value="Servicio">Servicio</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Proveedor</label>
+                        <input name="proveedor" value={formProducto.proveedor} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white" required placeholder="Nombre del proveedor" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Propiedad</label>
+                        <select name="propiedad" value={formProducto.propiedad} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white">
+                          <option value="Propia">Propia</option>
+                          <option value="Alquilada">Alquilada</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Cantidad</label>
+                        <input type="number" name="cantidad" value={formProducto.cantidad} min={1} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white" required placeholder="Ej: 1" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3">
+                      <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
+                    </div>
+                  </form>
+                  {productoGuardado && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                      <h4 className="font-semibold text-blue-700 mb-2">Último producto/servicio guardado:</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-blue-900 text-sm border border-blue-200 rounded">
+                          <thead>
+                            <tr className="bg-blue-100">
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Tipo</th>
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Proveedor</th>
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Propiedad</th>
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Cantidad</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.tipo}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.proveedor}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.propiedad}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.cantidad}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -746,6 +1086,9 @@ const Campañas = () => {
                     Líder
                   </th>
                   <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    Estado
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
@@ -788,6 +1131,19 @@ const Campañas = () => {
                       <div className="text-sm text-gray-900 font-medium">
                         {campaña.lider || <span className="text-gray-400 italic">Sin asignar</span>}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full ${
+                        campaña.estado === 'activo' ? 
+                          'bg-green-100 text-green-800 border border-green-200' :
+                        campaña.estado === 'inactivo' ? 
+                          'bg-red-100 text-red-800 border border-red-200' :
+                          'bg-gray-100 text-gray-800 border border-gray-200'
+                      }`}>
+                        {campaña.estado === 'activo' ? 'Activo' : 
+                         campaña.estado === 'inactivo' ? 'Inactivo' : 
+                         'Sin estado'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex gap-2 justify-center">
@@ -1022,10 +1378,10 @@ const Campañas = () => {
           </div>
         </div>
 
-        <form onSubmit={handleCampañaSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleCampañaSubmit} className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="relative">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Nombre de la Campaña *
               </label>
               <input
@@ -1033,19 +1389,19 @@ const Campañas = () => {
                 required
                 value={formCampaña.nombre}
                 onChange={(e) => setFormCampaña({...formCampaña, nombre: e.target.value})}
-                className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
                 placeholder="Ingrese el nombre de la campaña"
               />
             </div>
 
             <div className="relative">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Tipo de Servicio *
               </label>
               <select
                 value={formCampaña.tipo}
                 onChange={(e) => setFormCampaña({...formCampaña, tipo: e.target.value})}
-                className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               >
                 <option value="SAC">SAC - Atención al Cliente</option>
                 <option value="TMC">TMC - Telemarketing</option>
@@ -1055,14 +1411,14 @@ const Campañas = () => {
             </div>
 
             <div className="relative">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Cliente Corporativo *
               </label>
               <select
                 required
                 value={formCampaña.cliente_corporativo_id}
                 onChange={(e) => setFormCampaña({...formCampaña, cliente_corporativo_id: e.target.value})}
-                className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               >
                 <option value="">Seleccionar empresa</option>
                 {clientesCorporativos.map(cliente => (
@@ -1074,14 +1430,14 @@ const Campañas = () => {
             </div>
 
             <div className="relative">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Contacto *
               </label>
               <select
                 required
                 value={formCampaña.contacto_id}
                 onChange={(e) => setFormCampaña({...formCampaña, contacto_id: e.target.value})}
-                className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               >
                 <option value="">Seleccionar contacto</option>
                 {contactos.filter(contacto => 
@@ -1096,7 +1452,7 @@ const Campañas = () => {
             </div>
 
             <div className="relative">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Líder de Campaña *
               </label>
               <input
@@ -1104,13 +1460,13 @@ const Campañas = () => {
                 required
                 value={formCampaña.lider_de_campaña}
                 onChange={(e) => setFormCampaña({...formCampaña, lider_de_campaña: e.target.value})}
-                className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
                 placeholder="Nombre del líder"
               />
             </div>
 
             <div className="relative">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Ejecutivo *
               </label>
               <input
@@ -1118,13 +1474,13 @@ const Campañas = () => {
                 required
                 value={formCampaña.ejecutivo}
                 onChange={(e) => setFormCampaña({...formCampaña, ejecutivo: e.target.value})}
-                className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
                 placeholder="Nombre del ejecutivo"
               />
             </div>
 
-            <div className="relative md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Fecha de Producción *
               </label>
               <input
@@ -1132,22 +1488,37 @@ const Campañas = () => {
                 required
                 value={formCampaña.fecha_de_produccion}
                 onChange={(e) => setFormCampaña({...formCampaña, fecha_de_produccion: e.target.value})}
-                className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               />
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Estado *
+              </label>
+              <select
+                required
+                value={formCampaña.estado}
+                onChange={(e) => setFormCampaña({...formCampaña, estado: e.target.value})}
+                className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
+              >
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
             </div>
           </div>
 
-          <div className="flex gap-4 pt-4 border-t border-gray-200">
+          <div className="flex gap-4 pt-3 border-t border-gray-200">
             <button
               type="button"
               onClick={() => setModalCampaña(false)}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 px-6 rounded-lg font-medium transition-colors duration-200"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-2.5 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               Crear Campaña
             </button>

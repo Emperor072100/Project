@@ -16,7 +16,7 @@ def create_tables():
     print(" Tablas creadas exitosamente!")
     print("\nTablas que deberan estar creadas:")
     print("- project_usuarios")
-    print("- project_proyectos") 
+    print("- project_proyectos")
     print("- project_tareas")
     print("- project_estados")
     print("- project_prioridades")

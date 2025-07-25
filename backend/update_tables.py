@@ -67,6 +67,7 @@ def update_all_tables(recreate_campañas=False):
         print("   - lider_de_campaña: String (Not Null)")
         print("   - ejecutivo: String (Not Null)")
         print("   - fecha_de_produccion: Date (Not Null) - Solo fecha")
+        print("   - estado: Enum (activo, inactivo) - Default: activo")
         
         print("\n✅ Todas las tablas han sido actualizadas exitosamente!")
         
