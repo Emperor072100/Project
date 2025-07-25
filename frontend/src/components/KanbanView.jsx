@@ -20,7 +20,7 @@ import { useProyectos } from '../context/ProyectosContext';
 
 
 const KanbanView = () => {
-  const { proyectos, loading, updateProyectoFromKanban } = useProyectos();
+  const { proyectos, loading, updateProyectoFromKanban, fetchProyectos, fetchEstados } = useProyectos();
 
   const [columns, setColumns] = useState([
     { id: 'pendientes', title: 'PENDIENTES', color: 'bg-yellow-50' },
@@ -44,6 +44,15 @@ const KanbanView = () => {
   );
 
 
+  // Debug: mostrar estados disponibles al cargar
+  useEffect(() => {
+    const showEstados = async () => {
+      console.log('=== DEBUG: Obteniendo estados disponibles ===');
+      await fetchEstados();
+    };
+    showEstados();
+  }, []);
+
   // Sincronizar el estado local con los proyectos del contexto
   useEffect(() => {
     // Evitar duplicados al sincronizar, manteniendo solo una instancia de cada proyecto en la columna correcta
@@ -54,6 +63,8 @@ const KanbanView = () => {
       enProceso: uniqueProyectos.filter(p => p.column === 'enProceso'),
       terminados: uniqueProyectos.filter(p => p.column === 'terminados'),
     };
+    
+    console.log('Sincronizando proyectos por columna:', newColumnProjects); // Debug
     setColumnProjects(newColumnProjects);
 
     // Actualizar contadores de columnas
@@ -62,7 +73,7 @@ const KanbanView = () => {
       counts[col.id] = newColumnProjects[col.id].length;
     });
     setColumnCounts(counts);
-  }, [proyectos, columns]);
+  }, [proyectos]);
 
   const handleDragStart = (event) => {
     const { active } = event;
@@ -93,31 +104,60 @@ const KanbanView = () => {
       }
     }
 
+    console.log(`Moviendo de ${fromColumn} a ${toColumn}`); // Debug
+    console.log(`Proyecto actual:`, activeProject); // Debug adicional
+    console.log(`Estados de todos los proyectos:`, proyectos.map(p => ({ id: p.id, nombre: p.nombre, estado: p.estado, column: p.column }))); // Debug completo
+
     // Si se mueve a otra columna
     if (fromColumn !== toColumn) {
       try {
         // Actualizar primero el estado local para un efecto visual inmediato
         setColumnProjects(prev => {
+          // Crear nuevo estado asegurando que todas las columnas existen
+          const newColumnProjects = {
+            pendientes: [...(prev.pendientes || [])],
+            enProceso: [...(prev.enProceso || [])],
+            terminados: [...(prev.terminados || [])]
+          };
+          
           // Eliminar el proyecto de cualquier columna donde pudiera estar
-          const newColumnProjects = {};
-          Object.keys(prev).forEach(colKey => {
-            newColumnProjects[colKey] = prev[colKey].filter(p => p.id !== activeProject.id);
+          Object.keys(newColumnProjects).forEach(colKey => {
+            newColumnProjects[colKey] = newColumnProjects[colKey].filter(p => p.id !== activeProject.id);
           });
           
           // Agregar a la columna destino
-          newColumnProjects[toColumn] = [
-            ...newColumnProjects[toColumn],
-            { ...activeProject, column: toColumn }
-          ];
+          if (!newColumnProjects[toColumn]) {
+            newColumnProjects[toColumn] = [];
+          }
+          newColumnProjects[toColumn].push({ ...activeProject, column: toColumn });
           
+          console.log(`Estado actualizado:`, newColumnProjects); // Debug
           return newColumnProjects;
         });
         
         // Luego enviar la actualización al backend
-        await updateProyectoFromKanban({
-          ...activeProject,
-          column: toColumn
-        });
+        const success = await updateProyectoFromKanban(activeProject.id, toColumn);
+        
+        if (success) {
+          console.log(`✅ Proyecto ${activeProject.id} movido a columna ${toColumn} exitosamente`);
+          // Recargar los datos para asegurar persistencia
+          setTimeout(() => {
+            fetchProyectos();
+          }, 500);
+        } else {
+          console.error(`❌ Error al guardar proyecto ${activeProject.id} en backend`);
+          // Revertir cambio visual si hay error en el backend
+          setColumnProjects(prev => {
+            const updatedColumns = { ...prev };
+            // Quitar el proyecto de todas las columnas
+            Object.keys(updatedColumns).forEach(colKey => {
+              updatedColumns[colKey] = updatedColumns[colKey].filter(p => p.id !== activeProject.id);
+            });
+            // Ponerlo en su columna original
+            updatedColumns[fromColumn] = [...updatedColumns[fromColumn], activeProject];
+            return updatedColumns;
+          });
+        }
       } catch (error) {
         console.error("Error al mover proyecto:", error);
         // Revertir cambio visual si hay error en el backend
