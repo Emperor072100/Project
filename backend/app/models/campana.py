@@ -17,19 +17,19 @@ class EstadoCampaña(str, enum.Enum):
 
 
 class Campaña(Base):
-    __tablename__ = "campañas_campañas"
+    __tablename__ = "campanas_campanas"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
     tipo = Column(Enum(TipoCampaña), nullable=False, default=TipoCampaña.SAC)
     cliente_corporativo_id = Column(
         Integer,
-        ForeignKey("campañas_clientes_corporativos.id"),
+        ForeignKey("campanas_clientes_corporativos.id"),
         nullable=False
     )
     contacto_id = Column(
         Integer,
-        ForeignKey("campañas_contacto.id"),
+        ForeignKey("campanas_contacto.id"),
         nullable=False
     )
     lider_de_campaña = Column(String, nullable=False)
@@ -44,6 +44,9 @@ class Campaña(Base):
     # Relaciones
     cliente_corporativo = relationship(
         "ClienteCorporativo",
-        back_populates="campañas"
+        back_populates="campanas"
     )
-    contacto = relationship("Cliente", back_populates="campañas")
+    contacto = relationship("Cliente", back_populates="campanas")
+    historial = relationship("HistorialCampaña", back_populates="campaña")
+    productos = relationship("ProductoCampaña", back_populates="campaña")
+    facturacion = relationship("FacturacionCampaña", back_populates="campaña")
