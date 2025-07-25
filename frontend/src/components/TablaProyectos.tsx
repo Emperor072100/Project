@@ -71,6 +71,11 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     observaciones: false,
     acciones: true
   });
+  const [columnOrder, setColumnOrder] = useState([
+    'nombre', 'responsable', 'estado', 'tipo', 'equipo', 'prioridad',
+    'objetivo', 'fechaInicio', 'fechaFin', 'progreso', 'enlace', 'observaciones', 'acciones'
+  ]);
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
 
   const createUniqueKey = (prefix: string, id: number, value: string) =>
     `${prefix}-${id}-${value.replace(/\s+/g, '-')}`;
@@ -96,22 +101,539 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     }));
   };
 
-  // Definir las columnas y sus configuraciones
-  const columnConfig = [
-    { key: 'nombre', label: 'Nombre', fixed: true },
-    { key: 'responsable', label: 'Responsable' },
-    { key: 'estado', label: 'Estado' },
-    { key: 'tipo', label: 'Tipo' },
-    { key: 'equipo', label: 'Equipo' },
-    { key: 'prioridad', label: 'Prioridad' },
-    { key: 'objetivo', label: 'Objetivo' },
-    { key: 'fechaInicio', label: 'Fecha Inicio' },
-    { key: 'fechaFin', label: 'Fecha Fin' },
-    { key: 'progreso', label: 'Progreso' },
-    { key: 'enlace', label: 'Enlace' },
-    { key: 'observaciones', label: 'Observaciones' },
-    { key: 'acciones', label: 'Acciones', fixed: true }
-  ];
+  // Manejar el drag and drop de columnas
+  const handleColumnDragStart = (e: React.DragEvent, columnKey: string) => {
+    setDraggedColumn(columnKey);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleColumnDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleColumnDrop = (e: React.DragEvent, targetColumnKey: string) => {
+    e.preventDefault();
+    
+    if (!draggedColumn || draggedColumn === targetColumnKey) {
+      setDraggedColumn(null);
+      return;
+    }
+
+    const newOrder = [...columnOrder];
+    const draggedIndex = newOrder.indexOf(draggedColumn);
+    const targetIndex = newOrder.indexOf(targetColumnKey);
+
+    // Remover el elemento arrastrado
+    newOrder.splice(draggedIndex, 1);
+    // Insertarlo en la nueva posición
+    newOrder.splice(targetIndex, 0, draggedColumn);
+
+    setColumnOrder(newOrder);
+    setDraggedColumn(null);
+  };
+
+  const handleColumnDragEnd = () => {
+    setDraggedColumn(null);
+  };
+
+  // Definir las columnas y sus configuraciones (ahora organizadas por orden)
+  const getOrderedColumnConfig = () => {
+    const allColumns = {
+      nombre: { key: 'nombre', label: 'Nombre', fixed: true },
+      responsable: { key: 'responsable', label: 'Responsable' },
+      estado: { key: 'estado', label: 'Estado' },
+      tipo: { key: 'tipo', label: 'Tipo' },
+      equipo: { key: 'equipo', label: 'Equipo' },
+      prioridad: { key: 'prioridad', label: 'Prioridad' },
+      objetivo: { key: 'objetivo', label: 'Objetivo' },
+      fechaInicio: { key: 'fechaInicio', label: 'Fecha Inicio' },
+      fechaFin: { key: 'fechaFin', label: 'Fecha Fin' },
+      progreso: { key: 'progreso', label: 'Progreso' },
+      enlace: { key: 'enlace', label: 'Enlace' },
+      observaciones: { key: 'observaciones', label: 'Observaciones' },
+      acciones: { key: 'acciones', label: 'Acciones', fixed: true }
+    };
+
+    return columnOrder.map(key => allColumns[key]);
+  };
+
+  // Función para renderizar una celda específica
+  const renderCell = (columnKey: string, proyecto: any) => {
+    switch (columnKey) {
+      case 'nombre':
+        return (
+          <td key={`${proyecto.id}-nombre`} className="px-6 py-4 whitespace-normal">
+            <span className="text-green-700 font-medium hover:text-green-900 hover:underline cursor-pointer">
+              {proyecto.nombre}
+            </span>
+          </td>
+        );
+
+      case 'responsable':
+        return (
+          <td key={`${proyecto.id}-responsable`} className="px-6 py-4 whitespace-normal">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-green-100 text-green-700 text-sm font-medium">
+                {(proyecto.responsable_nombre || 'S/A').charAt(0).toUpperCase()}
+              </span>
+              <span>{proyecto.responsable_nombre || 'Sin asignar'}</span>
+            </div>
+          </td>
+        );
+
+      case 'estado':
+        return (
+          <td key={`${proyecto.id}-estado`} className="px-6 py-4 whitespace-normal">
+            {editando.id === proyecto.id && editando.campo === 'estado' ? (
+              <div className="space-y-2">
+                <div className="font-medium text-xs text-gray-500 mb-1">Pendiente</div>
+                <div className="flex flex-wrap gap-1">
+                  {opcionesEstado.pendientes.map(estado => (
+                    <button
+                      key={createUniqueKey('estado', proyecto.id, estado)}
+                      onClick={() => handleSave(proyecto.id, 'estado', estado)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                        estado === proyecto.estado
+                          ? 'bg-yellow-200 text-yellow-800 ring-2 ring-yellow-500'
+                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                      }`}
+                    >
+                      {estado}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="font-medium text-xs text-gray-500 mb-1 mt-3">En curso</div>
+                <div className="flex flex-wrap gap-1">
+                  {opcionesEstado.enProceso.map(estado => (
+                    <button
+                      key={createUniqueKey('estado', proyecto.id, estado)}
+                      onClick={() => handleSave(proyecto.id, 'estado', estado)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                        estado === proyecto.estado
+                          ? 'bg-blue-200 text-blue-800 ring-2 ring-blue-500'
+                          : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                      }`}
+                    >
+                      {estado}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="font-medium text-xs text-gray-500 mb-1 mt-3">Completado</div>
+                <div className="flex flex-wrap gap-1">
+                  {opcionesEstado.terminados.map(estado => {
+                    let bgColor = 'bg-green-100';
+                    let textColor = 'text-green-800';
+                    let hoverColor = 'hover:bg-green-200';
+                    let ringColor = 'ring-green-500';
+
+                    if (estado === 'Cancelado') {
+                      bgColor = 'bg-red-100';
+                      textColor = 'text-red-800';
+                      hoverColor = 'hover:bg-red-200';
+                      ringColor = 'ring-red-500';
+                    } else if (estado === 'Pausado') {
+                      bgColor = 'bg-red-100';
+                      textColor = 'text-red-800';
+                      hoverColor = 'hover:bg-red-200';
+                      ringColor = 'ring-red-500';
+                    }
+
+                    return (
+                      <button
+                        key={createUniqueKey('estado', proyecto.id, estado)}
+                        onClick={() => handleSave(proyecto.id, 'estado', estado)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                          estado === proyecto.estado
+                            ? `${bgColor} ${textColor} ring-2 ${ringColor}`
+                            : `${bgColor} ${textColor} ${hoverColor}`
+                        }`}
+                      >
+                        {estado}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <span
+                className={`px-3 py-1.5 rounded-full text-xs font-medium inline-flex items-center ${getColorEstado(proyecto.estado)} cursor-pointer`}
+                onClick={() => handleEdit(proyecto.id, 'estado')}
+              >
+                {proyecto.estado}
+              </span>
+            )}
+          </td>
+        );
+
+      case 'tipo':
+        return (
+          <td key={`${proyecto.id}-tipo`} className="px-6 py-4 whitespace-normal">
+            {editando.id === proyecto.id && editando.campo === 'tipo' ? (
+              <select
+                multiple
+                value={Array.isArray(proyecto.tipo) ? proyecto.tipo : [proyecto.tipo]}
+                onChange={(e) => {
+                  const values = Array.from(e.target.selectedOptions, o => o.value);
+                  handleSave(proyecto.id, 'tipo', values);
+                }}
+                className="border p-1 rounded w-full"
+              >
+                {opcionesTipo.map(op => (
+                  <option key={createUniqueKey('tipo', proyecto.id, op)} value={op}>
+                    {op}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div onClick={() => handleEdit(proyecto.id, 'tipo')} className="cursor-pointer">
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {formatArrayOrString(proyecto.tipo)}
+                </span>
+              </div>
+            )}
+          </td>
+        );
+
+      case 'equipo':
+        return (
+          <td key={`${proyecto.id}-equipo`} className="px-6 py-4 whitespace-normal">
+            {editando.id === proyecto.id && editando.campo === 'equipo' ? (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1">
+                  {opcionesEquipo.map(equipo => {
+                    let bgColor = '';
+                    let textColor = '';
+
+                    switch (equipo) {
+                      case 'Dirección TI':
+                        bgColor = 'bg-red-100';
+                        textColor = 'text-red-800';
+                        break;
+                      case 'Estrategia CX':
+                        bgColor = 'bg-orange-100';
+                        textColor = 'text-orange-800';
+                        break;
+                      case 'Dirección Financiera':
+                        bgColor = 'bg-gray-100';
+                        textColor = 'text-gray-800';
+                        break;
+                      case 'Dirección de Servicios':
+                        bgColor = 'bg-blue-100';
+                        textColor = 'text-blue-800';
+                        break;
+                      case 'Dirección Comercial':
+                        bgColor = 'bg-green-100';
+                        textColor = 'text-green-800';
+                        break;
+                      case 'Dirección GH':
+                        bgColor = 'bg-blue-100';
+                        textColor = 'text-blue-800';
+                        break;
+                      case 'Desarrollo CX':
+                        bgColor = 'bg-amber-100';
+                        textColor = 'text-amber-800';
+                        break;
+                      default:
+                        bgColor = 'bg-gray-100';
+                        textColor = 'text-gray-800';
+                    }
+
+                    const isSelected = Array.isArray(proyecto.equipo)
+                      ? proyecto.equipo.includes(equipo)
+                      : proyecto.equipo === equipo;
+
+                    return (
+                      <button
+                        key={createUniqueKey('equipo', proyecto.id, equipo)}
+                        onClick={() => {
+                          const currentEquipo = Array.isArray(proyecto.equipo) ? [...proyecto.equipo] : [proyecto.equipo].filter(Boolean);
+                          let newEquipo;
+
+                          if (isSelected) {
+                            newEquipo = currentEquipo.filter(e => e !== equipo);
+                          } else {
+                            newEquipo = [...currentEquipo, equipo];
+                          }
+
+                          handleSave(proyecto.id, 'equipo', newEquipo);
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium ${bgColor} ${textColor} ${
+                          isSelected ? `ring-2 ring-${textColor.replace('text-', '')}` : 'opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        {equipo}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => handleEdit(proyecto.id, 'equipo')}
+                className="cursor-pointer flex flex-wrap gap-1"
+              >
+                {Array.isArray(proyecto.equipo) ? proyecto.equipo.map(equipo => {
+                  let bgColor = '';
+                  let textColor = '';
+
+                  switch (equipo) {
+                    case 'Dirección TI':
+                      bgColor = 'bg-red-100';
+                      textColor = 'text-red-800';
+                      break;
+                    case 'Estrategia CX':
+                      bgColor = 'bg-orange-100';
+                      textColor = 'text-orange-800';
+                      break;
+                    case 'Dirección Financiera':
+                      bgColor = 'bg-gray-100';
+                      textColor = 'text-gray-800';
+                      break;
+                    case 'Dirección de Servicios':
+                      bgColor = 'bg-blue-100';
+                      textColor = 'text-blue-800';
+                      break;
+                    case 'Dirección Comercial':
+                      bgColor = 'bg-green-100';
+                      textColor = 'text-green-800';
+                      break;
+                    case 'Dirección GH':
+                      bgColor = 'bg-blue-100';
+                      textColor = 'text-blue-800';
+                      break;
+                    case 'Desarrollo CX':
+                      bgColor = 'bg-amber-100';
+                      textColor = 'text-amber-800';
+                      break;
+                    default:
+                      bgColor = 'bg-gray-100';
+                      textColor = 'text-gray-800';
+                  }
+
+                  return (
+                    <span
+                      key={createUniqueKey('equipo-display', proyecto.id, equipo)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}
+                    >
+                      {equipo}
+                    </span>
+                  );
+                }) : proyecto.equipo ? (
+                  <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    {proyecto.equipo}
+                  </span>
+                ) : null}
+              </div>
+            )}
+          </td>
+        );
+
+      case 'prioridad':
+        return (
+          <td key={`${proyecto.id}-prioridad`} className="px-6 py-4 whitespace-normal">
+            {editando.id === proyecto.id && editando.campo === 'prioridad' ? (
+              <select
+                value={proyecto.prioridad}
+                onChange={(e) => handleSave(proyecto.id, 'prioridad', e.target.value)}
+                className="border p-1 rounded w-full"
+              >
+                {opcionesPrioridad.map(p => (
+                  <option key={createUniqueKey('prioridad', proyecto.id, p)} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span
+                className={`${getColorPrioridad(proyecto.prioridad)} px-2 py-1 rounded-full text-xs cursor-pointer`}
+                onClick={() => handleEdit(proyecto.id, 'prioridad')}
+              >
+                {proyecto.prioridad}
+              </span>
+            )}
+          </td>
+        );
+
+      case 'objetivo':
+        return (
+          <td key={`${proyecto.id}-objetivo`} className="px-6 py-4 whitespace-normal">
+            {editando.id === proyecto.id && editando.campo === 'objetivo' ? (
+              <input
+                type="text"
+                value={proyecto.objetivo}
+                onChange={(e) => handleSave(proyecto.id, 'objetivo', e.target.value)}
+                className="border p-1 rounded w-full"
+              />
+            ) : (
+              <span
+                onClick={() => handleEdit(proyecto.id, 'objetivo')}
+                className="cursor-pointer"
+              >
+                {proyecto.objetivo}
+              </span>
+            )}
+          </td>
+        );
+
+      case 'fechaInicio':
+        return (
+          <td key={`${proyecto.id}-fechaInicio`} className="px-6 py-4 whitespace-normal">
+            {editando.id === proyecto.id && editando.campo === 'fechaInicio' ? (
+              <input
+                type="date"
+                value={proyecto.fechaInicio}
+                onChange={(e) => handleSave(proyecto.id, 'fechaInicio', e.target.value)}
+                className="border p-1 rounded w-full"
+              />
+            ) : (
+              <span
+                onClick={() => handleEdit(proyecto.id, 'fechaInicio')}
+                className="cursor-pointer"
+              >
+                {proyecto.fechaInicio}
+              </span>
+            )}
+          </td>
+        );
+
+      case 'fechaFin':
+        return (
+          <td key={`${proyecto.id}-fechaFin`} className="px-6 py-4 whitespace-normal">
+            {editando.id === proyecto.id && editando.campo === 'fechaFin' ? (
+              <input
+                type="date"
+                value={proyecto.fechaFin}
+                onChange={(e) => handleSave(proyecto.id, 'fechaFin', e.target.value)}
+                className="border p-1 rounded w-full"
+              />
+            ) : (
+              <span
+                onClick={() => handleEdit(proyecto.id, 'fechaFin')}
+                className="cursor-pointer"
+              >
+                {proyecto.fechaFin}
+              </span>
+            )}
+          </td>
+        );
+
+      case 'progreso':
+        return (
+          <td key={`${proyecto.id}-progreso`} className="px-6 py-4 whitespace-normal">
+            {editando.id === proyecto.id && editando.campo === 'progreso' ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    value={proyecto.progreso}
+                    onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
+                    min="0"
+                    max="100"
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <input
+                    type="number"
+                    value={proyecto.progreso}
+                    onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
+                    min="0"
+                    max="100"
+                    className="w-16 border p-1 rounded"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => handleEdit(proyecto.id, 'progreso')}
+                className="cursor-pointer space-y-1"
+              >
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">{proyecto.progreso}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div
+                    className={`h-2.5 rounded-full ${getProgressColor(proyecto.progreso)}`}
+                    style={{ width: `${proyecto.progreso}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+          </td>
+        );
+
+      case 'enlace':
+        return (
+          <td key={`${proyecto.id}-enlace`} className="px-6 py-4 whitespace-normal">
+            <a
+              href={proyecto.enlace}
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-600 underline"
+            >
+              Ver
+            </a>
+          </td>
+        );
+
+      case 'observaciones':
+        return (
+          <td key={`${proyecto.id}-observaciones`} className="px-6 py-4 whitespace-normal">
+            {editando.id === proyecto.id && editando.campo === 'observaciones' ? (
+              <textarea
+                value={proyecto.observaciones}
+                onChange={(e) => handleSave(proyecto.id, 'observaciones', e.target.value)}
+                className="border p-1 rounded w-full"
+                rows={3}
+              />
+            ) : (
+              <span
+                onClick={() => handleEdit(proyecto.id, 'observaciones')}
+                className="block max-w-xs truncate cursor-pointer"
+                title={proyecto.observaciones}
+              >
+                {proyecto.observaciones}
+              </span>
+            )}
+          </td>
+        );
+
+      case 'acciones':
+        return (
+          <td key={`${proyecto.id}-acciones`} className="px-6 py-4 whitespace-nowrap">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onVerDetalle?.(proyecto)}
+                className="inline-flex items-center px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 text-sm font-medium transition-colors duration-200"
+              >
+                Ver más
+              </button>
+              <button
+                onClick={() => navigate(`/proyecto/${proyecto.id}`)}
+                className="inline-flex items-center px-3 py-1.5 rounded-md bg-green-50 text-green-700 hover:bg-green-100 text-sm font-medium transition-colors duration-200"
+              >
+                Editar
+              </button>
+              {onEliminar && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEliminar(proyecto.id);
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium transition-colors duration-200"
+                >
+                  Eliminar
+                </button>
+              )}
+            </div>
+          </td>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
@@ -133,22 +655,43 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
             </button>
             
             {showColumnEditor && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-3 min-w-48">
-                <div className="text-sm font-medium text-gray-700 mb-2">Mostrar/Ocultar Columnas</div>
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-3 min-w-64">
+                <div className="text-sm font-medium text-gray-700 mb-2">Mostrar/Ocultar y Reordenar Columnas</div>
+                <div className="text-xs text-gray-500 mb-3">Arrastra las columnas para reordenarlas</div>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {columnConfig.map(column => (
-                    <label key={column.key} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={visibleColumns[column.key]}
-                        onChange={() => !column.fixed && toggleColumn(column.key)}
-                        disabled={column.fixed}
-                        className="rounded"
-                      />
-                      <span className={column.fixed ? 'text-gray-400' : 'text-gray-700'}>
-                        {column.label}
-                      </span>
-                    </label>
+                  {getOrderedColumnConfig().map(column => (
+                    <div 
+                      key={column.key} 
+                      className={`flex items-center gap-2 text-sm p-2 rounded border ${
+                        draggedColumn === column.key ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                      } ${!column.fixed ? 'cursor-move' : 'cursor-default'}`}
+                      draggable={!column.fixed}
+                      onDragStart={(e) => !column.fixed && handleColumnDragStart(e, column.key)}
+                      onDragOver={handleColumnDragOver}
+                      onDrop={(e) => handleColumnDrop(e, column.key)}
+                      onDragEnd={handleColumnDragEnd}
+                    >
+                      <div className="flex items-center gap-2 flex-1">
+                        {!column.fixed && (
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                          </svg>
+                        )}
+                        <input
+                          type="checkbox"
+                          checked={visibleColumns[column.key]}
+                          onChange={() => !column.fixed && toggleColumn(column.key)}
+                          disabled={column.fixed}
+                          className="rounded"
+                        />
+                        <span className={column.fixed ? 'text-gray-400' : 'text-gray-700'}>
+                          {column.label}
+                        </span>
+                      </div>
+                      {column.fixed && (
+                        <span className="text-xs text-gray-400 italic">Fija</span>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -166,7 +709,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
           <table className="min-w-full text-xs text-left bg-white">
             <thead className="bg-gradient-to-r from-green-500 to-green-600 text-white top-0 z-10">
               <tr>
-                {columnConfig.filter(col => visibleColumns[col.key]).map(column => (
+                {getOrderedColumnConfig().filter(col => visibleColumns[col.key]).map(column => (
                   <th key={`header-${column.key}`}
                     className="px-4 py-2 font-semibold text-xs tracking-wide">
                     {column.label}
@@ -178,477 +721,10 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               {filtrarProyectos().map((proyecto) => (
                 <tr key={proyecto.id}
                   className="hover:bg-green-50/50 transition-all duration-200">
-                  {/* Nombre */}
-                  {visibleColumns.nombre && (
-                    <td className="px-6 py-4 whitespace-normal">
-                      <span className="text-green-700 font-medium hover:text-green-900 hover:underline cursor-pointer">
-                        {proyecto.nombre}
-                      </span>
-                    </td>
-                  )}
-
-                  {/* Responsable */}
-                  {visibleColumns.responsable && (
-                    <td className="px-6 py-4 whitespace-normal">
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-green-100 text-green-700 text-sm font-medium">
-                          {(proyecto.responsable_nombre || 'S/A').charAt(0).toUpperCase()}
-                        </span>
-                        <span>{proyecto.responsable_nombre || 'Sin asignar'}</span>
-                      </div>
-                    </td>
-                  )}
-
-                  {/* Estado */}
-                  {visibleColumns.estado && (
-                    <td className="px-6 py-4 whitespace-normal">
-                    {editando.id === proyecto.id && editando.campo === 'estado' ? (
-                      <div className="space-y-2">
-                        <div className="font-medium text-xs text-gray-500 mb-1">Pendiente</div>
-                        <div className="flex flex-wrap gap-1">
-                          {opcionesEstado.pendientes.map(estado => (
-                            <button
-                              key={createUniqueKey('estado', proyecto.id, estado)}
-                              onClick={() => handleSave(proyecto.id, 'estado', estado)}
-                              className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                                estado === proyecto.estado
-                                  ? 'bg-yellow-200 text-yellow-800 ring-2 ring-yellow-500'
-                                  : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                              }`}
-                            >
-                              {estado}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="font-medium text-xs text-gray-500 mb-1 mt-3">En curso</div>
-                        <div className="flex flex-wrap gap-1">
-                          {opcionesEstado.enProceso.map(estado => (
-                            <button
-                              key={createUniqueKey('estado', proyecto.id, estado)}
-                              onClick={() => handleSave(proyecto.id, 'estado', estado)}
-                              className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                                estado === proyecto.estado
-                                  ? 'bg-blue-200 text-blue-800 ring-2 ring-blue-500'
-                                  : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                              }`}
-                            >
-                              {estado}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="font-medium text-xs text-gray-500 mb-1 mt-3">Completado</div>
-                        <div className="flex flex-wrap gap-1">
-                          {opcionesEstado.terminados.map(estado => {
-                            let bgColor = 'bg-green-100';
-                            let textColor = 'text-green-800';
-                            let hoverColor = 'hover:bg-green-200';
-                            let ringColor = 'ring-green-500';
-
-                            if (estado === 'Cancelado') {
-                              bgColor = 'bg-red-100';
-                              textColor = 'text-red-800';
-                              hoverColor = 'hover:bg-red-200';
-                              ringColor = 'ring-red-500';
-                            } else if (estado === 'Pausado') {
-                              bgColor = 'bg-red-100';
-                              textColor = 'text-red-800';
-                              hoverColor = 'hover:bg-red-200';
-                              ringColor = 'ring-red-500';
-                            }
-
-                            return (
-                              <button
-                                key={createUniqueKey('estado', proyecto.id, estado)}
-                                onClick={() => handleSave(proyecto.id, 'estado', estado)}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                                  estado === proyecto.estado
-                                    ? `${bgColor} ${textColor} ring-2 ${ringColor}`
-                                    : `${bgColor} ${textColor} ${hoverColor}`
-                                }`}
-                              >
-                                {estado}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <span
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium inline-flex items-center ${getColorEstado(proyecto.estado)} cursor-pointer`}
-                        onClick={() => handleEdit(proyecto.id, 'estado')}
-                      >
-                        {proyecto.estado}
-                      </span>
-                    )}
-                    </td>
-                  )}
-
-                  {/* Tipo */}
-                  {visibleColumns.tipo && (
-                    <td className="px-6 py-4 whitespace-normal">
-                    {editando.id === proyecto.id && editando.campo === 'tipo' ? (
-                      <select
-                        multiple
-                        value={Array.isArray(proyecto.tipo) ? proyecto.tipo : [proyecto.tipo]}
-                        onChange={(e) => {
-                          const values = Array.from(e.target.selectedOptions, o => o.value);
-                          handleSave(proyecto.id, 'tipo', values);
-                        }}
-                        className="border p-1 rounded w-full"
-                      >
-                        {opcionesTipo.map(op => (
-                          <option key={createUniqueKey('tipo', proyecto.id, op)} value={op}>
-                            {op}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div onClick={() => handleEdit(proyecto.id, 'tipo')} className="cursor-pointer">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {formatArrayOrString(proyecto.tipo)}
-                        </span>
-                      </div>
-                    )}
-                    </td>
-                  )}
-
-                  {/* Equipo */}
-                  {visibleColumns.equipo && (
-                    <td className="px-6 py-4 whitespace-normal">
-                    {editando.id === proyecto.id && editando.campo === 'equipo' ? (
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap gap-1">
-                          {opcionesEquipo.map(equipo => {
-                            let bgColor = '';
-                            let textColor = '';
-
-                            // Asignar colores según el equipo
-                            switch (equipo) {
-                              case 'Dirección TI':
-                                bgColor = 'bg-red-100';
-                                textColor = 'text-red-800';
-                                break;
-                              case 'Estrategia CX':
-                                bgColor = 'bg-orange-100';
-                                textColor = 'text-orange-800';
-                                break;
-                              case 'Dirección Financiera':
-                                bgColor = 'bg-gray-100';
-                                textColor = 'text-gray-800';
-                                break;
-                              case 'Dirección de Servicios':
-                                bgColor = 'bg-blue-100';
-                                textColor = 'text-blue-800';
-                                break;
-                              case 'Dirección Comercial':
-                                bgColor = 'bg-green-100';
-                                textColor = 'text-green-800';
-                                break;
-                              case 'Dirección GH':
-                                bgColor = 'bg-blue-100';
-                                textColor = 'text-blue-800';
-                                break;
-                              case 'Desarrollo CX':
-                                bgColor = 'bg-amber-100';
-                                textColor = 'text-amber-800';
-                                break;
-                              default:
-                                bgColor = 'bg-gray-100';
-                                textColor = 'text-gray-800';
-                            }
-
-                            const isSelected = Array.isArray(proyecto.equipo)
-                              ? proyecto.equipo.includes(equipo)
-                              : proyecto.equipo === equipo;
-
-                            return (
-                              <button
-                                key={createUniqueKey('equipo', proyecto.id, equipo)}
-                                onClick={() => {
-                                  const currentEquipo = Array.isArray(proyecto.equipo) ? [...proyecto.equipo] : [proyecto.equipo].filter(Boolean);
-                                  let newEquipo;
-
-                                  if (isSelected) {
-                                    newEquipo = currentEquipo.filter(e => e !== equipo);
-                                  } else {
-                                    newEquipo = [...currentEquipo, equipo];
-                                  }
-
-                                  handleSave(proyecto.id, 'equipo', newEquipo);
-                                }}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium ${bgColor} ${textColor} ${
-                                  isSelected ? `ring-2 ring-${textColor.replace('text-', '')}` : 'opacity-70 hover:opacity-100'
-                                }`}
-                              >
-                                {equipo}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        onClick={() => handleEdit(proyecto.id, 'equipo')}
-                        className="cursor-pointer flex flex-wrap gap-1"
-                      >
-                        {Array.isArray(proyecto.equipo) ? proyecto.equipo.map(equipo => {
-                          let bgColor = '';
-                          let textColor = '';
-
-                          // Asignar colores según el equipo
-                          switch (equipo) {
-                            case 'Dirección TI':
-                              bgColor = 'bg-red-100';
-                              textColor = 'text-red-800';
-                              break;
-                            case 'Estrategia CX':
-                              bgColor = 'bg-orange-100';
-                              textColor = 'text-orange-800';
-                              break;
-                            case 'Dirección Financiera':
-                              bgColor = 'bg-gray-100';
-                              textColor = 'text-gray-800';
-                              break;
-                            case 'Dirección de Servicios':
-                              bgColor = 'bg-blue-100';
-                              textColor = 'text-blue-800';
-                              break;
-                            case 'Dirección Comercial':
-                              bgColor = 'bg-green-100';
-                              textColor = 'text-green-800';
-                              break;
-                            case 'Dirección GH':
-                              bgColor = 'bg-blue-100';
-                              textColor = 'text-blue-800';
-                              break;
-                            case 'Desarrollo CX':
-                              bgColor = 'bg-amber-100';
-                              textColor = 'text-amber-800';
-                              break;
-                            default:
-                              bgColor = 'bg-gray-100';
-                              textColor = 'text-gray-800';
-                          }
-
-                          return (
-                            <span
-                              key={createUniqueKey('equipo-display', proyecto.id, equipo)}
-                              className={`px-3 py-1.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}
-                            >
-                              {equipo}
-                            </span>
-                          );
-                        }) : proyecto.equipo ? (
-                          <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {proyecto.equipo}
-                          </span>
-                        ) : null}
-                      </div>
-                    )}
-                    </td>
-                  )}
-
-                  {/* Prioridad */}
-                  {visibleColumns.prioridad && (
-                    <td className="px-6 py-4 whitespace-normal">
-                    {editando.id === proyecto.id && editando.campo === 'prioridad' ? (
-                      <select
-                        value={proyecto.prioridad}
-                        onChange={(e) => handleSave(proyecto.id, 'prioridad', e.target.value)}
-                        className="border p-1 rounded w-full"
-                      >
-                        {opcionesPrioridad.map(p => (
-                          <option key={createUniqueKey('prioridad', proyecto.id, p)} value={p}>
-                            {p}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span
-                        className={`${getColorPrioridad(proyecto.prioridad)} px-2 py-1 rounded-full text-xs cursor-pointer`}
-                        onClick={() => handleEdit(proyecto.id, 'prioridad')}
-                      >
-                        {proyecto.prioridad}
-                      </span>
-                    )}
-                    </td>
-                  )}
-
-                  {/* Objetivo */}
-                  {visibleColumns.objetivo && (
-                    <td className="px-6 py-4 whitespace-normal">
-                    {editando.id === proyecto.id && editando.campo === 'objetivo' ? (
-                      <input
-                        type="text"
-                        value={proyecto.objetivo}
-                        onChange={(e) => handleSave(proyecto.id, 'objetivo', e.target.value)}
-                        className="border p-1 rounded w-full"
-                      />
-                    ) : (
-                      <span
-                        onClick={() => handleEdit(proyecto.id, 'objetivo')}
-                        className="cursor-pointer"
-                      >
-                        {proyecto.objetivo}
-                      </span>
-                    )}
-                    </td>
-                  )}
-
-                  {/* Fecha Inicio */}
-                  {visibleColumns.fechaInicio && (
-                    <td className="px-6 py-4 whitespace-normal">
-                      {editando.id === proyecto.id && editando.campo === 'fechaInicio' ? (
-                        <input
-                          type="date"
-                          value={proyecto.fechaInicio}
-                          onChange={(e) => handleSave(proyecto.id, 'fechaInicio', e.target.value)}
-                          className="border p-1 rounded w-full"
-                        />
-                      ) : (
-                        <span
-                          onClick={() => handleEdit(proyecto.id, 'fechaInicio')}
-                          className="cursor-pointer"
-                        >
-                          {proyecto.fechaInicio}
-                        </span>
-                      )}
-                    </td>
-                  )}
-
-                  {/* Fecha Fin */}
-                  {visibleColumns.fechaFin && (
-                    <td className="px-6 py-4 whitespace-normal">
-                      {editando.id === proyecto.id && editando.campo === 'fechaFin' ? (
-                        <input
-                          type="date"
-                          value={proyecto.fechaFin}
-                          onChange={(e) => handleSave(proyecto.id, 'fechaFin', e.target.value)}
-                          className="border p-1 rounded w-full"
-                        />
-                      ) : (
-                        <span
-                          onClick={() => handleEdit(proyecto.id, 'fechaFin')}
-                          className="cursor-pointer"
-                        >
-                          {proyecto.fechaFin}
-                        </span>
-                      )}
-                    </td>
-                  )}
-
-                  {/* Progreso */}
-                  {visibleColumns.progreso && (
-                    <td className="px-6 py-4 whitespace-normal">
-                    {editando.id === proyecto.id && editando.campo === 'progreso' ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="range"
-                            value={proyecto.progreso}
-                            onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
-                            min="0"
-                            max="100"
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                          />
-                          <input
-                            type="number"
-                            value={proyecto.progreso}
-                            onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
-                            min="0"
-                            max="100"
-                            className="w-16 border p-1 rounded"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        onClick={() => handleEdit(proyecto.id, 'progreso')}
-                        className="cursor-pointer space-y-1"
-                      >
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">{proyecto.progreso}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div
-                            className={`h-2.5 rounded-full ${getProgressColor(proyecto.progreso)}`}
-                            style={{ width: `${proyecto.progreso}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-                    </td>
-                  )}
-
-                  {/* Enlace */}
-                  {visibleColumns.enlace && (
-                    <td className="px-6 py-4 whitespace-normal">
-                      <a
-                        href={proyecto.enlace}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 underline"
-                      >
-                        Ver
-                      </a>
-                    </td>
-                  )}
-
-                  {/* Observaciones */}
-                  {/* Observaciones */}
-                  {visibleColumns.observaciones && (
-                    <td className="px-6 py-4 whitespace-normal">
-                      {editando.id === proyecto.id && editando.campo === 'observaciones' ? (
-                        <textarea
-                          value={proyecto.observaciones}
-                          onChange={(e) => handleSave(proyecto.id, 'observaciones', e.target.value)}
-                          className="border p-1 rounded w-full"
-                          rows={3}
-                        />
-                      ) : (
-                        <span
-                          onClick={() => handleEdit(proyecto.id, 'observaciones')}
-                          className="block max-w-xs truncate cursor-pointer"
-                          title={proyecto.observaciones}
-                        >
-                          {proyecto.observaciones}
-                        </span>
-                      )}
-                    </td>
-                  )}
-
-                  {/* Acciones */}
-                  {visibleColumns.acciones && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onVerDetalle?.(proyecto)}
-                        className="inline-flex items-center px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 text-sm font-medium transition-colors duration-200"
-                      >
-                        Ver más
-                      </button>
-                      <button
-                        onClick={() => navigate(`/proyecto/${proyecto.id}`)}
-                        className="inline-flex items-center px-3 py-1.5 rounded-md bg-green-50 text-green-700 hover:bg-green-100 text-sm font-medium transition-colors duration-200"
-                      >
-                        Editar
-                      </button>
-                      {onEliminar && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEliminar(proyecto.id);
-                          }}
-                          className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium transition-colors duration-200"
-                        >
-                          Eliminar
-                        </button>
-                      )}
-                    </div>
-                    </td>
-                  )}
+                  {getOrderedColumnConfig()
+                    .filter(col => visibleColumns[col.key])
+                    .map(column => renderCell(column.key, proyecto))
+                  }
                 </tr>
               ))}
             </tbody>
