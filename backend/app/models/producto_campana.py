@@ -15,10 +15,10 @@ class PropiedadProducto(str, enum.Enum):
 
 
 class ProductoCampaña(Base):
-    __tablename__ = "productos_campañas"
+    __tablename__ = "productos_campanas"
 
     id = Column(Integer, primary_key=True, index=True)
-    campaña_id = Column(Integer, ForeignKey("campañas_campañas.id"), nullable=False)
+    campaña_id = Column(Integer, ForeignKey("campanas_campanas.id"), nullable=False)
     tipo = Column(Enum(TipoProducto), nullable=False, default=TipoProducto.PRODUCTO)
     producto_servicio = Column(String, nullable=False)  # Nuevo campo: nombre específico del producto/servicio
     proveedor = Column(String, nullable=False)

@@ -4,7 +4,7 @@ from core.database import Base
 
 
 class ClienteCorporativo(Base):
-    __tablename__ = "campañas_clientes_corporativos"
+    __tablename__ = "campanas_clientes_corporativos"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False, index=True)
@@ -13,7 +13,7 @@ class ClienteCorporativo(Base):
     
     # Relaciones
     contactos = relationship("Cliente", back_populates="cliente_corporativo")
-    campañas = relationship("Campaña", back_populates="cliente_corporativo")
+    campanas = relationship("Campaña", back_populates="cliente_corporativo")
     
     def __repr__(self):
         return (f"<ClienteCorporativo(id={self.id}, "
