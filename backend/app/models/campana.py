@@ -37,3 +37,6 @@ class Campaña(Base):
         back_populates="campañas"
     )
     contacto = relationship("Cliente", back_populates="campañas")
+    historial = relationship("HistorialCampaña", back_populates="campaña")
+    productos = relationship("ProductoCampaña", back_populates="campaña")
+    facturacion = relationship("FacturacionCampaña", back_populates="campaña")

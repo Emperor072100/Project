@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaHistory, FaUsers, FaBullhorn, FaChartBar } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaHistory, FaUsers, FaBullhorn, FaChartBar, FaBoxOpen, FaFileInvoiceDollar } from 'react-icons/fa';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
@@ -25,9 +25,15 @@ const Campañas = () => {
   const [modalHistorial, setModalHistorial] = useState(false);
   const [historial, setHistorial] = useState([]);
   const [campañaSeleccionada, setCampañaSeleccionada] = useState(null);
+  
+  // Nuevos modales independientes
+  const [modalProductos, setModalProductos] = useState(false);
+  const [modalFacturacion, setModalFacturacion] = useState(false);
+  
   const [mostrarProductos, setMostrarProductos] = useState(false);
   const [formProducto, setFormProducto] = useState({
     tipo: 'Producto',
+    producto_servicio: '',
     proveedor: '',
     propiedad: 'Propia',
     cantidad: 1
@@ -36,11 +42,11 @@ const Campañas = () => {
   const [formFacturacion, setFormFacturacion] = useState({
     unidad: '',
     cantidad: 1,
-    valor: ''
+    valor: '',
+    periodicidad: ''
   });
-  const [facturacionGuardada, setFacturacionGuardada] = useState(null);
-
-  const [productoGuardado, setProductoGuardado] = useState(null);
+  const [facturacionGuardada, setFacturacionGuardada] = useState([]);
+  const [productoGuardado, setProductoGuardado] = useState([]);
 
   // Estado para edición de campania
   const [editando, setEditando] = useState(false);
@@ -95,10 +101,10 @@ const Campañas = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const [campañasRes, clientesCorporativosRes, contactosRes, estadisticasRes] = await Promise.all([
-        axios.get('http://localhost:8000/campañas', config),
+        axios.get('http://localhost:8000/campanas', config),
         axios.get('http://localhost:8000/clientes-corporativos', config),
         axios.get('http://localhost:8000/contactos', config),
-        axios.get('http://localhost:8000/campañas/estadisticas', config)
+        axios.get('http://localhost:8000/campanas/estadisticas', config)
       ]);
 
       // Mapear los datos de campañas con información relacionada
@@ -197,7 +203,7 @@ const Campañas = () => {
         fecha_de_produccion: formCampaña.fecha_de_produccion || null
       };
 
-      await axios.post('http://localhost:8000/campañas/', datosEnvio, config);
+      await axios.post('http://localhost:8000/campanas/', datosEnvio, config);
       toast.success('Campaña creada exitosamente');
       setModalCampaña(false);
       setFormCampaña({
@@ -235,8 +241,8 @@ const Campañas = () => {
       presupuesto: campaña.presupuesto || '',
       observaciones: campaña.observaciones || ''
     });
-    setProductoGuardado(null);
-    setFacturacionGuardada(null);
+    setProductoGuardado([]);
+    setFacturacionGuardada([]);
   };
 
 
@@ -261,11 +267,12 @@ const Campañas = () => {
         presupuesto: formEditar.presupuesto,
         observaciones: formEditar.observaciones
       };
-      await axios.put(encodeURI(`http://localhost:8000/campañas/${campañaSeleccionada.id}`), payload, config);
+      await axios.put(encodeURI(`http://localhost:8000/campanas/${campañaSeleccionada.id}`), payload, config);
       setCampañaSeleccionada((prev) => ({ ...prev, ...payload }));
-      await axios.post(`http://localhost:8000/campañas/${campañaSeleccionada.id}/historial`, {
-        fecha: new Date().toISOString(),
-        cambios: { ...payload },
+      await axios.post(`http://localhost:8000/campanas/${campañaSeleccionada.id}/historial`, {
+        accion: "actualizada",
+        cambios: payload,
+        observaciones: "Campaña actualizada desde la interfaz"
       }, config);
       setEditando(false);
       toast.success('Datos de campaña actualizados');
@@ -284,11 +291,50 @@ const Campañas = () => {
     setFormFacturacion((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleGuardarFacturacion = (e) => {
+  const handleGuardarFacturacion = async (e) => {
     e.preventDefault();
-    setFacturacionGuardada(formFacturacion);
-    setTimeout(() => toast.success('Unidad de facturación guardada correctamente'), 100); // toast después de render
-    // No cierres el formulario automáticamente
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      const facturacionData = {
+        unidad: formFacturacion.unidad,
+        cantidad: parseInt(formFacturacion.cantidad),
+        valor: parseFloat(formFacturacion.valor),
+        periodicidad: formFacturacion.periodicidad
+      };
+
+      let res;
+      if (formFacturacion.id) {
+        // Si tiene ID, es una edición
+        res = await axios.put(
+          `http://localhost:8000/campanas/${campañaSeleccionada.id}/facturacion/${formFacturacion.id}`,
+          facturacionData,
+          config
+        );
+        
+        // Actualizar la lista reemplazando el elemento editado
+        setFacturacionGuardada(prev => prev.map(item => 
+          item.id === formFacturacion.id ? res.data : item
+        ));
+        toast.success('Unidad de facturación actualizada correctamente');
+      } else {
+        // Si no tiene ID, es una creación
+        res = await axios.post(
+          `http://localhost:8000/campanas/${campañaSeleccionada.id}/facturacion`,
+          facturacionData,
+          config
+        );
+        
+        setFacturacionGuardada(prev => [...prev, res.data]);
+        toast.success('Unidad de facturación guardada correctamente');
+      }
+
+      setFormFacturacion({ unidad: '', cantidad: 1, valor: '', periodicidad: '' });
+    } catch (error) {
+      console.error('Error guardando facturación:', error);
+      toast.error('Error al guardar la unidad de facturación');
+    }
   };
 
   const handleProductoChange = (e) => {
@@ -296,11 +342,64 @@ const Campañas = () => {
     setFormProducto((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleGuardarProducto = (e) => {
+  const handleGuardarProducto = async (e) => {
     e.preventDefault();
-    setProductoGuardado(formProducto);
-    setTimeout(() => toast.success('Producto/servicio guardado correctamente'), 100); // toast después de render
-    // No cierres el formulario automáticamente
+    try {
+      console.log('Campaña seleccionada:', campañaSeleccionada);
+      console.log('ID de campaña:', campañaSeleccionada?.id);
+      
+      if (!campañaSeleccionada?.id) {
+        toast.error('No hay campaña seleccionada');
+        return;
+      }
+
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      const productoData = {
+        tipo: formProducto.tipo,
+        producto_servicio: formProducto.producto_servicio,
+        proveedor: formProducto.proveedor,
+        propiedad: formProducto.propiedad,
+        cantidad: parseInt(formProducto.cantidad)
+      };
+
+      console.log('Datos del producto a enviar:', productoData);
+
+      let res;
+      if (formProducto.id) {
+        // Si tiene ID, es una edición
+        console.log('URL del endpoint (PUT):', `http://localhost:8000/campanas/${campañaSeleccionada.id}/productos/${formProducto.id}`);
+        res = await axios.put(
+          `http://localhost:8000/campanas/${campañaSeleccionada.id}/productos/${formProducto.id}`,
+          productoData,
+          config
+        );
+        
+        // Actualizar la lista reemplazando el elemento editado
+        setProductoGuardado(prev => prev.map(item => 
+          item.id === formProducto.id ? res.data : item
+        ));
+        toast.success('Producto/servicio actualizado correctamente');
+      } else {
+        // Si no tiene ID, es una creación
+        console.log('URL del endpoint (POST):', `http://localhost:8000/campanas/${campañaSeleccionada.id}/productos`);
+        res = await axios.post(
+          `http://localhost:8000/campanas/${campañaSeleccionada.id}/productos`,
+          productoData,
+          config
+        );
+        
+        setProductoGuardado(prev => [...prev, res.data]);
+        toast.success('Producto/servicio guardado correctamente');
+      }
+
+      setFormProducto({ tipo: 'Producto', producto_servicio: '', proveedor: '', propiedad: 'Propia', cantidad: 1 });
+    } catch (error) {
+      console.error('Error guardando producto:', error);
+      console.error('Respuesta del servidor:', error.response);
+      toast.error('Error al guardar el producto/servicio');
+    }
   };
 
   const handleHistorial = async (campaña) => {
@@ -308,13 +407,42 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const res = await axios.get(`http://localhost:8000/campañas/${campaña.id}/historial`, config);
+      const res = await axios.get(`http://localhost:8000/campanas/${campaña.id}/historial`, config);
       setHistorial(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       setHistorial([]);
       toast.error('No se pudo cargar el historial', error);
     }
     setModalHistorial(true);
+  };
+
+  // Nuevas funciones para los modales independientes
+  const handleAbrirProductos = async (campaña) => {
+    setCampañaSeleccionada(campaña);
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`http://localhost:8000/campanas/${campaña.id}/productos`, config);
+      setProductoGuardado(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error('Error cargando productos:', error);
+      setProductoGuardado([]);
+    }
+    setModalProductos(true);
+  };
+
+  const handleAbrirFacturacion = async (campaña) => {
+    setCampañaSeleccionada(campaña);
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`http://localhost:8000/campanas/${campaña.id}/facturacion`, config);
+      setFacturacionGuardada(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error('Error cargando facturación:', error);
+      setFacturacionGuardada([]);
+    }
+    setModalFacturacion(true);
   };
 
   return (
@@ -345,13 +473,26 @@ const Campañas = () => {
                 <tbody>
                   {historial.map((h, idx) => (
                     <tr key={idx}>
-                      <td className="px-3 py-2 border-b border-gray-100">{dayjs(h.fecha).format('DD/MM/YYYY HH:mm')}</td>
                       <td className="px-3 py-2 border-b border-gray-100">
-                        <ul className="list-disc ml-4">
-                          {Object.entries(h.cambios).map(([k, v]) => (
-                            <li key={k}><b>{k}:</b> {v}</li>
-                          ))}
-                        </ul>
+                        {new Date(new Date(h.fecha).getTime() - (5 * 60 * 60 * 1000)).toLocaleString('es-CO', {
+                          day: '2-digit',
+                          month: '2-digit', 
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false
+                        })}
+                      </td>
+                      <td className="px-3 py-2 border-b border-gray-100">
+                        {h.observaciones ? (
+                          <div className="text-gray-700">{h.observaciones}</div>
+                        ) : (
+                          <ul className="list-disc ml-4">
+                            {Object.entries(h.cambios || {}).map(([k, v]) => (
+                              <li key={k}><b>{k}:</b> {String(v)}</li>
+                            ))}
+                          </ul>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -401,14 +542,14 @@ const Campañas = () => {
                       <button
                         type="button"
                         className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
-                        onClick={() => setMostrarProductos((prev) => !prev)}
+                        onClick={() => handleAbrirProductos(campañaSeleccionada)}
                       >
                         Productos y/o Servicio
                       </button>
                       <button
                         type="button"
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
-                        onClick={() => setMostrarFacturacion((prev) => !prev)}
+                        onClick={() => handleAbrirFacturacion(campañaSeleccionada)}
                       >
                         Unidades de Facturación
                       </button>
@@ -427,119 +568,6 @@ const Campañas = () => {
                 <form onSubmit={e => { e.preventDefault(); handleGuardarEdicion(); }}>
                   {/* ...formulario de edición aquí si editando... */}
                 </form>
-              )}
-              {/* Formulario de Facturación expandible */}
-              {mostrarFacturacion && (
-                <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
-                  <form className="space-y-6" onSubmit={handleGuardarFacturacion}>
-                    <h3 className="text-lg font-semibold mb-4">Unidades de facturación</h3>
-                    <div className="flex flex-wrap gap-4 mb-4">
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Unidad de facturación</label>
-                        <input name="unidad" value={formFacturacion.unidad} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
-                      </div>
-                      <div className="flex-1 min-w-[120px]">
-                        <label className="block text-sm font-medium mb-1">Cantidad</label>
-                        <input type="number" name="cantidad" value={formFacturacion.cantidad} min={1} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
-                      </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Valor</label>
-                        <div className="flex items-center">
-                          <span className="mr-2 text-gray-500 font-semibold">$</span>
-                          <input type="number" name="valor" value={formFacturacion.valor} min={0} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-3">
-                      <button type="button" className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition" onClick={() => { setMostrarFacturacion(false); setFacturacionGuardada(null); }}>Cancelar</button>
-                      <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">Guardar</button>
-                    </div>
-                  </form>
-                  {facturacionGuardada && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
-                      <h4 className="font-semibold text-green-700 mb-2">Última facturación guardada:</h4>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-green-900 text-sm border border-green-200 rounded">
-                          <thead>
-                            <tr className="bg-green-100">
-                              <th className="px-3 py-2 border-b border-green-200 text-left">Unidad</th>
-                              <th className="px-3 py-2 border-b border-green-200 text-left">Cantidad</th>
-                              <th className="px-3 py-2 border-b border-green-200 text-left">Valor</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.unidad}</td>
-                              <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.cantidad}</td>
-                              <td className="px-3 py-2 border-b border-green-100">${facturacionGuardada.valor}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* Formulario de Productos expandible */}
-              {mostrarProductos && (
-                <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
-                  <form className="space-y-6" onSubmit={handleGuardarProducto}>
-                    <h3 className="text-lg font-semibold mb-4">Productos y/o servicios</h3>
-                    <div className="flex flex-wrap gap-4 mb-4">
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Tipo</label>
-                        <select name="tipo" value={formProducto.tipo} onChange={handleProductoChange} className="w-full border rounded px-3 py-2">
-                          <option value="Producto">Producto</option>
-                          <option value="Servicio">Servicio</option>
-                        </select>
-                      </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Proveedor</label>
-                        <input name="proveedor" value={formProducto.proveedor} onChange={handleProductoChange} className="w-full border rounded px-3 py-2" required />
-                      </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Propiedad</label>
-                        <select name="propiedad" value={formProducto.propiedad} onChange={handleProductoChange} className="w-full border rounded px-3 py-2">
-                          <option value="Propia">Propia</option>
-                          <option value="Alquilada">Alquilada</option>
-                        </select>
-                      </div>
-                      <div className="flex-1 min-w-[120px]">
-                        <label className="block text-sm font-medium mb-1">Cantidad</label>
-                        <input type="number" name="cantidad" value={formProducto.cantidad} min={1} onChange={handleProductoChange} className="w-full border rounded px-3 py-2" required />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-3">
-                      <button type="button" className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
-                      <button type="submit" className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition">Guardar</button>
-                    </div>
-                  </form>
-                  {productoGuardado && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                      <h4 className="font-semibold text-yellow-700 mb-2">Último producto/servicio guardado:</h4>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-yellow-900 text-sm border border-yellow-200 rounded">
-                          <thead>
-                            <tr className="bg-yellow-100">
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Tipo</th>
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Proveedor</th>
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Propiedad</th>
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Cantidad</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.tipo}</td>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.proveedor}</td>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.propiedad}</td>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.cantidad}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </div>
               )}
             </div>
           </div>
@@ -1125,6 +1153,358 @@ const Campañas = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal de Productos */}
+      <Modal
+        isOpen={modalProductos}
+        onClose={() => setModalProductos(false)}
+        title="Productos y/o Servicios"
+      >
+        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 mb-4">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-yellow-600 rounded-lg">
+              <FaBoxOpen className="text-white text-xl" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-800">Gestión de Productos</h3>
+              <p className="text-yellow-600">Administra los productos y servicios de la campaña</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Formulario para agregar producto */}
+        <form className="space-y-4 mb-6" onSubmit={handleGuardarProducto}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Tipo</label>
+              <select 
+                name="tipo" 
+                value={formProducto.tipo} 
+                onChange={handleProductoChange} 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
+              >
+                <option value="Producto">Producto</option>
+                <option value="Servicio">Servicio</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Producto/Servicio</label>
+              <input 
+                name="producto_servicio" 
+                value={formProducto.producto_servicio} 
+                onChange={handleProductoChange} 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200" 
+                placeholder="Especifica el producto o servicio"
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Proveedor</label>
+              <input 
+                name="proveedor" 
+                value={formProducto.proveedor} 
+                onChange={handleProductoChange} 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200" 
+                placeholder="Nombre del proveedor"
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Propiedad</label>
+              <select 
+                name="propiedad" 
+                value={formProducto.propiedad} 
+                onChange={handleProductoChange} 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
+              >
+                <option value="Propia">Propia</option>
+                <option value="Alquilada">Alquilada</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Cantidad</label>
+              <input 
+                type="number" 
+                name="cantidad" 
+                value={formProducto.cantidad} 
+                min={1} 
+                onChange={handleProductoChange} 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200" 
+                required 
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-4 pt-4">
+            <button
+              type="button"
+              onClick={() => setFormProducto({ tipo: 'Producto', producto_servicio: '', proveedor: '', propiedad: 'Propia', cantidad: 1 })}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+            >
+              Limpiar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              Agregar Producto
+            </button>
+          </div>
+        </form>
+
+        {/* Mostrar productos guardados */}
+        {productoGuardado.length > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <h4 className="font-semibold text-yellow-700 mb-2">Productos/servicios guardados:</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-yellow-900 text-sm border border-yellow-200 rounded">
+                <thead>
+                  <tr className="bg-yellow-100">
+                    <th className="px-3 py-2 border-b border-yellow-200 text-left">Tipo</th>
+                    <th className="px-3 py-2 border-b border-yellow-200 text-left">Producto/Servicio</th>
+                    <th className="px-3 py-2 border-b border-yellow-200 text-left">Proveedor</th>
+                    <th className="px-3 py-2 border-b border-yellow-200 text-left">Propiedad</th>
+                    <th className="px-3 py-2 border-b border-yellow-200 text-left">Cantidad</th>
+                    <th className="px-3 py-2 border-b border-yellow-200 text-left">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productoGuardado.map((producto, index) => (
+                    <tr key={producto.id || index}>
+                      <td className="px-3 py-2 border-b border-yellow-100">{producto.tipo}</td>
+                      <td className="px-3 py-2 border-b border-yellow-100">{producto.producto_servicio}</td>
+                      <td className="px-3 py-2 border-b border-yellow-100">{producto.proveedor}</td>
+                      <td className="px-3 py-2 border-b border-yellow-100">{producto.propiedad}</td>
+                      <td className="px-3 py-2 border-b border-yellow-100">{producto.cantidad}</td>
+                      <td className="px-3 py-2 border-b border-yellow-100">
+                        <button 
+                          onClick={async () => {
+                            setFormProducto(producto);
+                            // Para editar, llenamos el formulario pero no eliminamos del backend aún
+                          }}
+                          className="text-blue-600 hover:text-blue-800 mr-2 font-medium"
+                        >
+                          Editar
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            if (window.confirm('¿Estás seguro de que quieres eliminar este producto/servicio?')) {
+                              try {
+                                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                                const config = { headers: { Authorization: `Bearer ${token}` } };
+                                await axios.delete(`http://localhost:8000/campanas/${campañaSeleccionada.id}/productos/${producto.id}`, config);
+                                setProductoGuardado(prev => prev.filter(p => p.id !== producto.id));
+                                toast.success('Producto/servicio eliminado');
+                              } catch (error) {
+                                console.error('Error eliminando producto:', error);
+                                toast.error('Error al eliminar el producto/servicio');
+                              }
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {productoGuardado.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <FaBoxOpen className="text-4xl mx-auto mb-4 text-gray-400" />
+              <p>No hay productos registrados para esta campaña</p>
+            </div>
+          )}
+
+          <div className="flex gap-4 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setModalProductos(false)}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Facturación */}
+      <Modal
+        isOpen={modalFacturacion}
+        onClose={() => setModalFacturacion(false)}
+        title="Unidades de Facturación"
+      >
+        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 mb-4">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-green-600 rounded-lg">
+              <FaFileInvoiceDollar className="text-white text-xl" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-green-800">Gestión de Facturación</h3>
+              <p className="text-green-600">Administra las unidades de facturación de la campaña</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Formulario para agregar facturación */}
+        <form className="space-y-4 mb-6" onSubmit={handleGuardarFacturacion}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Unidad de facturación</label>
+              <input 
+                name="unidad" 
+                value={formFacturacion.unidad} 
+                onChange={handleFacturacionChange} 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200" 
+                placeholder="Ej: Horas, Productos, Servicios"
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Cantidad</label>
+              <input 
+                type="number" 
+                name="cantidad" 
+                value={formFacturacion.cantidad} 
+                min={1} 
+                onChange={handleFacturacionChange} 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200" 
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Valor</label>
+              <div className="flex items-center">
+                <span className="mr-2 text-gray-500 font-semibold">$</span>
+                <input 
+                  type="number" 
+                  name="valor" 
+                  value={formFacturacion.valor} 
+                  min={0} 
+                  onChange={handleFacturacionChange} 
+                  className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200" 
+                  placeholder="0.00"
+                  required 
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Periodicidad</label>
+              <input 
+                name="periodicidad" 
+                value={formFacturacion.periodicidad} 
+                onChange={handleFacturacionChange} 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200" 
+                placeholder="Ej: Mensual, Anual, Por evento"
+                required 
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-4 pt-4">
+            <button
+              type="button"
+              onClick={() => setFormFacturacion({ unidad: '', cantidad: 1, valor: '', periodicidad: '' })}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+            >
+              Limpiar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              Agregar Unidad
+            </button>
+          </div>
+        </form>
+
+        {/* Mostrar facturación guardada */}
+        {facturacionGuardada.length > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <h4 className="font-semibold text-green-700 mb-2">Unidades de facturación guardadas:</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-green-900 text-sm border border-green-200 rounded">
+                <thead>
+                  <tr className="bg-green-100">
+                    <th className="px-3 py-2 border-b border-green-200 text-left">Unidad</th>
+                    <th className="px-3 py-2 border-b border-green-200 text-left">Cantidad</th>
+                    <th className="px-3 py-2 border-b border-green-200 text-left">Valor</th>
+                    <th className="px-3 py-2 border-b border-green-200 text-left">Periodicidad</th>
+                    <th className="px-3 py-2 border-b border-green-200 text-left">Total</th>
+                    <th className="px-3 py-2 border-b border-green-200 text-left">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {facturacionGuardada.map((factura, index) => (
+                    <tr key={factura.id || index}>
+                      <td className="px-3 py-2 border-b border-green-100">{factura.unidad}</td>
+                      <td className="px-3 py-2 border-b border-green-100">{factura.cantidad}</td>
+                      <td className="px-3 py-2 border-b border-green-100">${factura.valor}</td>
+                      <td className="px-3 py-2 border-b border-green-100">{factura.periodicidad}</td>
+                      <td className="px-3 py-2 border-b border-green-100">${(factura.cantidad * factura.valor).toLocaleString()}</td>
+                      <td className="px-3 py-2 border-b border-green-100">
+                        <button 
+                          onClick={async () => {
+                            setFormFacturacion(factura);
+                            // Para editar, llenamos el formulario pero no eliminamos del backend aún
+                          }}
+                          className="text-blue-600 hover:text-blue-800 mr-2 font-medium"
+                        >
+                          Editar
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            if (window.confirm('¿Estás seguro de que quieres eliminar esta unidad de facturación?')) {
+                              try {
+                                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                                const config = { headers: { Authorization: `Bearer ${token}` } };
+                                await axios.delete(`http://localhost:8000/campanas/${campañaSeleccionada.id}/facturacion/${factura.id}`, config);
+                                setFacturacionGuardada(prev => prev.filter(f => f.id !== factura.id));
+                                toast.success('Unidad de facturación eliminada');
+                              } catch (error) {
+                                console.error('Error eliminando facturación:', error);
+                                toast.error('Error al eliminar la unidad de facturación');
+                              }
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {facturacionGuardada.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <FaFileInvoiceDollar className="text-4xl mx-auto mb-4 text-gray-400" />
+              <p>No hay unidades de facturación registradas para esta campaña</p>
+            </div>
+          )}
+
+          <div className="flex gap-4 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setModalFacturacion(false)}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
