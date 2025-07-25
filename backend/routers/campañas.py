@@ -273,14 +273,28 @@ def registrar_cambio_campaña(
     # Generar mensaje personalizado según la acción
     mensaje_legible = generar_mensaje_historial(accion, cambios, usuario_id, db)
     
+    import datetime
+    import enum
+    import json
+    def serializar_para_json(obj):
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
+        if isinstance(obj, enum.Enum):
+            return obj.value
+        raise TypeError(f"Type {type(obj)} not serializable")
+
+    cambios_json = None
+    if cambios is not None:
+        # Serializa el dict a string y luego lo vuelve a dict para que SQLAlchemy lo acepte como JSON serializable
+        cambios_json = json.loads(json.dumps(cambios, default=serializar_para_json))
+
     entrada_historial = HistorialCampaña(
         campaña_id=campaña_id,
         usuario_id=usuario_id,
         accion=accion,
-        cambios=cambios,
+        cambios=cambios_json,
         observaciones=mensaje_legible or observaciones
     )
-    
     db.add(entrada_historial)
     db.commit()
 
