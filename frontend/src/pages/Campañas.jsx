@@ -383,35 +383,44 @@ const Campañas = () => {
               {/* Vista o edición de datos principales */}
               {!editando ? (
                 <div className="flex flex-col md:flex-row gap-6 items-start">
-                  {/* Info principal */}
-                  <div className="flex-1 space-y-3 w-full">
-                    <div>
-                      <span className="font-semibold">Cliente Corporativo:</span> {campañaSeleccionada.cliente_nombre || <span className='italic text-gray-400'>Sin asignar</span>}
+                  {/* Info principal organizada en grid */}
+                  <div className="flex-1 w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Cliente Corporativo</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.cliente_nombre || <span className='italic text-gray-400'>Sin asignar</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Tipo de Servicio</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.tipo || <span className='italic text-gray-400'>Sin asignar</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Nombre de la Campaña</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.nombre || <span className='italic text-gray-400'>Sin nombre</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Contacto Asociado</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.contacto_nombre || <span className='italic text-gray-400'>Sin contacto</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Número de Contacto</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.contacto_telefono || <span className='italic text-gray-400'>Sin número</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Líder de Campaña</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.lider_de_campaña || <span className='italic text-gray-400'>Sin asignar</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Ejecutivo</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.ejecutivo || <span className='italic text-gray-400'>Sin asignar</span>}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Fecha de Producción</span>
+                        <span className="text-base text-gray-800">{campañaSeleccionada.fecha_de_produccion || <span className='italic text-gray-400'>Sin fecha</span>}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-semibold">Tipo de Servicio:</span> {campañaSeleccionada.tipo || <span className='italic text-gray-400'>Sin asignar</span>}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Nombre de la Campaña:</span> {campañaSeleccionada.nombre || <span className='italic text-gray-400'>Sin nombre</span>}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Contacto Asociado:</span> {campañaSeleccionada.contacto_nombre || <span className='italic text-gray-400'>Sin contacto</span>}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Número de Contacto:</span> {campañaSeleccionada.contacto_telefono || <span className='italic text-gray-400'>Sin número</span>}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Líder de Campaña:</span> {campañaSeleccionada.lider_de_campaña || <span className='italic text-gray-400'>Sin asignar</span>}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Ejecutivo:</span> {campañaSeleccionada.ejecutivo || <span className='italic text-gray-400'>Sin asignar</span>}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Fecha de Producción:</span> {campañaSeleccionada.fecha_de_produccion || <span className='italic text-gray-400'>Sin fecha</span>}
-                    </div>
-                    
                     {/* Botón de Editar Campaña */}
-                    <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="mt-6 pt-4 border-t border-gray-200">
                       <button
                         type="button"
                         className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-4 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg border border-orange-200"
@@ -422,7 +431,6 @@ const Campañas = () => {
                         </span>
                       </button>
                     </div>
-
                     {/* Botones de acción para Productos y Facturación */}
                     <div className="flex flex-col md:flex-row gap-3 mt-6">
                       <button
