@@ -11,6 +11,11 @@ class TipoCampaña(str, enum.Enum):
     CBZ = "CBZ"
 
 
+class EstadoCampaña(str, enum.Enum):
+    ACTIVO = "activo"
+    INACTIVO = "inactivo"
+
+
 class Campaña(Base):
     __tablename__ = "campañas_campañas"
 
@@ -30,6 +35,11 @@ class Campaña(Base):
     lider_de_campaña = Column(String, nullable=False)
     ejecutivo = Column(String, nullable=False)
     fecha_de_produccion = Column(Date, nullable=False)  # Solo fecha, sin hora
+    estado = Column(
+        Enum(EstadoCampaña),
+        nullable=False,
+        default=EstadoCampaña.ACTIVO
+    )
     
     # Relaciones
     cliente_corporativo = relationship(
