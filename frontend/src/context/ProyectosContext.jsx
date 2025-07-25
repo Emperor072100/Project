@@ -153,28 +153,87 @@ export const ProyectosProvider = ({ children }) => {
     }
   };
   
+  // Función para obtener estados disponibles (para debug)
+  const fetchEstados = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const response = await axios.get('http://localhost:8000/estados', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('Estados disponibles en la base de datos:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener estados:', error);
+      return [];
+    }
+  };
+
   // Función para actualizar un proyecto desde Kanban (cambio de columna)
   const updateProyectoFromKanban = async (id, newColumn) => {
-    // Encontrar el proyecto
-    const proyecto = proyectos.find(p => p.id.toString() === id.toString());
-    if (!proyecto) return false;
-    
-    // Determinar el nuevo estado basado en la columna
-    const estadosPosibles = {
-      pendientes: ['Conceptual', 'Análisis', 'Sin Empezar'],
-      enProceso: ['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas'],
-      terminados: ['Cancelado', 'Pausado', 'En producción', 'Desarrollado']
-    };
-    
-    // Si el proyecto ya tiene un subestado en la columna destino, mantenerlo
-    // Si no, asignar el primer subestado de la columna
-    let nuevoEstado = proyecto.estado;
-    if (!estadosPosibles[newColumn].includes(proyecto.estado)) {
-      nuevoEstado = estadosPosibles[newColumn][0];
+    try {
+      // Encontrar el proyecto
+      const proyecto = proyectos.find(p => p.id.toString() === id.toString());
+      if (!proyecto) {
+        console.error('Proyecto no encontrado:', id);
+        return false;
+      }
+      
+      // Mapeo correcto de columnas a estados de la base de datos
+      const columnToEstadoMap = {
+        'pendientes': 'Pendiente',
+        'enProceso': 'En proceso', 
+        'terminados': 'Terminado'
+      };
+      
+      const nuevoEstado = columnToEstadoMap[newColumn];
+      
+      if (!nuevoEstado) {
+        console.error(`Columna '${newColumn}' no tiene mapeo de estado válido`);
+        return false;
+      }
+      
+      console.log(`Actualizando proyecto ${id} de "${proyecto.estado}" a "${nuevoEstado}"`);
+      console.log(`Columna de destino: ${newColumn}`);
+      
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      // Usar el nuevo endpoint PATCH específico para estados
+      const updateData = {
+        estado: nuevoEstado
+      };
+      
+      console.log('Datos enviados para actualización:', updateData);
+      
+      const response = await axios.patch(`http://localhost:8000/proyectos/${id}/estado`, updateData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status === 200) {
+        // Actualizar estado local
+        const column = mapEstadoToColumn(nuevoEstado);
+        setProyectos(prev =>
+          prev.map(proy => proy.id === id ? { 
+            ...proy, 
+            estado: nuevoEstado,
+            column,
+            subcolumn: nuevoEstado
+          } : proy)
+        );
+        
+        toast.success("Proyecto movido correctamente");
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error al actualizar proyecto desde Kanban:', error);
+      console.error('Detalles del error:', error.response?.data);
+      toast.error("Error al mover proyecto: " + (error.response?.data?.detail || error.message));
+      return false;
     }
-    
-    // Actualizar el proyecto con el nuevo estado
-    return await updateProyecto(proyecto.id, 'estado', nuevoEstado);
   };
   
   // Función para eliminar un proyecto
@@ -243,32 +302,27 @@ export const ProyectosProvider = ({ children }) => {
   // Funciones auxiliares
   const mapEstadoToColumn = (estado) => {
     const estadosMap = {
-      'Conceptual': 'pendientes',
-      'Análisis': 'pendientes',
-      'Sin Empezar': 'pendientes',
-      'En diseño': 'enProceso',
-      'En desarrollo': 'enProceso',
-      'En curso': 'enProceso',
-      'Etapa pruebas': 'enProceso',
-      'Cancelado': 'terminados',
-      'Pausado': 'terminados',
-      'En producción': 'terminados',
-      'Desarrollado': 'terminados'
+      // Estados reales de la base de datos
+      'Pendiente': 'pendientes',
+      'En proceso': 'enProceso', 
+      'Terminado': 'terminados',
+      // Estados adicionales por si acaso
+      'peruano': 'pendientes'
     };
     
     return estadosMap[estado] || 'pendientes';
   };
   
   const getColorByEstado = (estado) => {
-    // Colores para Gantt
-    if (['En producción', 'Desarrollado'].includes(estado)) {
+    // Colores para Gantt con estados reales de la base de datos
+    if (['Terminado'].includes(estado)) {
       return '#4CAF50'; // Verde
-    } else if (['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas'].includes(estado)) {
+    } else if (['En proceso'].includes(estado)) {
       return '#2196F3'; // Azul
-    } else if (['Pausado'].includes(estado)) {
+    } else if (['Pendiente'].includes(estado)) {
       return '#FFC107'; // Amarillo
-    } else if (['Cancelado'].includes(estado)) {
-      return '#F44336'; // Rojo
+    } else if (['peruano'].includes(estado)) {
+      return '#9C27B0'; // Púrpura para estado "peruano"
     } else {
       return '#9E9E9E'; // Gris
     }
@@ -288,7 +342,8 @@ export const ProyectosProvider = ({ children }) => {
     updateProyecto,
     updateProyectoFromKanban,
     deleteProyecto,
-    createProyecto
+    createProyecto,
+    fetchEstados
   };
   
   return (

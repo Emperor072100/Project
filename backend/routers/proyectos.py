@@ -111,6 +111,58 @@ def listar_proyectos(
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
+from pydantic import BaseModel
+
+class EstadoUpdate(BaseModel):
+    estado: str
+
+@router.patch("/{proyecto_id}/estado")
+def actualizar_estado_proyecto(
+    proyecto_id: int,
+    datos: EstadoUpdate,
+    db: Session = Depends(get_db),
+    usuario: UserInDB = Depends(get_current_user)
+):
+    """Endpoint específico para actualizar solo el estado de un proyecto desde Kanban"""
+    from app.models.estado import Estado
+    
+    proyecto = db.query(modelo.Proyecto).filter_by(id=proyecto_id).first()
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    if usuario.rol != "admin" and proyecto.responsable_id != usuario.id:
+        raise HTTPException(status_code=403, detail="No tienes permisos para modificar este proyecto")
+
+    # Obtener todos los estados disponibles para debug
+    estados_disponibles = db.query(Estado).all()
+    print(f"Estados disponibles en la base de datos:")
+    for estado in estados_disponibles:
+        print(f"  - ID: {estado.id}, Nombre: '{estado.nombre}'")
+    
+    print(f"Buscando estado: '{datos.estado}'")
+
+    # Buscar el estado en la base de datos por nombre (case insensitive)
+    estado_obj = db.query(Estado).filter(Estado.nombre.ilike(datos.estado)).first()
+    if not estado_obj:
+        # Intentar buscar por nombre exacto
+        estado_obj = db.query(Estado).filter(Estado.nombre == datos.estado).first()
+        
+    if not estado_obj:
+        estados_nombres = [e.nombre for e in estados_disponibles]
+        raise HTTPException(
+            status_code=422, 
+            detail=f"Estado '{datos.estado}' no encontrado. Estados disponibles: {estados_nombres}"
+        )
+
+    print(f"Estado encontrado: ID {estado_obj.id}, Nombre: '{estado_obj.nombre}'")
+
+    # Actualizar el estado_id
+    proyecto.estado_id = estado_obj.id
+    db.commit()
+    db.refresh(proyecto)
+    
+    return {"message": "Estado actualizado correctamente", "nuevo_estado": datos.estado}
+
 @router.put("/{proyecto_id}", response_model=ProyectoOut)
 def actualizar_proyecto(
     proyecto_id: int,

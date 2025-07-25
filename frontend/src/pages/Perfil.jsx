@@ -1,12 +1,62 @@
 import React, { useState, useEffect } from "react";
 
 export default function Perfil() {
+  // Obtener usuario y luego sus proyectos asociados
+  useEffect(() => {
+    const userRaw = localStorage.getItem('user') || sessionStorage.getItem('user');
+    let userData = {
+      nombre: '',
+      apellido: '',
+      correo: '',
+      rol: 'usuario',
+      foto: null,
+      id: null
+    };
+    if (userRaw) {
+      try {
+        const userObj = JSON.parse(userRaw);
+        userData = {
+          nombre: userObj.nombre || '',
+          apellido: userObj.apellido || '',
+          correo: userObj.correo || '',
+          rol: userObj.rol || 'usuario',
+          foto: userObj.foto || null,
+          id: userObj.id || null
+        };
+      } catch (e) {}
+    }
+    setUsuario(userData);
+    // Traer todos los proyectos y filtrar por responsable_id
+    const fetchProyectosUsuario = async () => {
+      if (!userData.id) return;
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      try {
+        const response = await fetch('http://localhost:8000/proyectos/', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Filtrar por responsable_id
+          const proyectosUsuario = data.filter(p => p.responsable_id === userData.id);
+          setProyectos(proyectosUsuario);
+        } else {
+          setProyectos([]);
+        }
+      } catch (e) {
+        setProyectos([]);
+      }
+    };
+    fetchProyectosUsuario();
+  }, []);
   const [usuario, setUsuario] = useState({
     nombre: "",
     apellido: "",
     correo: "",
     rol: "",
-    foto: null
+    foto: null,
+    id: null
   });
 
   const [proyectos, setProyectos] = useState([]);
@@ -14,45 +64,37 @@ export default function Perfil() {
   const [previewUrl, setPreviewUrl] = useState(null);
 
   useEffect(() => {
-    // Obtener datos del usuario del localStorage o sessionStorage
-    const userRole = localStorage.getItem('userRole') || sessionStorage.getItem('userRole') || 'usuario';
-    
-    // Simular datos de usuario para desarrollo
-    let userData;
-    if (userRole === 'admin') {
-      userData = {
-        nombre: 'Carlos',
-        apellido: 'Rodríguez',
-        correo: 'carlos.rodriguez@andesbpo.com',
-        rol: 'admin',
-        foto: null
-      };
-      
-      // Proyectos para administrador (puede ver todos)
-      setProyectos([
-        { id: 1, nombre: "Sistema de gestión de facturas" },
-        { id: 2, nombre: "Automatización de facturación" },
-        { id: 3, nombre: "Desarrollo de dashboard" },
-        { id: 4, nombre: "Integración API" },
-        { id: 5, nombre: "Sistema de reportes" }
-      ]);
-    } else {
-      userData = {
-        nombre: 'María',
-        apellido: 'González',
-        correo: 'maria.gonzalez@andesbpo.com',
-        rol: 'usuario',
-        foto: null
-      };
-      
-      // Proyectos para usuario normal (solo ve los propios)
-      setProyectos([
-        { id: 2, nombre: "Automatización de facturación" },
-        { id: 4, nombre: "Integración API" }
-      ]);
+    // Obtener datos del usuario logueado desde localStorage/sessionStorage
+    const userRaw = localStorage.getItem('user') || sessionStorage.getItem('user');
+    let userData = {
+      nombre: '',
+      apellido: '',
+      correo: '',
+      rol: 'usuario',
+      foto: null
+    };
+    if (userRaw) {
+      try {
+        const userObj = JSON.parse(userRaw);
+        userData = {
+          nombre: userObj.nombre || '',
+          apellido: userObj.apellido || '',
+          correo: userObj.correo || '',
+          rol: userObj.rol || 'usuario',
+          foto: userObj.foto || null
+        };
+      } catch (e) {}
     }
-    
     setUsuario(userData);
+    // Si el usuario tiene proyectos asociados, mostrarlos
+    if (userRaw) {
+      try {
+        const userObj = JSON.parse(userRaw);
+        if (userObj.proyectos && Array.isArray(userObj.proyectos)) {
+          setProyectos(userObj.proyectos);
+        }
+      } catch (e) {}
+    }
   }, []);
 
   // Función para obtener las iniciales del usuario
@@ -68,6 +110,7 @@ export default function Perfil() {
 
   // Función para obtener el texto del rol en español
   const getRoleText = () => {
+    if (!usuario.rol) return '';
     return usuario.rol === 'admin' ? 'Administrador' : 'Usuario';
   };
 
@@ -139,15 +182,17 @@ export default function Perfil() {
           </div>
         </div>
       </div>
-      {/* Proyectos del usuario */}
-      <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl">
-        <h3 className="text-lg font-semibold mb-4">{usuario.rol === 'admin' ? 'Todos los Proyectos' : 'Mis Proyectos'}</h3>
-        <ul className="list-disc pl-6">
-          {proyectos.map(proy => (
-            <li key={proy.id}>{proy.nombre}</li>
-          ))}
-        </ul>
-      </div>
+      {/* Proyectos del usuario si existen */}
+      {proyectos && proyectos.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl">
+          <h3 className="text-lg font-semibold mb-4">{usuario.rol === 'admin' ? 'Todos los Proyectos' : 'Mis Proyectos'}</h3>
+          <ul className="list-disc pl-6">
+            {proyectos.map(proy => (
+              <li key={proy.id || proy.nombre}>{proy.nombre}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
