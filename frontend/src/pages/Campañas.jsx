@@ -577,19 +577,19 @@ const Campañas = () => {
                       <button
                         type="button"
                         className="flex-1 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white py-2 px-4 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg border border-blue-200"
-                        onClick={() => setMostrarProductos((prev) => !prev)}
+                        onClick={() => handleAbrirProductos(campañaSeleccionada)}
                       >
                         <span className="inline-flex items-center gap-2">
-                          <FaUsers className="text-white text-base" /> Productos y/o Servicio
+                          <FaBoxOpen className="text-white text-base" /> Productos y/o Servicio
                         </span>
                       </button>
                       <button
                         type="button"
                         className="flex-1 bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white py-2 px-4 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg border border-green-200"
-                        onClick={() => setMostrarFacturacion((prev) => !prev)}
+                        onClick={() => handleAbrirFacturacion(campañaSeleccionada)}
                       >
                         <span className="inline-flex items-center gap-2">
-                          <FaBullhorn className="text-white text-base" /> Unidades de Facturación
+                          <FaFileInvoiceDollar className="text-white text-base" /> Unidades de Facturación
                         </span>
                       </button>
                     </div>
