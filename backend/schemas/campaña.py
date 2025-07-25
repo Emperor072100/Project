@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
-from app.models.campana import TipoCampaña
+from app.models.campana import TipoCampaña, EstadoCampaña
 
 
 class CampañaBase(BaseModel):
@@ -12,6 +12,7 @@ class CampañaBase(BaseModel):
     lider_de_campaña: str
     ejecutivo: str
     fecha_de_produccion: date  # Solo fecha, sin hora
+    estado: EstadoCampaña = EstadoCampaña.ACTIVO
 
 
 class CampañaCreate(CampañaBase):
@@ -26,6 +27,7 @@ class CampañaUpdate(BaseModel):
     lider_de_campaña: Optional[str] = None
     ejecutivo: Optional[str] = None
     fecha_de_produccion: Optional[date] = None
+    estado: Optional[EstadoCampaña] = None
 
 
 class CampañaOut(CampañaBase):
