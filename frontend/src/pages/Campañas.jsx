@@ -114,6 +114,7 @@ const Campañas = () => {
           ...campaña,
           cliente_nombre: clienteCorporativo?.nombre || 'Sin asignar',
           contacto_nombre: contacto?.nombre || 'Sin asignar',
+          contacto_telefono: contacto?.telefono || '',
           // Mapear campos para compatibilidad con la tabla existente
           cje: campaña.ejecutivo,
           lider: campaña.lider_de_campaña
@@ -238,10 +239,6 @@ const Campañas = () => {
     setFacturacionGuardada(null);
   };
 
-  const handleEditarChange = (e) => {
-    const { name, value } = e.target;
-    setFormEditar((prev) => ({ ...prev, [name]: value }));
-  };
 
   const handleGuardarEdicion = async () => {
     if (!campañaSeleccionada?.id) {
@@ -381,206 +378,54 @@ const Campañas = () => {
               {/* Información principal y botones SIEMPRE visibles */}
               {/* Vista o edición de datos principales */}
               {!editando ? (
-                <>
-                  {/* Mostrar datos de la campaña seleccionada */}
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Cliente:</span> {campañaSeleccionada.cliente_nombre || <span className='italic text-gray-400'>Sin asignar</span>}
+                <div className="flex flex-col md:flex-row gap-6 items-center">
+                  {/* Info principal */}
+                  <div className="flex-1 space-y-3 w-full">
+                    <div>
+                      <span className="font-semibold">Cliente Corporativo:</span> {campañaSeleccionada.cliente_nombre || <span className='italic text-gray-400'>Sin asignar</span>}
                     </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Tipo:</span> {campañaSeleccionada.tipo || <span className='italic text-gray-400'>Sin asignar</span>}
+                    <div>
+                      <span className="font-semibold">Tipo de Servicio:</span> {campañaSeleccionada.tipo || <span className='italic text-gray-400'>Sin asignar</span>}
                     </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Estado:</span> {campañaSeleccionada.estado || <span className='italic text-gray-400'>Sin estado</span>}
+                    <div>
+                      <span className="font-semibold">Nombre de la Campaña:</span> {campañaSeleccionada.nombre || <span className='italic text-gray-400'>Sin nombre</span>}
                     </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Campaña:</span> {campañaSeleccionada.nombre}
+                    <div>
+                      <span className="font-semibold">Contacto Asociado:</span> {campañaSeleccionada.contacto_nombre || <span className='italic text-gray-400'>Sin contacto</span>}
                     </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Ejecutivo:</span> {campañaSeleccionada.ejecutivo || <span className='italic text-gray-400'>Sin asignar</span>}
+                    <div>
+                      <span className="font-semibold">Número de Contacto:</span> {campañaSeleccionada.contacto_telefono || <span className='italic text-gray-400'>Sin número</span>}
                     </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Líder:</span> {campañaSeleccionada.lider_de_campaña || <span className='italic text-gray-400'>Sin asignar</span>}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Descripción:</span> {campañaSeleccionada.descripcion || <span className='italic text-gray-400'>Sin descripción</span>}
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Presupuesto:</span> {campañaSeleccionada.presupuesto || <span className='italic text-gray-400'>Sin presupuesto</span>}
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Observaciones:</span> {campañaSeleccionada.observaciones || <span className='italic text-gray-400'>Sin observaciones</span>}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Fecha inicio:</span> {campañaSeleccionada.fecha_inicio ? dayjs(campañaSeleccionada.fecha_inicio).format('DD/MM/YYYY HH:mm') : <span className='italic text-gray-400'>Sin fecha</span>}
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Fecha fin:</span> {campañaSeleccionada.fecha_fin ? dayjs(campañaSeleccionada.fecha_fin).format('DD/MM/YYYY HH:mm') : <span className='italic text-gray-400'>Sin fecha</span>}
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Creación:</span> {campañaSeleccionada.fecha_creacion ? dayjs(campañaSeleccionada.fecha_creacion).format('DD/MM/YYYY HH:mm') : <span className='italic text-gray-400'>Sin fecha</span>}
+                    {/* Botones de acción para Productos y Facturación */}
+                    <div className="flex flex-col md:flex-row gap-3 mt-6">
+                      <button
+                        type="button"
+                        className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                        onClick={() => setMostrarProductos((prev) => !prev)}
+                      >
+                        Productos y/o Servicio
+                      </button>
+                      <button
+                        type="button"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                        onClick={() => setMostrarFacturacion((prev) => !prev)}
+                      >
+                        Unidades de Facturación
+                      </button>
                     </div>
                   </div>
-                  {/* Botones inferiores */}
-                  <div className="flex justify-end gap-3 mt-8">
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition" onClick={() => setEditando(true)}>Editar</button>
-                    <button
-                      className={`px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition ${mostrarProductos ? 'ring-2 ring-yellow-300' : ''}`}
-                      onClick={() => setMostrarProductos((prev) => !prev)}
-                    >
-                      Productos
-                    </button>
-                    <button
-                      className={`px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition ${mostrarFacturacion ? 'ring-2 ring-green-300' : ''}`}
-                      onClick={() => setMostrarFacturacion((prev) => !prev)}
-                    >
-                      Facturación
-                    </button>
+                  {/* Logo */}
+                  <div className="flex-shrink-0 flex flex-col items-center justify-center w-32 h-32 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                    {campañaSeleccionada.logo ? (
+                      <img src={campañaSeleccionada.logo} alt="Logo cliente" className="object-contain w-full h-full" />
+                    ) : (
+                      <span className="text-gray-400 italic">Sin logo</span>
+                    )}
                   </div>
-                  {/* Formulario de Facturación expandible */}
-                  {mostrarFacturacion && (
-                    <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
-                      {/* ...existing code... */}
-                    </div>
-                  )}
-                  {/* Formulario de Productos expandible */}
-                  {mostrarProductos && (
-                    <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
-                      {/* ...existing code... */}
-                    </div>
-                  )}
-                </>
+                </div>
               ) : (
                 <form onSubmit={e => { e.preventDefault(); handleGuardarEdicion(); }}>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Nombre:</span>
-                      <input
-                        name="nombre"
-                        value={formEditar.nombre}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        required
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Descripción:</span>
-                      <input
-                        name="descripcion"
-                        value={formEditar.descripcion}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Tipo:</span>
-                      <select
-                        name="tipo"
-                        value={formEditar.tipo}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        required
-                      >
-                        <option value="SAC">SAC - Servicio de Atención</option>
-                        <option value="TMC">TMC - Telemarketing Central</option>
-                        <option value="TVT">TVT - Televentas Total</option>
-                        <option value="CBZ">CBZ - Cobranza</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Ejecutivo:</span>
-                      <input
-                        name="cje"
-                        value={formEditar.cje}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Líder:</span>
-                      <input
-                        name="lider"
-                        value={formEditar.lider}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Cliente ID:</span>
-                      <input
-                        name="cliente_id"
-                        value={formEditar.cliente_id}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        type="number"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Fecha inicio:</span>
-                      <input
-                        name="fecha_inicio"
-                        value={formEditar.fecha_inicio}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        type="datetime-local"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Fecha fin:</span>
-                      <input
-                        name="fecha_fin"
-                        value={formEditar.fecha_fin}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                        type="datetime-local"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Estado:</span>
-                      <input
-                        name="estado"
-                        value={formEditar.estado}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Presupuesto:</span>
-                      <input
-                        name="presupuesto"
-                        value={formEditar.presupuesto}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <span className="font-semibold">Observaciones:</span>
-                      <input
-                        name="observaciones"
-                        value={formEditar.observaciones}
-                        onChange={handleEditarChange}
-                        className="w-full border rounded px-2 py-1 mt-1"
-                      />
-                    </div>
-                  </div>
-                  {/* Botones de guardar/cancelar */}
-                  <div className="flex justify-end gap-3 mt-8">
-                    <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition" type="submit">Guardar</button>
-                    <button className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition" type="button" onClick={() => setEditando(false)}>Cancelar</button>
-                  </div>
+                  {/* ...formulario de edición aquí si editando... */}
                 </form>
               )}
               {/* Formulario de Facturación expandible */}
@@ -767,7 +612,7 @@ const Campañas = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-blue-600 text-base font-semibold">SAC</p>
-                    <p className="text-blue-800 text-base mt-1">Servicio de Atención</p>
+                    <p className="text-blue-800 text-base mt-1">Atención al Cliente</p>
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-bold text-blue-800">{estadisticas.por_servicio.SAC}</span>
@@ -780,7 +625,7 @@ const Campañas = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-green-600 text-base font-semibold">TMC</p>
-                    <p className="text-green-800 text-base mt-1">Telemarketing Central</p>
+                    <p className="text-green-800 text-base mt-1">Telemarketing</p>
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-bold text-green-800">{estadisticas.por_servicio.TMC}</span>
@@ -793,7 +638,7 @@ const Campañas = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-purple-600 text-base font-semibold">TVT</p>
-                    <p className="text-purple-800 text-base mt-1">Televentas Total</p>
+                    <p className="text-purple-800 text-base mt-1">Televentas</p>
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-bold text-purple-800">{estadisticas.por_servicio.TVT}</span>
@@ -1174,9 +1019,9 @@ const Campañas = () => {
                 onChange={(e) => setFormCampaña({...formCampaña, tipo: e.target.value})}
                 className="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               >
-                <option value="SAC">SAC - Servicio de Atención</option>
-                <option value="TMC">TMC - Telemarketing Central</option>
-                <option value="TVT">TVT - Televentas Total</option>
+                <option value="SAC">SAC - Atención al Cliente</option>
+                <option value="TMC">TMC - Telemarketing</option>
+                <option value="TVT">TVT - Televentas</option>
                 <option value="CBZ">CBZ - Cobranza</option>
               </select>
             </div>
