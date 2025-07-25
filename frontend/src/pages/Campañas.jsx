@@ -436,27 +436,29 @@ const Campañas = () => {
               {mostrarFacturacion && (
                 <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
                   <form className="space-y-6" onSubmit={handleGuardarFacturacion}>
-                    <h3 className="text-lg font-semibold mb-4">Unidades de facturación</h3>
-                    <div className="flex flex-wrap gap-4 mb-4">
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Unidad de facturación</label>
-                        <input name="unidad" value={formFacturacion.unidad} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
+                    <h3 className="text-lg font-bold mb-4 text-green-800 flex items-center gap-2">
+                      <FaBullhorn className="text-green-500" /> Unidades de facturación
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-green-50 border border-green-100 rounded-xl p-4 mb-4 shadow-sm">
+                      <div>
+                        <label className="block text-sm font-semibold text-green-800 mb-1">Unidad de facturación</label>
+                        <input name="unidad" value={formFacturacion.unidad} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: Horas, Llamadas, etc." />
                       </div>
-                      <div className="flex-1 min-w-[120px]">
-                        <label className="block text-sm font-medium mb-1">Cantidad</label>
-                        <input type="number" name="cantidad" value={formFacturacion.cantidad} min={1} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
+                      <div>
+                        <label className="block text-sm font-semibold text-green-800 mb-1">Cantidad</label>
+                        <input type="number" name="cantidad" value={formFacturacion.cantidad} min={1} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: 1" />
                       </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Valor</label>
+                      <div>
+                        <label className="block text-sm font-semibold text-green-800 mb-1">Valor</label>
                         <div className="flex items-center">
-                          <span className="mr-2 text-gray-500 font-semibold">$</span>
-                          <input type="number" name="valor" value={formFacturacion.valor} min={0} onChange={handleFacturacionChange} className="w-full border rounded px-3 py-2" required />
+                          <span className="mr-2 text-green-500 font-semibold">$</span>
+                          <input type="number" name="valor" value={formFacturacion.valor} min={0} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: 1000" />
                         </div>
                       </div>
                     </div>
                     <div className="flex justify-end gap-3">
-                      <button type="button" className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition" onClick={() => { setMostrarFacturacion(false); setFacturacionGuardada(null); }}>Cancelar</button>
-                      <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">Guardar</button>
+                      <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarFacturacion(false); setFacturacionGuardada(null); }}>Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
                     </div>
                   </form>
                   {facturacionGuardada && (
@@ -488,55 +490,57 @@ const Campañas = () => {
               {mostrarProductos && (
                 <div className="transition-all duration-300 overflow-hidden" style={{maxHeight: 600, opacity: 1, marginBottom: 24}}>
                   <form className="space-y-6" onSubmit={handleGuardarProducto}>
-                    <h3 className="text-lg font-semibold mb-4">Productos y/o servicios</h3>
-                    <div className="flex flex-wrap gap-4 mb-4">
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Tipo</label>
-                        <select name="tipo" value={formProducto.tipo} onChange={handleProductoChange} className="w-full border rounded px-3 py-2">
+                    <h3 className="text-lg font-bold mb-4 text-blue-800 flex items-center gap-2">
+                      <FaUsers className="text-blue-500" /> Productos y/o servicios
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4 shadow-sm">
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Tipo</label>
+                        <select name="tipo" value={formProducto.tipo} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white">
                           <option value="Producto">Producto</option>
                           <option value="Servicio">Servicio</option>
                         </select>
                       </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Proveedor</label>
-                        <input name="proveedor" value={formProducto.proveedor} onChange={handleProductoChange} className="w-full border rounded px-3 py-2" required />
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Proveedor</label>
+                        <input name="proveedor" value={formProducto.proveedor} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white" required placeholder="Nombre del proveedor" />
                       </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="block text-sm font-medium mb-1">Propiedad</label>
-                        <select name="propiedad" value={formProducto.propiedad} onChange={handleProductoChange} className="w-full border rounded px-3 py-2">
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Propiedad</label>
+                        <select name="propiedad" value={formProducto.propiedad} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white">
                           <option value="Propia">Propia</option>
                           <option value="Alquilada">Alquilada</option>
                         </select>
                       </div>
-                      <div className="flex-1 min-w-[120px]">
-                        <label className="block text-sm font-medium mb-1">Cantidad</label>
-                        <input type="number" name="cantidad" value={formProducto.cantidad} min={1} onChange={handleProductoChange} className="w-full border rounded px-3 py-2" required />
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-800 mb-1">Cantidad</label>
+                        <input type="number" name="cantidad" value={formProducto.cantidad} min={1} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white" required placeholder="Ej: 1" />
                       </div>
                     </div>
                     <div className="flex justify-end gap-3">
-                      <button type="button" className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
-                      <button type="submit" className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition">Guardar</button>
+                      <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
                     </div>
                   </form>
                   {productoGuardado && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                      <h4 className="font-semibold text-yellow-700 mb-2">Último producto/servicio guardado:</h4>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                      <h4 className="font-semibold text-blue-700 mb-2">Último producto/servicio guardado:</h4>
                       <div className="overflow-x-auto">
-                        <table className="min-w-full text-yellow-900 text-sm border border-yellow-200 rounded">
+                        <table className="min-w-full text-blue-900 text-sm border border-blue-200 rounded">
                           <thead>
-                            <tr className="bg-yellow-100">
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Tipo</th>
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Proveedor</th>
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Propiedad</th>
-                              <th className="px-3 py-2 border-b border-yellow-200 text-left">Cantidad</th>
+                            <tr className="bg-blue-100">
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Tipo</th>
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Proveedor</th>
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Propiedad</th>
+                              <th className="px-3 py-2 border-b border-blue-200 text-left">Cantidad</th>
                             </tr>
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.tipo}</td>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.proveedor}</td>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.propiedad}</td>
-                              <td className="px-3 py-2 border-b border-yellow-100">{productoGuardado.cantidad}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.tipo}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.proveedor}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.propiedad}</td>
+                              <td className="px-3 py-2 border-b border-blue-100">{productoGuardado.cantidad}</td>
                             </tr>
                           </tbody>
                         </table>
