@@ -1,13 +1,42 @@
 from logging.config import fileConfig
+import os
+from dotenv import load_dotenv
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from alembic.script import ScriptDirectory
+
+# Load environment variables from .env file
+load_dotenv()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Override sqlalchemy.url with the DATABASE_URL from environment
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
+
+# Add this section to handle revision issues
+script_dir = ScriptDirectory.from_config(config)
+
+# Custom script revision directory to handle missing revisions
+class CustomScriptDirectory(ScriptDirectory):
+    @property
+    def _revision_map(self):
+        try:
+            return super()._revision_map
+        except KeyError:
+            # If there's a KeyError due to missing revisions
+            # Regenerate the revision map from scratch
+            self._revision_map = {}
+            return super()._revision_map
+
+# Replace the script directory with our custom one
+context.script = CustomScriptDirectory.from_config(config)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
