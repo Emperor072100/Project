@@ -378,7 +378,7 @@ const Campañas = () => {
               {/* Información principal y botones SIEMPRE visibles */}
               {/* Vista o edición de datos principales */}
               {!editando ? (
-                <div className="flex flex-col md:flex-row gap-6 items-center">
+                <div className="flex flex-col md:flex-row gap-6 items-start">
                   {/* Info principal */}
                   <div className="flex-1 space-y-3 w-full">
                     <div>
