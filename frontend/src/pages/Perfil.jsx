@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
 
-export default function Perfil() {
+// Recibe la prop sidebarCollapsed desde el layout
+export default function Perfil({ sidebarCollapsed = false }) {
+  const navigate = useNavigate();
   const [usuario, setUsuario] = useState({
     nombre: "",
     apellido: "",
@@ -135,9 +138,12 @@ export default function Perfil() {
     }
   };
 
+  // Determinar el ancho máximo según el estado del sidebar
+  const maxWidth = sidebarCollapsed ? 'max-w-4xl' : 'max-w-2xl';
+
   return (
     <div className="p-8 bg-gradient-to-br from-green-50 to-white min-h-screen flex flex-col items-center">
-      <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col md:flex-row items-center w-full max-w-2xl mb-8">
+      <div className={`bg-white rounded-xl shadow-lg p-8 flex flex-col md:flex-row items-center w-full ${maxWidth} mb-8`}>
         {/* Icono/Foto/Letra con opción para cambiar */}
         <div className="flex-shrink-0 relative group mb-6 md:mb-0">
           {previewUrl || usuario.foto ? (
@@ -182,7 +188,7 @@ export default function Perfil() {
       </div>
       {/* Proyectos del usuario si existen */}
       {proyectos && proyectos.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl mb-8">
+        <div className={`bg-white rounded-xl shadow-lg p-6 w-full ${maxWidth} mb-8`}>
           <h3 className="text-lg font-semibold mb-4">{usuario.rol === 'admin' ? 'Todos los Proyectos' : 'Mis Proyectos'}</h3>
           <ul className="list-disc pl-6">
             {proyectos.map(proy => (
@@ -193,7 +199,7 @@ export default function Perfil() {
       )}
       {/* Campañas relacionadas */}
       {campañas && campañas.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl">
+        <div className={`bg-white rounded-xl shadow-lg p-6 w-full ${maxWidth}`}>
           <h3 className="text-xl font-bold mb-6 text-green-700 flex items-center gap-2">
             <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h6m-6 0V7a4 4 0 00-4-4H5a4 4 0 00-4 4v10a4 4 0 004 4h6a4 4 0 004-4v-2" /></svg>
             Campañas Relacionadas
@@ -203,8 +209,11 @@ export default function Perfil() {
               // Buscar el cliente corporativo relacionado
               const cliente = clientesCorporativos.find(c => c.id === camp.cliente_corporativo_id);
               const logo = cliente?.logo;
+              const handleClick = () => {
+                navigate(`/campañas?adminId=${camp.id}`);
+              };
               return (
-                <div key={camp.id} className="rounded-lg border border-gray-200 shadow-sm p-4 flex flex-col bg-gradient-to-br from-green-50 to-white hover:shadow-lg transition-shadow duration-200">
+                <div key={camp.id} onClick={handleClick} className="cursor-pointer rounded-lg border border-gray-200 shadow-sm p-4 flex flex-col bg-gradient-to-br from-green-50 to-white hover:shadow-lg transition-shadow duration-200">
                   <div className="flex items-center gap-4 mb-2">
                     {logo ? (
                       <img src={logo} alt="Logo cliente corporativo" className="w-14 h-14 object-contain rounded-lg border border-gray-200 bg-white" />

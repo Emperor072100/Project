@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { FaPlus, FaEdit, FaHistory, FaUsers, FaBullhorn, FaChartBar, FaBoxOpen, FaFileInvoiceDollar } from 'react-icons/fa';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -7,6 +8,7 @@ import dayjs from 'dayjs';
 import Swal from 'sweetalert2';
 
 const Campañas = () => {
+  const location = useLocation();
   // Estados principales
   const [campañas, setCampañas] = useState([]);
   const [clientesCorporativos, setClientesCorporativos] = useState([]);
@@ -97,6 +99,19 @@ const Campañas = () => {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  // Abrir modal administrar si adminId está en la URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const adminId = params.get('adminId');
+    if (adminId && campañas.length > 0) {
+      const camp = campañas.find(c => String(c.id) === String(adminId));
+      if (camp) {
+        setCampañaSeleccionada(camp);
+        setModalAdministrar(true);
+      }
+    }
+  }, [location.search, campañas]);
 
   const cargarDatos = async () => {
     try {
