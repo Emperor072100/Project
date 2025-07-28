@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import Swal from 'sweetalert2';
 
 const Sidebar = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
@@ -26,10 +27,28 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   }, []);
 
   const handleLogout = () => {
-    // Lógica de cierre de sesión
-    authService.logout();
-    console.log('Sesión cerrada');
-    navigate('/login');
+    Swal.fire({
+      title: '¿Cerrar sesión?',
+      text: '¿Estás seguro que deseas cerrar tu sesión?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cerrar sesión',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        authService.logout();
+        Swal.fire({
+          icon: 'success',
+          title: 'Sesión cerrada',
+          text: 'Has cerrado sesión correctamente',
+          timer: 1500,
+          showConfirmButton: false
+        });
+        navigate('/login');
+      }
+    });
   };
 
   const toggleSidebar = () => {

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { FaPlus, FaEdit, FaHistory, FaUsers, FaBullhorn, FaChartBar, FaBoxOpen, FaFileInvoiceDollar } from 'react-icons/fa';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import dayjs from 'dayjs';
+import Swal from 'sweetalert2';
 
 const Campañas = () => {
+  const location = useLocation();
   // Estados principales
   const [campañas, setCampañas] = useState([]);
   const [clientesCorporativos, setClientesCorporativos] = useState([]);
@@ -97,6 +100,19 @@ const Campañas = () => {
     cargarDatos();
   }, []);
 
+  // Abrir modal administrar si adminId está en la URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const adminId = params.get('adminId');
+    if (adminId && campañas.length > 0) {
+      const camp = campañas.find(c => String(c.id) === String(adminId));
+      if (camp) {
+        setCampañaSeleccionada(camp);
+        setModalAdministrar(true);
+      }
+    }
+  }, [location.search, campañas]);
+
   const cargarDatos = async () => {
     try {
       setLoading(true);
@@ -149,20 +165,24 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      
       await axios.post('http://localhost:8000/clientes-corporativos/', formClienteCorporativo, config);
-      
-      toast.success('Cliente corporativo creado exitosamente');
-      setModalClienteCorporativo(false);
-      setFormClienteCorporativo({
-        nombre: '',
-        logo: '',
-        sector: ''
+      Swal.fire({
+        icon: 'success',
+        title: 'Cliente corporativo creado',
+        text: 'El cliente corporativo se ha creado exitosamente',
+        timer: 2000,
+        showConfirmButton: false
+      }).then(() => {
+        setModalClienteCorporativo(false);
+        setFormClienteCorporativo({ nombre: '', logo: '', sector: '' });
+        cargarDatos();
       });
-      cargarDatos();
     } catch (error) {
-      console.error('Error creando cliente corporativo:', error);
-      toast.error('Error al crear el cliente corporativo');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al crear el cliente corporativo',
+      });
     }
   };
 
@@ -172,21 +192,24 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      
       await axios.post('http://localhost:8000/contactos/', formContacto, config);
-      
-      toast.success('Contacto creado exitosamente');
-      setModalContacto(false);
-      setFormContacto({
-        nombre: '',
-        telefono: '',
-        correo: '',
-        cliente_corporativo_id: ''
+      Swal.fire({
+        icon: 'success',
+        title: 'Contacto creado',
+        text: 'El contacto se ha creado exitosamente',
+        timer: 2000,
+        showConfirmButton: false
+      }).then(() => {
+        setModalContacto(false);
+        setFormContacto({ nombre: '', telefono: '', correo: '', cliente_corporativo_id: '' });
+        cargarDatos();
       });
-      cargarDatos();
     } catch (error) {
-      console.error('Error creando contacto:', error);
-      toast.error('Error al crear el contacto');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al crear el contacto',
+      });
     }
   };
 
@@ -209,22 +232,32 @@ const Campañas = () => {
       };
 
       await axios.post('http://localhost:8000/campanas/', datosEnvio, config);
-      toast.success('Campaña creada exitosamente');
-      setModalCampaña(false);
-      setFormCampaña({
-        nombre: '',
-        tipo: 'SAC',
-        cliente_corporativo_id: '',
-        contacto_id: '',
-        lider_de_campaña: '',
-        ejecutivo: '',
-        fecha_de_produccion: '',
-        estado: 'activo'
+      Swal.fire({
+        icon: 'success',
+        title: 'Campaña creada',
+        text: 'La campaña se ha creado exitosamente',
+        timer: 2000,
+        showConfirmButton: false
+      }).then(() => {
+        setModalCampaña(false);
+        setFormCampaña({
+          nombre: '',
+          tipo: 'SAC',
+          cliente_corporativo_id: '',
+          contacto_id: '',
+          lider_de_campaña: '',
+          ejecutivo: '',
+          fecha_de_produccion: '',
+          estado: 'activo'
+        });
+        cargarDatos();
       });
-      cargarDatos();
     } catch (error) {
-      console.error('Error creando campaña:', error);
-      toast.error('Error al crear la campaña');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al crear la campaña',
+      });
     }
   };
 
@@ -271,21 +304,42 @@ const Campañas = () => {
         fecha_de_produccion: formEditar.fecha_inicio || null,
         estado: formEditar.estado
       };
+      
       await axios.put(encodeURI(`http://localhost:8000/campanas/${campañaSeleccionada.id}`), payload, config);
       setCampañaSeleccionada((prev) => ({ ...prev, ...payload }));
-      await axios.post(`http://localhost:8000/campanas/${campañaSeleccionada.id}/historial`, {
-        accion: "actualizada",
-        cambios: payload,
-        observaciones: "Campaña actualizada desde la interfaz"
-      }, config);
-      setEditando(false);
-      toast.success('Datos de campaña actualizados');
-      cargarDatos(); // Refresca la lista tras editar
+      
+      // Actualizar la lista de campañas
+      setCampañas((prev) => 
+        prev.map((c) => 
+          c.id === campañaSeleccionada.id ? { ...c, ...payload } : c
+        )
+      );
+      
+      // Actualizar el historial (el backend ya registra el cambio automáticamente)
+      await actualizarHistorial();
+      Swal.fire({
+        icon: 'success',
+        title: 'Campaña actualizada',
+        text: 'La campaña se ha actualizado correctamente',
+        timer: 2000,
+        showConfirmButton: false
+      }).then(() => {
+        setEditando(false);
+        cargarDatos(); // Refresca la lista tras editar
+      });
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        toast.error('No se encontró la campaña. Puede que haya sido eliminada o el ID es incorrecto.');
+        Swal.fire({
+          icon: 'error',
+          title: 'No se encontró la campaña',
+          text: 'Puede que haya sido eliminada o el ID es incorrecto.',
+        });
       } else {
-        toast.error('Error al guardar los cambios');
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al guardar los cambios',
+        });
       }
     }
   };
@@ -321,7 +375,13 @@ const Campañas = () => {
         setFacturacionGuardada(prev => prev.map(item => 
           item.id === formFacturacion.id ? res.data : item
         ));
-        toast.success('Unidad de facturación actualizada correctamente');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Unidad de facturación actualizada',
+          text: 'La unidad de facturación se ha actualizado correctamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
       } else {
         // Si no tiene ID, es una creación
         res = await axios.post(
@@ -331,13 +391,23 @@ const Campañas = () => {
         );
         
         setFacturacionGuardada(prev => [...prev, res.data]);
-        toast.success('Unidad de facturación guardada correctamente');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Unidad de facturación guardada',
+          text: 'La unidad de facturación se ha guardado correctamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
       }
 
       setFormFacturacion({ unidad: '', cantidad: 1, valor: '', periodicidad: '' });
     } catch (error) {
       console.error('Error guardando facturación:', error);
-      toast.error('Error al guardar la unidad de facturación');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al guardar la unidad de facturación',
+      });
     }
   };
 
@@ -384,7 +454,13 @@ const Campañas = () => {
         setProductoGuardado(prev => prev.map(item => 
           item.id === formProducto.id ? res.data : item
         ));
-        toast.success('Producto/servicio actualizado correctamente');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Producto/servicio actualizado',
+          text: 'El producto/servicio se ha actualizado correctamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
       } else {
         // Si no tiene ID, es una creación
         console.log('URL del endpoint (POST):', `http://localhost:8000/campanas/${campañaSeleccionada.id}/productos`);
@@ -395,14 +471,24 @@ const Campañas = () => {
         );
         
         setProductoGuardado(prev => [...prev, res.data]);
-        toast.success('Producto/servicio guardado correctamente');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Producto/servicio guardado',
+          text: 'El producto/servicio se ha guardado correctamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
       }
 
       setFormProducto({ tipo: 'Producto', producto_servicio: '', proveedor: '', propiedad: 'Propia', cantidad: 1 });
     } catch (error) {
       console.error('Error guardando producto:', error);
       console.error('Respuesta del servidor:', error.response);
-      toast.error('Error al guardar el producto/servicio');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al guardar el producto/servicio',
+      });
     }
   };
 
@@ -418,6 +504,20 @@ const Campañas = () => {
       toast.error('No se pudo cargar el historial', error);
     }
     setModalHistorial(true);
+  };
+
+  // Función para actualizar el historial sin abrir modal
+  const actualizarHistorial = async () => {
+    if (!campañaSeleccionada?.id) return;
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`http://localhost:8000/campanas/${campañaSeleccionada.id}/historial`, config);
+      setHistorial(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.log('Error actualizando historial:', error);
+      // No mostrar error al usuario ya que es una actualización silenciosa
+    }
   };
 
   // Nuevas funciones para los modales independientes
@@ -461,47 +561,97 @@ const Campañas = () => {
           </div>
         }
       >
-        <div className="p-4">
-          <h3 className="font-semibold mb-2">{campañaSeleccionada?.nombre || 'Campaña'}</h3>
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-800">{campañaSeleccionada?.nombre || 'Campaña'}</h3>
+              <p className="text-sm text-gray-500">Historial completo de actividad</p>
+            </div>
+          </div>
+          
           {historial.length === 0 ? (
-            <div className="text-gray-500 italic">No hay historial de cambios para esta campaña.</div>
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <p className="text-gray-500 text-lg font-medium">No hay historial aún</p>
+              <p className="text-gray-400 text-sm">Los cambios aparecerán aquí cuando se modifique la campaña</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm border border-gray-200 rounded">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-3 py-2 border-b border-gray-200 text-left">Fecha</th>
-                    <th className="px-3 py-2 border-b border-gray-200 text-left">Cambios</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historial.map((h, idx) => (
-                    <tr key={idx}>
-                      <td className="px-3 py-2 border-b border-gray-100">
-                        {new Date(new Date(h.fecha).getTime() - (5 * 60 * 60 * 1000)).toLocaleString('es-CO', {
-                          day: '2-digit',
-                          month: '2-digit', 
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false
-                        })}
-                      </td>
-                      <td className="px-3 py-2 border-b border-gray-100">
-                        {h.observaciones ? (
-                          <div className="text-gray-700">{h.observaciones}</div>
-                        ) : (
-                          <ul className="list-disc ml-4">
-                            {Object.entries(h.cambios || {}).map(([k, v]) => (
-                              <li key={k}><b>{k}:</b> {String(v)}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+              {historial.map((h, idx) => {
+                const fecha = new Date(new Date(h.fecha).getTime() - (5 * 60 * 60 * 1000));
+                const fechaTexto = fecha.toLocaleString('es-CO', {
+                  day: '2-digit',
+                  month: '2-digit', 
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                });
+                
+                return (
+                  <div key={idx} className="relative">
+                    {/* Línea vertical del timeline */}
+                    {idx !== historial.length - 1 && (
+                      <div className="absolute left-6 top-12 w-0.5 h-full bg-gradient-to-b from-blue-200 to-transparent"></div>
+                    )}
+                    
+                    {/* Contenido del evento */}
+                    <div className="flex gap-4">
+                      {/* Indicador circular */}
+                      <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </div>
+                      
+                      {/* Tarjeta de contenido */}
+                      <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
+                        <div className="p-4">
+                          {/* Header con fecha */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
+                                {idx === 0 ? 'Más reciente' : `Hace ${idx === 1 ? '1 cambio' : `${idx} cambios`}`}
+                              </div>
+                            </div>
+                            <div className="text-sm text-gray-500 font-mono">
+                              {fechaTexto}
+                            </div>
+                          </div>
+                          
+                          {/* Contenido del cambio */}
+                          <div className="text-gray-700">
+                            {h.observaciones ? (
+                              <p className="leading-relaxed">{h.observaciones}</p>
+                            ) : (
+                              <div className="space-y-1">
+                                {Object.entries(h.cambios || {}).map(([k, v]) => (
+                                  <div key={k} className="flex items-start gap-2">
+                                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                                    <span><span className="font-semibold text-gray-800">{k}:</span> {String(v)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Footer con gradiente sutil */}
+                        <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-b-xl"></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -598,11 +748,13 @@ const Campañas = () => {
                   <div className="flex-shrink-0 flex flex-col items-center justify-start space-y-2 mt-2">
                     {/* Logo */}
                     <div className="w-28 h-28 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center">
-                      {campañaSeleccionada.logo ? (
-                        <img src={campañaSeleccionada.logo} alt="Logo cliente" className="object-contain w-full h-full" />
-                      ) : (
-                        <span className="text-gray-400 italic text-sm">Sin logo</span>
-                      )}
+                      {(() => {
+                        const cliente = clientesCorporativos.find(c => c.id === campañaSeleccionada.cliente_corporativo_id);
+                        if (cliente && cliente.logo) {
+                          return <img src={cliente.logo} alt="Logo cliente" className="object-contain w-full h-full" />;
+                        }
+                        return <span className="text-gray-400 italic text-sm">Sin logo</span>;
+                      })()}
                     </div>
                     {/* Estado */}
                     <div className="text-center">
@@ -633,7 +785,10 @@ const Campañas = () => {
                     </button>
                   </div>
                   
-                  <form onSubmit={e => { e.preventDefault(); handleGuardarEdicion(); }} className="space-y-3">
+                  <form onSubmit={e => { 
+                    e.preventDefault(); 
+                    handleGuardarEdicion(); 
+                  }} className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {/* Nombre de la Campaña */}
                       <div>
@@ -778,13 +933,13 @@ const Campañas = () => {
                       <button
                         type="button"
                         onClick={() => setEditando(false)}
-                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 px-4 rounded-lg font-medium transition-colors duration-200"
+                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 px-6 rounded-lg font-medium transition-colors duration-200"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-4 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+                        className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-6 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg"
                       >
                         Guardar Cambios
                       </button>
@@ -877,6 +1032,7 @@ const Campañas = () => {
                         <input type="number" name="cantidad" value={formProducto.cantidad} min={1} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white" required placeholder="Ej: 1" />
                       </div>
                     </div>
+                    
                     <div className="flex justify-end gap-3">
                       <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
                       <button type="submit" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
@@ -1565,7 +1721,7 @@ const Campañas = () => {
                 name="producto_servicio" 
                 value={formProducto.producto_servicio} 
                 onChange={handleProductoChange} 
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200" 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
                 placeholder="Especifica el producto o servicio"
                 required 
               />
@@ -1576,7 +1732,7 @@ const Campañas = () => {
                 name="proveedor" 
                 value={formProducto.proveedor} 
                 onChange={handleProductoChange} 
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200" 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
                 placeholder="Nombre del proveedor"
                 required 
               />
@@ -1601,7 +1757,7 @@ const Campañas = () => {
                 value={formProducto.cantidad} 
                 min={1} 
                 onChange={handleProductoChange} 
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200" 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
                 required 
               />
             </div>

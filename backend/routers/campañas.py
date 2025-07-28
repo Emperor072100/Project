@@ -388,6 +388,37 @@ def generar_mensaje_historial(accion: str, cambios: dict, usuario_id: int = None
         unidad = cambios.get("unidad", "unidad")
         return f"{usuario_nombre} eliminó facturación {unidad}"
     
+    elif accion == "actualizada":
+        # Manejar actualizaciones de campaña
+        if not cambios:
+            return f"{usuario_nombre} actualizó la campaña"
+        
+        cambios_texto = []
+        for campo, valores in cambios.items():
+            if isinstance(valores, dict) and "anterior" in valores and "nuevo" in valores:
+                anterior = valores["anterior"]
+                nuevo = valores["nuevo"]
+                
+                # Traducir nombres de campos al español
+                campo_esp = {
+                    "nombre": "nombre",
+                    "tipo": "tipo",
+                    "ejecutivo": "ejecutivo",
+                    "lider_de_campaña": "líder de campaña",
+                    "estado": "estado",
+                    "fecha_de_produccion": "fecha de producción",
+                    "cliente_corporativo_id": "cliente corporativo",
+                    "contacto_id": "contacto"
+                }.get(campo, campo)
+                
+                if anterior != nuevo:
+                    cambios_texto.append(f"{campo_esp} de '{anterior}' a '{nuevo}'")
+        
+        if cambios_texto:
+            return f"{usuario_nombre} actualizó {', '.join(cambios_texto)}"
+        else:
+            return f"{usuario_nombre} actualizó la campaña"
+    
     else:
         return f"{usuario_nombre} realizó acción {accion}"
 

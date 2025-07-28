@@ -1,8 +1,25 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
 
-export default function Perfil() {
-  // Obtener usuario y luego sus proyectos asociados
+// Recibe la prop sidebarCollapsed desde el layout
+export default function Perfil({ sidebarCollapsed = false }) {
+  const navigate = useNavigate();
+  const [usuario, setUsuario] = useState({
+    nombre: "",
+    apellido: "",
+    correo: "",
+    rol: "usuario",
+    foto: null,
+    id: null
+  });
+  const [proyectos, setProyectos] = useState([]);
+  const [fileInput, setFileInput] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [campañas, setCampañas] = useState([]);
+  const [clientesCorporativos, setClientesCorporativos] = useState([]);
+
   useEffect(() => {
+    // Obtener usuario y proyectos asociados
     const userRaw = localStorage.getItem('user') || sessionStorage.getItem('user');
     let userData = {
       nombre: '',
@@ -23,10 +40,10 @@ export default function Perfil() {
           foto: userObj.foto || null,
           id: userObj.id || null
         };
-      } catch (e) {}
+      } catch {}
     }
     setUsuario(userData);
-    // Traer todos los proyectos y filtrar por responsable_id
+    // Proyectos asociados
     const fetchProyectosUsuario = async () => {
       if (!userData.id) return;
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -38,64 +55,48 @@ export default function Perfil() {
         });
         if (response.ok) {
           const data = await response.json();
-          // Filtrar por responsable_id
           const proyectosUsuario = data.filter(p => p.responsable_id === userData.id);
           setProyectos(proyectosUsuario);
         } else {
           setProyectos([]);
         }
-      } catch (e) {
+      } catch {
         setProyectos([]);
       }
     };
     fetchProyectosUsuario();
   }, []);
-  const [usuario, setUsuario] = useState({
-    nombre: "",
-    apellido: "",
-    correo: "",
-    rol: "",
-    foto: null,
-    id: null
-  });
-
-  const [proyectos, setProyectos] = useState([]);
-  const [fileInput, setFileInput] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
 
   useEffect(() => {
-    // Obtener datos del usuario logueado desde localStorage/sessionStorage
-    const userRaw = localStorage.getItem('user') || sessionStorage.getItem('user');
-    let userData = {
-      nombre: '',
-      apellido: '',
-      correo: '',
-      rol: 'usuario',
-      foto: null
-    };
-    if (userRaw) {
+    // Campañas y clientes corporativos solo cuando usuario.id está listo
+    if (!usuario.id) return;
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const fetchCampañasYClientes = async () => {
       try {
-        const userObj = JSON.parse(userRaw);
-        userData = {
-          nombre: userObj.nombre || '',
-          apellido: userObj.apellido || '',
-          correo: userObj.correo || '',
-          rol: userObj.rol || 'usuario',
-          foto: userObj.foto || null
-        };
-      } catch (e) {}
-    }
-    setUsuario(userData);
-    // Si el usuario tiene proyectos asociados, mostrarlos
-    if (userRaw) {
-      try {
-        const userObj = JSON.parse(userRaw);
-        if (userObj.proyectos && Array.isArray(userObj.proyectos)) {
-          setProyectos(userObj.proyectos);
+        // Obtener campañas
+        const respCampañas = await fetch('http://localhost:8000/campanas/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const respClientes = await fetch('http://localhost:8000/clientes-corporativos', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        let campañasData = [];
+        let clientesData = [];
+        if (respCampañas.ok) {
+          campañasData = await respCampañas.json();
         }
-      } catch (e) {}
-    }
-  }, []);
+        if (respClientes.ok) {
+          clientesData = await respClientes.json();
+        }
+        setCampañas(campañasData);
+        setClientesCorporativos(clientesData);
+      } catch {
+        setCampañas([]);
+        setClientesCorporativos([]);
+      }
+    };
+    fetchCampañasYClientes();
+  }, [usuario.id, usuario.nombre]);
 
   // Función para obtener las iniciales del usuario
   const getUserInitials = () => {
@@ -137,9 +138,12 @@ export default function Perfil() {
     }
   };
 
+  // Determinar el ancho máximo según el estado del sidebar
+  const maxWidth = sidebarCollapsed ? 'max-w-4xl' : 'max-w-2xl';
+
   return (
     <div className="p-8 bg-gradient-to-br from-green-50 to-white min-h-screen flex flex-col items-center">
-      <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col md:flex-row items-center w-full max-w-2xl mb-8">
+      <div className={`bg-white rounded-xl shadow-lg p-8 flex flex-col md:flex-row items-center w-full ${maxWidth} mb-8`}>
         {/* Icono/Foto/Letra con opción para cambiar */}
         <div className="flex-shrink-0 relative group mb-6 md:mb-0">
           {previewUrl || usuario.foto ? (
@@ -184,13 +188,52 @@ export default function Perfil() {
       </div>
       {/* Proyectos del usuario si existen */}
       {proyectos && proyectos.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl">
+        <div className={`bg-white rounded-xl shadow-lg p-6 w-full ${maxWidth} mb-8`}>
           <h3 className="text-lg font-semibold mb-4">{usuario.rol === 'admin' ? 'Todos los Proyectos' : 'Mis Proyectos'}</h3>
           <ul className="list-disc pl-6">
             {proyectos.map(proy => (
               <li key={proy.id || proy.nombre}>{proy.nombre}</li>
             ))}
           </ul>
+        </div>
+      )}
+      {/* Campañas relacionadas */}
+      {campañas && campañas.length > 0 && (
+        <div className={`bg-white rounded-xl shadow-lg p-6 w-full ${maxWidth}`}>
+          <h3 className="text-xl font-bold mb-6 text-green-700 flex items-center gap-2">
+            <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h6m-6 0V7a4 4 0 00-4-4H5a4 4 0 00-4 4v10a4 4 0 004 4h6a4 4 0 004-4v-2" /></svg>
+            Campañas Relacionadas
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {campañas.map(camp => {
+              // Buscar el cliente corporativo relacionado
+              const cliente = clientesCorporativos.find(c => c.id === camp.cliente_corporativo_id);
+              const logo = cliente?.logo;
+              const handleClick = () => {
+                navigate(`/campañas?adminId=${camp.id}`);
+              };
+              return (
+                <div key={camp.id} onClick={handleClick} className="cursor-pointer rounded-lg border border-gray-200 shadow-sm p-4 flex flex-col bg-gradient-to-br from-green-50 to-white hover:shadow-lg transition-shadow duration-200">
+                  <div className="flex items-center gap-4 mb-2">
+                    {logo ? (
+                      <img src={logo} alt="Logo cliente corporativo" className="w-14 h-14 object-contain rounded-lg border border-gray-200 bg-white" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-2xl font-bold border border-gray-200">?</div>
+                    )}
+                    <div>
+                      <span className="font-bold text-green-700 text-lg">{camp.nombre}</span>
+                      <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">{camp.tipo}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 text-sm mt-2">
+                    <span className="text-gray-500">Estado: <span className="font-semibold text-gray-700">{camp.estado}</span></span>
+                    <span className="text-gray-500">Líder: <span className="font-semibold text-gray-700">{camp.lider_de_campaña}</span></span>
+                    <span className="text-gray-500">Ejecutivo: <span className="font-semibold text-gray-700">{camp.ejecutivo}</span></span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
