@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import dayjs from 'dayjs';
+import Swal from 'sweetalert2';
 
 const Campañas = () => {
   // Estados principales
@@ -149,20 +150,24 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      
       await axios.post('http://localhost:8000/clientes-corporativos/', formClienteCorporativo, config);
-      
-      toast.success('Cliente corporativo creado exitosamente');
-      setModalClienteCorporativo(false);
-      setFormClienteCorporativo({
-        nombre: '',
-        logo: '',
-        sector: ''
+      Swal.fire({
+        icon: 'success',
+        title: 'Cliente corporativo creado',
+        text: 'El cliente corporativo se ha creado exitosamente',
+        timer: 2000,
+        showConfirmButton: false
+      }).then(() => {
+        setModalClienteCorporativo(false);
+        setFormClienteCorporativo({ nombre: '', logo: '', sector: '' });
+        cargarDatos();
       });
-      cargarDatos();
     } catch (error) {
-      console.error('Error creando cliente corporativo:', error);
-      toast.error('Error al crear el cliente corporativo');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al crear el cliente corporativo',
+      });
     }
   };
 
@@ -172,21 +177,24 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      
       await axios.post('http://localhost:8000/contactos/', formContacto, config);
-      
-      toast.success('Contacto creado exitosamente');
-      setModalContacto(false);
-      setFormContacto({
-        nombre: '',
-        telefono: '',
-        correo: '',
-        cliente_corporativo_id: ''
+      Swal.fire({
+        icon: 'success',
+        title: 'Contacto creado',
+        text: 'El contacto se ha creado exitosamente',
+        timer: 2000,
+        showConfirmButton: false
+      }).then(() => {
+        setModalContacto(false);
+        setFormContacto({ nombre: '', telefono: '', correo: '', cliente_corporativo_id: '' });
+        cargarDatos();
       });
-      cargarDatos();
     } catch (error) {
-      console.error('Error creando contacto:', error);
-      toast.error('Error al crear el contacto');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al crear el contacto',
+      });
     }
   };
 
@@ -209,22 +217,32 @@ const Campañas = () => {
       };
 
       await axios.post('http://localhost:8000/campanas/', datosEnvio, config);
-      toast.success('Campaña creada exitosamente');
-      setModalCampaña(false);
-      setFormCampaña({
-        nombre: '',
-        tipo: 'SAC',
-        cliente_corporativo_id: '',
-        contacto_id: '',
-        lider_de_campaña: '',
-        ejecutivo: '',
-        fecha_de_produccion: '',
-        estado: 'activo'
+      Swal.fire({
+        icon: 'success',
+        title: 'Campaña creada',
+        text: 'La campaña se ha creado exitosamente',
+        timer: 2000,
+        showConfirmButton: false
+      }).then(() => {
+        setModalCampaña(false);
+        setFormCampaña({
+          nombre: '',
+          tipo: 'SAC',
+          cliente_corporativo_id: '',
+          contacto_id: '',
+          lider_de_campaña: '',
+          ejecutivo: '',
+          fecha_de_produccion: '',
+          estado: 'activo'
+        });
+        cargarDatos();
       });
-      cargarDatos();
     } catch (error) {
-      console.error('Error creando campaña:', error);
-      toast.error('Error al crear la campaña');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al crear la campaña',
+      });
     }
   };
 
@@ -284,14 +302,29 @@ const Campañas = () => {
       
       // Actualizar el historial (el backend ya registra el cambio automáticamente)
       await actualizarHistorial();
-      toast.success("Campaña actualizada correctamente");
-      setEditando(false);
-      cargarDatos(); // Refresca la lista tras editar
+      Swal.fire({
+        icon: 'success',
+        title: 'Campaña actualizada',
+        text: 'La campaña se ha actualizado correctamente',
+        timer: 2000,
+        showConfirmButton: false
+      }).then(() => {
+        setEditando(false);
+        cargarDatos(); // Refresca la lista tras editar
+      });
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        toast.error('No se encontró la campaña. Puede que haya sido eliminada o el ID es incorrecto.');
+        Swal.fire({
+          icon: 'error',
+          title: 'No se encontró la campaña',
+          text: 'Puede que haya sido eliminada o el ID es incorrecto.',
+        });
       } else {
-        toast.error('Error al guardar los cambios');
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al guardar los cambios',
+        });
       }
     }
   };
@@ -327,7 +360,13 @@ const Campañas = () => {
         setFacturacionGuardada(prev => prev.map(item => 
           item.id === formFacturacion.id ? res.data : item
         ));
-        toast.success('Unidad de facturación actualizada correctamente');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Unidad de facturación actualizada',
+          text: 'La unidad de facturación se ha actualizado correctamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
       } else {
         // Si no tiene ID, es una creación
         res = await axios.post(
@@ -337,13 +376,23 @@ const Campañas = () => {
         );
         
         setFacturacionGuardada(prev => [...prev, res.data]);
-        toast.success('Unidad de facturación guardada correctamente');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Unidad de facturación guardada',
+          text: 'La unidad de facturación se ha guardado correctamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
       }
 
       setFormFacturacion({ unidad: '', cantidad: 1, valor: '', periodicidad: '' });
     } catch (error) {
       console.error('Error guardando facturación:', error);
-      toast.error('Error al guardar la unidad de facturación');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al guardar la unidad de facturación',
+      });
     }
   };
 
@@ -390,7 +439,13 @@ const Campañas = () => {
         setProductoGuardado(prev => prev.map(item => 
           item.id === formProducto.id ? res.data : item
         ));
-        toast.success('Producto/servicio actualizado correctamente');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Producto/servicio actualizado',
+          text: 'El producto/servicio se ha actualizado correctamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
       } else {
         // Si no tiene ID, es una creación
         console.log('URL del endpoint (POST):', `http://localhost:8000/campanas/${campañaSeleccionada.id}/productos`);
@@ -401,14 +456,24 @@ const Campañas = () => {
         );
         
         setProductoGuardado(prev => [...prev, res.data]);
-        toast.success('Producto/servicio guardado correctamente');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Producto/servicio guardado',
+          text: 'El producto/servicio se ha guardado correctamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
       }
 
       setFormProducto({ tipo: 'Producto', producto_servicio: '', proveedor: '', propiedad: 'Propia', cantidad: 1 });
     } catch (error) {
       console.error('Error guardando producto:', error);
       console.error('Respuesta del servidor:', error.response);
-      toast.error('Error al guardar el producto/servicio');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al guardar el producto/servicio',
+      });
     }
   };
 
@@ -851,13 +916,13 @@ const Campañas = () => {
                       <button
                         type="button"
                         onClick={() => setEditando(false)}
-                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 px-4 rounded-lg font-medium transition-colors duration-200"
+                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 px-6 rounded-lg font-medium transition-colors duration-200"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-4 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+                        className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-6 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg"
                       >
                         Guardar Cambios
                       </button>
@@ -950,6 +1015,7 @@ const Campañas = () => {
                         <input type="number" name="cantidad" value={formProducto.cantidad} min={1} onChange={handleProductoChange} className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white" required placeholder="Ej: 1" />
                       </div>
                     </div>
+                    
                     <div className="flex justify-end gap-3">
                       <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
                       <button type="submit" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
@@ -1638,7 +1704,7 @@ const Campañas = () => {
                 name="producto_servicio" 
                 value={formProducto.producto_servicio} 
                 onChange={handleProductoChange} 
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200" 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
                 placeholder="Especifica el producto o servicio"
                 required 
               />
@@ -1649,7 +1715,7 @@ const Campañas = () => {
                 name="proveedor" 
                 value={formProducto.proveedor} 
                 onChange={handleProductoChange} 
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200" 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
                 placeholder="Nombre del proveedor"
                 required 
               />
@@ -1674,7 +1740,7 @@ const Campañas = () => {
                 value={formProducto.cantidad} 
                 min={1} 
                 onChange={handleProductoChange} 
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200" 
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
                 required 
               />
             </div>
