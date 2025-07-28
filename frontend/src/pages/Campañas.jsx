@@ -733,11 +733,13 @@ const Campañas = () => {
                   <div className="flex-shrink-0 flex flex-col items-center justify-start space-y-2 mt-2">
                     {/* Logo */}
                     <div className="w-28 h-28 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center">
-                      {campañaSeleccionada.logo ? (
-                        <img src={campañaSeleccionada.logo} alt="Logo cliente" className="object-contain w-full h-full" />
-                      ) : (
-                        <span className="text-gray-400 italic text-sm">Sin logo</span>
-                      )}
+                      {(() => {
+                        const cliente = clientesCorporativos.find(c => c.id === campañaSeleccionada.cliente_corporativo_id);
+                        if (cliente && cliente.logo) {
+                          return <img src={cliente.logo} alt="Logo cliente" className="object-contain w-full h-full" />;
+                        }
+                        return <span className="text-gray-400 italic text-sm">Sin logo</span>;
+                      })()}
                     </div>
                     {/* Estado */}
                     <div className="text-center">
