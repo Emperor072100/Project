@@ -163,6 +163,41 @@ def actualizar_estado_proyecto(
     
     return {"message": "Estado actualizado correctamente", "nuevo_estado": datos.estado}
 
+@router.patch("/{proyecto_id}/equipo")
+def actualizar_equipo_proyecto(
+    proyecto_id: int,
+    datos: dict,
+    db: Session = Depends(get_db),
+    usuario: UserInDB = Depends(get_current_user)
+):
+    """Endpoint específico para actualizar solo el equipo de un proyecto"""
+    proyecto = db.query(modelo.Proyecto).filter_by(id=proyecto_id).first()
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    if usuario.rol != "admin" and proyecto.responsable_id != usuario.id:
+        raise HTTPException(status_code=403, detail="No tienes permisos para modificar este proyecto")
+
+    # Obtener la lista de equipos del request
+    equipo_list = datos.get('equipo', [])
+    print(f"DEBUG: Equipos recibidos en PATCH: {equipo_list}")
+    
+    # Verificar qué equipos existen en la base de datos
+    todos_equipos = db.query(Equipo).all()
+    print(f"DEBUG: Equipos disponibles en BD: {[e.nombre for e in todos_equipos]}")
+    
+    if equipo_list:
+        equipos_objs = db.query(Equipo).filter(Equipo.nombre.in_(equipo_list)).all()
+        print(f"DEBUG: Equipos encontrados: {[e.nombre for e in equipos_objs]}")
+        proyecto.equipos = equipos_objs
+    else:
+        # Si se envía una lista vacía, limpiar los equipos
+        proyecto.equipos = []
+    
+    db.commit()
+    db.refresh(proyecto)
+    return {"message": "Equipo actualizado correctamente", "nuevo_equipo": [e.nombre for e in proyecto.equipos]}
+
 @router.put("/{proyecto_id}", response_model=ProyectoOut)
 def actualizar_proyecto(
     proyecto_id: int,
@@ -190,9 +225,18 @@ def actualizar_proyecto(
         update_data.pop('tipo', None)
 
     if 'equipo' in update_data:
+        print(f"DEBUG: Equipos recibidos: {update_data['equipo']}")
         if update_data['equipo']:
+            # Verificar qué equipos existen en la base de datos
+            todos_equipos = db.query(Equipo).all()
+            print(f"DEBUG: Equipos disponibles en BD: {[e.nombre for e in todos_equipos]}")
+            
             equipos_objs = db.query(Equipo).filter(Equipo.nombre.in_(update_data['equipo'])).all()
+            print(f"DEBUG: Equipos encontrados: {[e.nombre for e in equipos_objs]}")
             proyecto.equipos = equipos_objs
+        else:
+            # Si se envía una lista vacía, limpiar los equipos
+            proyecto.equipos = []
         update_data.pop('equipo', None)
 
     if 'estado' in update_data and update_data['estado'] not in [

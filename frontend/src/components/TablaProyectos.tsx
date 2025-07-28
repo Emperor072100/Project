@@ -1,5 +1,6 @@
 // components/TablaProyectos.tsx
 import React, { useState } from 'react';
+import axios from 'axios';
 import { Proyecto } from '../views';
 import { useNavigate } from 'react-router-dom';
 import PanelDetalleProyecto from './PanelDetalleProyecto';
@@ -31,9 +32,9 @@ const opcionesEquipo = [
 ];
 const opcionesPrioridad = ['Alta', 'Media', 'Baja'];
 const opcionesEstado = {
-  pendientes: ['Conceptual', 'Análisis', 'Sin Empezar'],
+  pendientes: ['Conceptual', 'Análisis', 'Sin empezar'],
   enProceso: ['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas'],
-  terminados: ['Cancelado', 'Pausado', 'En producción', 'Desarrollado']
+  terminados: ['Cancelado', 'Pausado', 'En producción', 'Desarollado', 'Listo']
 };
 
 const formatArrayOrString = (value: string[] | string | undefined): string => {
@@ -56,7 +57,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   const navigate = useNavigate();
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState<Proyecto | null>(null);
   const [showColumnEditor, setShowColumnEditor] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState({
+  // Leer configuración de columnas desde localStorage
+  const defaultVisibleColumns = {
     nombre: true,
     responsable: true,
     estado: true,
@@ -70,11 +72,19 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     enlace: false,
     observaciones: false,
     acciones: true
-  });
-  const [columnOrder, setColumnOrder] = useState([
+  };
+  const defaultColumnOrder = [
     'nombre', 'responsable', 'estado', 'tipo', 'equipo', 'prioridad',
     'objetivo', 'fechaInicio', 'fechaFin', 'progreso', 'enlace', 'observaciones', 'acciones'
-  ]);
+  ];
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    const saved = localStorage.getItem('tablaProyectos_visibleColumns');
+    return saved ? JSON.parse(saved) : defaultVisibleColumns;
+  });
+  const [columnOrder, setColumnOrder] = useState(() => {
+    const saved = localStorage.getItem('tablaProyectos_columnOrder');
+    return saved ? JSON.parse(saved) : defaultColumnOrder;
+  });
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
 
   const createUniqueKey = (prefix: string, id: number, value: string) =>
@@ -95,10 +105,14 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
 
   // Manejar la visibilidad de columnas
   const toggleColumn = (columnKey: string) => {
-    setVisibleColumns(prev => ({
-      ...prev,
-      [columnKey]: !prev[columnKey]
-    }));
+    setVisibleColumns(prev => {
+      const updated = {
+        ...prev,
+        [columnKey]: !prev[columnKey]
+      };
+      localStorage.setItem('tablaProyectos_visibleColumns', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // Manejar el drag and drop de columnas
@@ -129,7 +143,10 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     // Insertarlo en la nueva posición
     newOrder.splice(targetIndex, 0, draggedColumn);
 
-    setColumnOrder(newOrder);
+    setColumnOrder(() => {
+      localStorage.setItem('tablaProyectos_columnOrder', JSON.stringify(newOrder));
+      return newOrder;
+    });
     setDraggedColumn(null);
   };
 
@@ -156,6 +173,57 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     };
 
     return columnOrder.map(key => allColumns[key]);
+  };
+
+  // Función para actualizar el estado en el backend
+  const actualizarEstado = async (proyectoId: number, nuevoEstado: string) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      await axios.patch(
+        `http://localhost:8000/proyectos/${proyectoId}/estado`,
+        { estado: nuevoEstado },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Estado actualizado');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || 'Error al actualizar estado');
+    }
+  };
+
+  // Función para actualizar el equipo en el backend
+  const actualizarEquipo = async (proyectoId: number, nuevoEquipo: string[]) => {
+    try {
+      console.log('Actualizando equipo:', { proyectoId, nuevoEquipo });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      // Intentar con PATCH primero (más específico)
+      try {
+        const response = await axios.patch(
+          `http://localhost:8000/proyectos/${proyectoId}/equipo`,
+          { equipo: nuevoEquipo },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log('Respuesta del servidor (PATCH):', response.data);
+        toast.success('Equipo actualizado');
+        return;
+      } catch (patchError: any) {
+        console.log('PATCH falló, intentando con PUT...');
+        
+        // Si PATCH falla, usar PUT pero con datos mínimos
+        const response = await axios.put(
+          `http://localhost:8000/proyectos/${proyectoId}`,
+          { equipo: nuevoEquipo },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log('Respuesta del servidor (PUT):', response.data);
+        toast.success('Equipo actualizado');
+      }
+    } catch (error: any) {
+      console.error('Error completo al actualizar equipo:', error);
+      console.error('Respuesta del error:', error?.response?.data);
+      console.error('Detalle del error:', JSON.stringify(error?.response?.data?.detail, null, 2));
+      toast.error(error?.response?.data?.detail || 'Error al actualizar equipo');
+    }
   };
 
   // Función para renderizar una celda específica
@@ -192,7 +260,10 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                   {opcionesEstado.pendientes.map(estado => (
                     <button
                       key={createUniqueKey('estado', proyecto.id, estado)}
-                      onClick={() => handleSave(proyecto.id, 'estado', estado)}
+                      onClick={async () => {
+                        await actualizarEstado(proyecto.id, estado);
+                        handleSave(proyecto.id, 'estado', estado);
+                      }}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium ${
                         estado === proyecto.estado
                           ? 'bg-yellow-200 text-yellow-800 ring-2 ring-yellow-500'
@@ -209,7 +280,10 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                   {opcionesEstado.enProceso.map(estado => (
                     <button
                       key={createUniqueKey('estado', proyecto.id, estado)}
-                      onClick={() => handleSave(proyecto.id, 'estado', estado)}
+                      onClick={async () => {
+                        await actualizarEstado(proyecto.id, estado);
+                        handleSave(proyecto.id, 'estado', estado);
+                      }}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium ${
                         estado === proyecto.estado
                           ? 'bg-blue-200 text-blue-800 ring-2 ring-blue-500'
@@ -244,7 +318,10 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                     return (
                       <button
                         key={createUniqueKey('estado', proyecto.id, estado)}
-                        onClick={() => handleSave(proyecto.id, 'estado', estado)}
+                        onClick={async () => {
+                          await actualizarEstado(proyecto.id, estado);
+                          handleSave(proyecto.id, 'estado', estado);
+                        }}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium ${
                           estado === proyecto.estado
                             ? `${bgColor} ${textColor} ring-2 ${ringColor}`
@@ -348,8 +425,10 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                     return (
                       <button
                         key={createUniqueKey('equipo', proyecto.id, equipo)}
-                        onClick={() => {
-                          const currentEquipo = Array.isArray(proyecto.equipo) ? [...proyecto.equipo] : [proyecto.equipo].filter(Boolean);
+                        onClick={async () => {
+                          const currentEquipo = Array.isArray(proyecto.equipo) 
+                            ? [...proyecto.equipo] 
+                            : (proyecto.equipo ? [proyecto.equipo] : []);
                           let newEquipo;
 
                           if (isSelected) {
@@ -358,6 +437,9 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                             newEquipo = [...currentEquipo, equipo];
                           }
 
+                          // Actualizar en el backend primero
+                          await actualizarEquipo(proyecto.id, newEquipo);
+                          // Luego actualizar en el frontend
                           handleSave(proyecto.id, 'equipo', newEquipo);
                         }}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium ${bgColor} ${textColor} ${
@@ -373,9 +455,9 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
             ) : (
               <div
                 onClick={() => handleEdit(proyecto.id, 'equipo')}
-                className="cursor-pointer flex flex-wrap gap-1"
+                className="cursor-pointer flex flex-wrap gap-1 min-h-[2rem] items-center"
               >
-                {Array.isArray(proyecto.equipo) ? proyecto.equipo.map(equipo => {
+                {Array.isArray(proyecto.equipo) && proyecto.equipo.length > 0 ? proyecto.equipo.map(equipo => {
                   let bgColor = '';
                   let textColor = '';
 
@@ -421,11 +503,15 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                       {equipo}
                     </span>
                   );
-                }) : proyecto.equipo ? (
+                }) : proyecto.equipo && !Array.isArray(proyecto.equipo) ? (
                   <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                     {proyecto.equipo}
                   </span>
-                ) : null}
+                ) : (
+                  <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-dashed border-gray-300 hover:bg-gray-100 transition-colors">
+                    + Seleccionar equipo
+                  </span>
+                )}
               </div>
             )}
           </td>

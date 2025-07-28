@@ -180,9 +180,9 @@ export const ProyectosProvider = ({ children }) => {
       
       // Mapeo correcto de columnas a estados de la base de datos
       const columnToEstadoMap = {
-        'pendientes': 'Pendiente',
-        'enProceso': 'En proceso', 
-        'terminados': 'Terminado'
+        'pendientes': 'Sin empezar',
+        'enProceso': 'En curso', 
+        'terminados': 'Listo'
       };
       
       const nuevoEstado = columnToEstadoMap[newColumn];
@@ -302,11 +302,28 @@ export const ProyectosProvider = ({ children }) => {
   // Funciones auxiliares
   const mapEstadoToColumn = (estado) => {
     const estadosMap = {
-      // Estados reales de la base de datos
+      // Estados pendientes
+      'Conceptual': 'pendientes',
+      'Análisis': 'pendientes',
+      'Sin empezar': 'pendientes',
+      
+      // Estados en proceso
+      'En diseño': 'enProceso',
+      'En desarrollo': 'enProceso',
+      'En curso': 'enProceso',
+      'Etapa pruebas': 'enProceso',
+      
+      // Estados terminados
+      'Cancelado': 'terminados',
+      'Pausado': 'terminados',
+      'En producción': 'terminados',
+      'Desarollado': 'terminados',
+      'Listo': 'terminados',
+      
+      // Estados adicionales por compatibilidad
       'Pendiente': 'pendientes',
-      'En proceso': 'enProceso', 
+      'En proceso': 'enProceso',
       'Terminado': 'terminados',
-      // Estados adicionales por si acaso
       'peruano': 'pendientes'
     };
     
@@ -315,11 +332,11 @@ export const ProyectosProvider = ({ children }) => {
   
   const getColorByEstado = (estado) => {
     // Colores para Gantt con estados reales de la base de datos
-    if (['Terminado'].includes(estado)) {
+    if (['Cancelado', 'Pausado', 'En producción', 'Desarollado', 'Listo', 'Terminado'].includes(estado)) {
       return '#4CAF50'; // Verde
-    } else if (['En proceso'].includes(estado)) {
+    } else if (['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas', 'En proceso'].includes(estado)) {
       return '#2196F3'; // Azul
-    } else if (['Pendiente'].includes(estado)) {
+    } else if (['Conceptual', 'Análisis', 'Sin empezar', 'Pendiente'].includes(estado)) {
       return '#FFC107'; // Amarillo
     } else if (['peruano'].includes(estado)) {
       return '#9C27B0'; // Púrpura para estado "peruano"
