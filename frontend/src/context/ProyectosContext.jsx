@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import axiosInstance from '../services/axiosConfig';
 import toast from 'react-hot-toast';
 
 // Crear el contexto
@@ -62,6 +63,31 @@ export const ProyectosProvider = ({ children }) => {
     }
   };
   
+  // Función para calcular progreso automáticamente basado en el estado
+  const getProgresoByEstado = (estado) => {
+    const progresoMap = {
+      // Estados pendientes (0-25%)
+      'Conceptual': 5,
+      'Análisis': 15,
+      'Sin Empezar': 0,
+      
+      // Estados en proceso (30-80%)
+      'En diseño': 30,
+      'En desarrollo': 50,
+      'En curso': 65,
+      'Etapa pruebas': 80,
+      
+      // Estados terminados (85-100% o casos especiales)
+      'Cancelado': 0,
+      'Pausado': 25,
+      'En producción': 100,
+      'Desarrollado': 95,
+      'Listo': 100  // Agregado estado Listo
+    };
+    
+    return progresoMap[estado] !== undefined ? progresoMap[estado] : 0;
+  };
+
   // Función para actualizar un proyecto
   const updateProyecto = async (id, campo, valor) => {
     try {
@@ -110,15 +136,35 @@ export const ProyectosProvider = ({ children }) => {
       // Si estamos actualizando el estado, también actualizamos la columna para Kanban
       if (campo === 'estado') {
         const column = mapEstadoToColumn(valor);
+        const progresoAutomatico = getProgresoByEstado(valor);
+        
+        console.log(`📊 Estado "${valor}" → Progreso automático: ${progresoAutomatico}%`);
+        
+        // Incluir progreso en los datos a enviar al backend
+        apiData.progreso = progresoAutomatico;
         
         // Actualizar localmente primero para UI responsiva
         setProyectos(prev =>
           prev.map(proy => proy.id === id ? { 
             ...proy, 
             [campo]: valor,
+            progreso: progresoAutomatico,
             column,
             subcolumn: valor,
-            color: getColorByEstado(valor)
+            color: getColorByEstado(valor),
+            // Agregar keys para forzar re-render
+            lastUpdated: Date.now(),
+            progressKey: `progress-${id}-${progresoAutomatico}-${Date.now()}`
+          } : proy)
+        );
+      } else if (campo === 'progreso') {
+        // Si se actualiza el progreso manualmente, agregar keys para re-render
+        setProyectos(prev =>
+          prev.map(proy => proy.id === id ? { 
+            ...proy, 
+            [campo]: typeof valor === 'number' ? valor : parseFloat(valor) || 0,
+            lastUpdated: Date.now(),
+            progressKey: `progress-${id}-${valor}-${Date.now()}`
           } : proy)
         );
       } else {
@@ -129,15 +175,18 @@ export const ProyectosProvider = ({ children }) => {
       }
       
       // Enviar actualización a la API
-      const response = await axios.put(`http://localhost:8000/proyectos/${id}`, apiData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      console.log('📤 Enviando datos a la API:', JSON.stringify(apiData, null, 2));
+      const response = await axiosInstance.put(`/proyectos/${id}`, apiData);
+      
+      console.log('📥 Respuesta del servidor:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
       });
       
       // Verificar que la respuesta sea exitosa
       if (response.status === 200) {
+        console.log(`✅ Proyecto ${id} actualizado exitosamente en el backend`);
         toast.success("Guardado correctamente");
         return true;
       } else {
@@ -145,6 +194,13 @@ export const ProyectosProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error al actualizar proyecto:', error);
+      console.error('📍 Detalles del error:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      
       toast.error("Error al guardar: " + (error.response?.data?.detail || error.message || "Error desconocido"));
       
       // Recargar proyectos para asegurar consistencia
@@ -156,10 +212,7 @@ export const ProyectosProvider = ({ children }) => {
   // Función para obtener estados disponibles (para debug)
   const fetchEstados = async () => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await axios.get('http://localhost:8000/estados', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axiosInstance.get('/estados');
       console.log('Estados disponibles en la base de datos:', response.data);
       return response.data;
     } catch (error) {
@@ -179,10 +232,11 @@ export const ProyectosProvider = ({ children }) => {
       }
       
       // Mapeo correcto de columnas a estados de la base de datos
+      // Basado en los estados disponibles del backend: ['Conceptual', 'Análisis', 'Sin Empezar', 'En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas', 'Cancelado', 'Pausado', 'En producción', 'Desarrollado']
       const columnToEstadoMap = {
-        'pendientes': 'Sin empezar',
-        'enProceso': 'En curso', 
-        'terminados': 'Listo'
+        'pendientes': 'Conceptual',  // Estado por defecto cuando se arrastra a pendientes
+        'enProceso': 'En diseño',    // Estado por defecto cuando se arrastra a en proceso
+        'terminados': 'Desarrollado' // Estado por defecto cuando se arrastra a terminados
       };
       
       const nuevoEstado = columnToEstadoMap[newColumn];
@@ -198,32 +252,45 @@ export const ProyectosProvider = ({ children }) => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       
       // Usar el nuevo endpoint PATCH específico para estados
+      const nuevoProgreso = getProgresoByEstado(nuevoEstado);
       const updateData = {
-        estado: nuevoEstado
+        estado: nuevoEstado,
+        progreso: nuevoProgreso  // Incluir progreso en la actualización
       };
       
-      console.log('Datos enviados para actualización:', updateData);
+      console.log('📤 Datos enviados para actualización de Kanban:', updateData);
       
-      const response = await axios.patch(`http://localhost:8000/proyectos/${id}/estado`, updateData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const response = await axiosInstance.patch(`/proyectos/${id}/estado`, updateData);
+      
+      console.log('📥 Respuesta del servidor (Kanban):', {
+        status: response.status,
+        data: response.data
       });
       
       if (response.status === 200) {
-        // Actualizar estado local
+        // Calcular progreso automático para el nuevo estado
+        const nuevoProgreso = getProgresoByEstado(nuevoEstado);
+        
+        // Actualizar estado local incluyendo el progreso automático
         const column = mapEstadoToColumn(nuevoEstado);
+        const timestamp = Date.now();
+        
         setProyectos(prev =>
           prev.map(proy => proy.id === id ? { 
             ...proy, 
             estado: nuevoEstado,
+            progreso: nuevoProgreso,
             column,
-            subcolumn: nuevoEstado
+            subcolumn: nuevoEstado,
+            // Forzar re-render con keys únicas
+            lastUpdated: timestamp,
+            progressKey: `progress-${id}-${nuevoProgreso}-${timestamp}`,
+            renderKey: `render-${timestamp}`
           } : proy)
         );
         
-        toast.success("Proyecto movido correctamente");
+        console.log(`🔄 Proyecto ${id} actualizado: ${nuevoEstado} (${nuevoProgreso}%)`);
+        toast.success(`Proyecto movido correctamente - Progreso: ${nuevoProgreso}%`);
         return true;
       }
       
@@ -305,7 +372,7 @@ export const ProyectosProvider = ({ children }) => {
       // Estados pendientes
       'Conceptual': 'pendientes',
       'Análisis': 'pendientes',
-      'Sin empezar': 'pendientes',
+      'Sin Empezar': 'pendientes',  // Corregido: con mayúsculas
       
       // Estados en proceso
       'En diseño': 'enProceso',
@@ -317,14 +384,13 @@ export const ProyectosProvider = ({ children }) => {
       'Cancelado': 'terminados',
       'Pausado': 'terminados',
       'En producción': 'terminados',
-      'Desarollado': 'terminados',
-      'Listo': 'terminados',
+      'Desarrollado': 'terminados',  // Corregido: ortografía correcta
+      'Listo': 'terminados',  // Agregado estado Listo
       
       // Estados adicionales por compatibilidad
       'Pendiente': 'pendientes',
       'En proceso': 'enProceso',
-      'Terminado': 'terminados',
-      'peruano': 'pendientes'
+      'Terminado': 'terminados'
     };
     
     return estadosMap[estado] || 'pendientes';

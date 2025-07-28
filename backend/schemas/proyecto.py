@@ -68,7 +68,7 @@ class ProyectoOut(BaseModel):
     observaciones: Optional[str]
     fecha_inicio: Optional[date]
     fecha_fin: Optional[date]
-    progreso: Optional[int]
+    progreso: Optional[float]
     responsable_id: int
     responsable_nombre: Optional[str] = None
 

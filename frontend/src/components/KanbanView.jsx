@@ -20,7 +20,7 @@ import { useProyectos } from '../context/ProyectosContext';
 
 
 const KanbanView = () => {
-  const { proyectos, loading, updateProyectoFromKanban, fetchProyectos, fetchEstados } = useProyectos();
+  const { proyectos, loading, updateProyectoFromKanban, fetchProyectos, updateProyecto } = useProyectos();
 
   const [columns, setColumns] = useState([
     { id: 'pendientes', title: 'PENDIENTES', color: 'bg-yellow-50' },
@@ -35,7 +35,6 @@ const KanbanView = () => {
     terminados: []
   });
 
-  const [columnCounts, setColumnCounts] = useState({});
   const [activeProject, setActiveProject] = useState(null);
 
   const sensors = useSensors(
@@ -44,35 +43,22 @@ const KanbanView = () => {
   );
 
 
-  // Debug: mostrar estados disponibles al cargar
-  useEffect(() => {
-    const showEstados = async () => {
-      console.log('=== DEBUG: Obteniendo estados disponibles ===');
-      await fetchEstados();
-    };
-    showEstados();
-  }, []);
-
   // Sincronizar el estado local con los proyectos del contexto
   useEffect(() => {
-    // Evitar duplicados al sincronizar, manteniendo solo una instancia de cada proyecto en la columna correcta
-    const uniqueProyectos = [...proyectos];
-    
     const newColumnProjects = {
-      pendientes: uniqueProyectos.filter(p => p.column === 'pendientes'),
-      enProceso: uniqueProyectos.filter(p => p.column === 'enProceso'),
-      terminados: uniqueProyectos.filter(p => p.column === 'terminados'),
+      pendientes: proyectos.filter(p => p.column === 'pendientes'),
+      enProceso: proyectos.filter(p => p.column === 'enProceso'),
+      terminados: proyectos.filter(p => p.column === 'terminados'),
     };
     
-    console.log('Sincronizando proyectos por columna:', newColumnProjects); // Debug
-    setColumnProjects(newColumnProjects);
-
-    // Actualizar contadores de columnas
-    const counts = {};
-    columns.forEach(col => {
-      counts[col.id] = newColumnProjects[col.id].length;
+    // Debug: Log de los proyectos por columna
+    console.log('🔍 Proyectos por columna:', {
+      pendientes: newColumnProjects.pendientes.map(p => ({ id: p.id, nombre: p.nombre, estado: p.estado, column: p.column })),
+      enProceso: newColumnProjects.enProceso.map(p => ({ id: p.id, nombre: p.nombre, estado: p.estado, column: p.column })),
+      terminados: newColumnProjects.terminados.map(p => ({ id: p.id, nombre: p.nombre, estado: p.estado, column: p.column }))
     });
-    setColumnCounts(counts);
+    
+    setColumnProjects(newColumnProjects);
   }, [proyectos]);
 
   const handleDragStart = (event) => {
@@ -85,6 +71,7 @@ const KanbanView = () => {
     const { active, over } = event;
     setActiveProject(null);
     // No modificar expandedCards aquí, así la expansión se mantiene tras el drag
+
     if (!over) return;
 
     const activeProject = proyectos.find(p => p.id.toString() === active.id.toString());
@@ -104,74 +91,37 @@ const KanbanView = () => {
       }
     }
 
-    console.log(`Moviendo de ${fromColumn} a ${toColumn}`); // Debug
-    console.log(`Proyecto actual:`, activeProject); // Debug adicional
-    console.log(`Estados de todos los proyectos:`, proyectos.map(p => ({ id: p.id, nombre: p.nombre, estado: p.estado, column: p.column }))); // Debug completo
-
     // Si se mueve a otra columna
     if (fromColumn !== toColumn) {
       try {
-        // Actualizar primero el estado local para un efecto visual inmediato
-        setColumnProjects(prev => {
-          // Crear nuevo estado asegurando que todas las columnas existen
-          const newColumnProjects = {
-            pendientes: [...(prev.pendientes || [])],
-            enProceso: [...(prev.enProceso || [])],
-            terminados: [...(prev.terminados || [])]
-          };
-          
-          // Eliminar el proyecto de cualquier columna donde pudiera estar
-          Object.keys(newColumnProjects).forEach(colKey => {
-            newColumnProjects[colKey] = newColumnProjects[colKey].filter(p => p.id !== activeProject.id);
-          });
-          
-          // Agregar a la columna destino
-          if (!newColumnProjects[toColumn]) {
-            newColumnProjects[toColumn] = [];
-          }
-          newColumnProjects[toColumn].push({ ...activeProject, column: toColumn });
-          
-          console.log(`Estado actualizado:`, newColumnProjects); // Debug
-          return newColumnProjects;
-        });
+        console.log(`🔄 KANBAN: Iniciando movimiento de tarjeta`);
+        console.log(`   Proyecto: ${activeProject.nombre} (ID: ${activeProject.id})`);
+        console.log(`   Estado actual: ${activeProject.estado} (${activeProject.progreso}%)`);
+        console.log(`   De columna: ${fromColumn} → A columna: ${toColumn}`);
         
-        // Luego enviar la actualización al backend
+        // Mapeo directo para mostrar inmediatamente el cambio esperado
+        // Usando los estados reales del backend
+        const expectedStates = {
+          'pendientes': { estado: 'Conceptual', progreso: 5 },
+          'enProceso': { estado: 'En diseño', progreso: 30 },
+          'terminados': { estado: 'Desarrollado', progreso: 95 }
+        };
+        
+        const expectedChange = expectedStates[toColumn];
+        console.log(`   Cambio esperado: ${expectedChange.estado} (${expectedChange.progreso}%)`);
+        
         const success = await updateProyectoFromKanban(activeProject.id, toColumn);
         
         if (success) {
-          console.log(`✅ Proyecto ${activeProject.id} movido a columna ${toColumn} exitosamente`);
-          // Recargar los datos para asegurar persistencia
-          setTimeout(() => {
-            fetchProyectos();
-          }, 500);
+          console.log(`✅ KANBAN: Proyecto ${activeProject.id} movido exitosamente`);
+          // NO recargar inmediatamente - dejar que el contexto maneje la actualización
+          // El contexto ya actualiza el estado local, no necesitamos fetchProyectos aquí
         } else {
-          console.error(`❌ Error al guardar proyecto ${activeProject.id} en backend`);
-          // Revertir cambio visual si hay error en el backend
-          setColumnProjects(prev => {
-            const updatedColumns = { ...prev };
-            // Quitar el proyecto de todas las columnas
-            Object.keys(updatedColumns).forEach(colKey => {
-              updatedColumns[colKey] = updatedColumns[colKey].filter(p => p.id !== activeProject.id);
-            });
-            // Ponerlo en su columna original
-            updatedColumns[fromColumn] = [...updatedColumns[fromColumn], activeProject];
-            return updatedColumns;
-          });
+          console.error(`❌ KANBAN: Error - updateProyectoFromKanban retornó false`);
         }
       } catch (error) {
-        console.error("Error al mover proyecto:", error);
-        // Revertir cambio visual si hay error en el backend
-        setColumnProjects(prev => {
-          // Volver a sincronizar con los datos originales
-          const updatedColumns = { ...prev };
-          // Quitar el proyecto de todas las columnas
-          Object.keys(updatedColumns).forEach(colKey => {
-            updatedColumns[colKey] = updatedColumns[colKey].filter(p => p.id !== activeProject.id);
-          });
-          // Ponerlo en su columna original
-          updatedColumns[fromColumn] = [...updatedColumns[fromColumn], activeProject];
-          return updatedColumns;
-        });
+        console.error("❌ KANBAN: Error al mover proyecto:", error);
+        console.error("Detalles del error:", error.response?.data);
       }
       return;
     }
@@ -225,6 +175,60 @@ const KanbanView = () => {
 
   const [expandedCards, setExpandedCards] = useState(new Set());
 
+  // Estados disponibles por columna para cambiar el porcentaje
+  // Basado en los estados reales del backend
+  const estadosPorColumna = {
+    'pendientes': [
+      { nombre: 'Conceptual', porcentaje: 5 },
+      { nombre: 'Análisis', porcentaje: 15 },
+      { nombre: 'Sin Empezar', porcentaje: 0 }
+    ],
+    'enProceso': [
+      { nombre: 'En diseño', porcentaje: 30 },
+      { nombre: 'En desarrollo', porcentaje: 50 },
+      { nombre: 'En curso', porcentaje: 65 },
+      { nombre: 'Etapa pruebas', porcentaje: 80 }
+    ],
+    'terminados': [
+      { nombre: 'Cancelado', porcentaje: 0 },
+      { nombre: 'Pausado', porcentaje: 25 },
+      { nombre: 'En producción', porcentaje: 100 },
+      { nombre: 'Desarrollado', porcentaje: 95 },
+      { nombre: 'Listo', porcentaje: 100 }
+    ]
+  };
+
+  // Función para cambiar el estado dentro de la misma columna
+  const cambiarEstadoEnColumna = async (project, nuevoEstado) => {
+    try {
+      const estadoInfo = Object.values(estadosPorColumna)
+        .flat()
+        .find(e => e.nombre === nuevoEstado);
+      
+      if (!estadoInfo) return;
+
+      console.log(`🔄 Cambiando estado en columna: ${project.estado} → ${nuevoEstado} (${estadoInfo.porcentaje}%)`);
+      
+      // Usar solo updateProyecto con el estado - el contexto se encarga del progreso automáticamente
+      console.log(`📤 Actualizando estado del proyecto ${project.id} a "${nuevoEstado}"`);
+      const success = await updateProyecto(project.id, 'estado', nuevoEstado);
+      
+      if (success) {
+        console.log(`✅ Estado actualizado exitosamente a "${nuevoEstado}"`);
+        
+        // Verificar persistencia después de 2 segundos
+        setTimeout(async () => {
+          console.log(`🔍 Verificando persistencia del proyecto ${project.id}...`);
+          await fetchProyectos(true);
+        }, 2000);
+      } else {
+        console.error(`❌ Error al actualizar estado`);
+      }
+    } catch (error) {
+      console.error('Error al cambiar estado:', error);
+    }
+  };
+
   const ProjectCard = React.memo(({ project }) => {
     const {
       attributes,
@@ -260,7 +264,7 @@ const KanbanView = () => {
       <div
         ref={setNodeRef}
         style={style}
-        className={`bg-white rounded-md shadow-sm mb-2 border-l-4 border-blue-500 hover:shadow-md transition-shadow cursor-pointer p-3`}
+        className="bg-white rounded-md shadow-sm mb-2 border-l-4 border-blue-500 hover:shadow-md transition-shadow cursor-pointer p-3"
         onClick={handleCardClick}
       >
         {/* Header compacto siempre visible, drag handle */}
@@ -270,26 +274,64 @@ const KanbanView = () => {
             {project.prioridad}
           </span>
         </div>
+        
         <div className="flex items-center mb-2">
           <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 mr-2 text-xs">
             {(project.responsable_nombre || project.responsable || 'S/A').charAt(0).toUpperCase()}
           </div>
           <span className="text-xs text-gray-500 truncate">
-            {Array.isArray(project.equipo) ? project.equipo[0] : project.equipo || 'Sin equipo'}
+            {project.responsable_nombre || project.responsable || 'Sin responsable'}
           </span>
         </div>
+
         <div className="text-xs bg-gray-100 px-2 py-1 rounded mb-2 text-center">
-          {project.subcolumn || project.estado}
+          {project.estado}
         </div>
+
         <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
           <div 
-            className={`h-1.5 rounded-full transition-all duration-300 ${getProgressColor(project.progreso || 0)}`} 
-            style={{ width: `${project.progreso || 0}%` }}
+            key={project.progressKey || `progress-${project.id}-${project.progreso || 0}-${project.lastUpdated || 0}`}
+            className={`h-1.5 rounded-full transition-all duration-1000 ease-out ${getProgressColor(project.progreso || 0)}`} 
+            style={{ 
+              width: `${project.progreso || 0}%`,
+              transition: 'width 1s ease-out, background-color 0.5s ease',
+              transform: 'translateZ(0)', // Hardware acceleration
+              willChange: 'width' // Optimize for animations
+            }}
           ></div>
         </div>
-        {/* Si está expandida, mostrar detalles debajo del header, sin modificar el header */}
+        
+        {/* Mostrar progreso numérico para debug */}
+        <div className="text-xs text-gray-600 text-center mb-1">
+          {project.progreso || 0}% - Estado: {project.estado}
+        </div>
+
+        {/* Si está expandida, mostrar detalles debajo del header */}
         {isExpanded && (
           <div className="rounded-lg bg-gray-50 border-t border-gray-200 mt-2 px-2 py-2 space-y-2 overflow-hidden">
+            {/* Selector de estado para ajustar porcentaje */}
+            <div className="bg-white rounded p-2 border">
+              <div className="text-xs font-medium text-gray-700 mb-2">Cambiar estado y porcentaje:</div>
+              <div className="grid grid-cols-2 gap-1">
+                {estadosPorColumna[project.column]?.map((estado) => (
+                  <button
+                    key={estado.nombre}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      cambiarEstadoEnColumna(project, estado.nombre);
+                    }}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      project.estado === estado.nombre
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {estado.nombre} ({estado.porcentaje}%)
+                  </button>
+                ))}
+              </div>
+            </div>
+            
             {/* Fechas */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="bg-blue-100 px-2 py-1 rounded flex flex-col items-center">
@@ -301,6 +343,7 @@ const KanbanView = () => {
                 <span className="text-red-800 whitespace-nowrap">{formatDate(project.fechaFin)}</span>
               </div>
             </div>
+            
             {/* Progreso detallado */}
             <div className="bg-white rounded p-2 border flex flex-col gap-1">
               <div className="flex justify-between items-center">
@@ -309,11 +352,18 @@ const KanbanView = () => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(project.progreso || 0)}`} 
-                  style={{ width: `${project.progreso || 0}%` }}
+                  key={project.progressKey || `progress-detailed-${project.id}-${project.progreso || 0}-${project.lastUpdated || 0}`}
+                  className={`h-2 rounded-full transition-all duration-1000 ease-out ${getProgressColor(project.progreso || 0)}`} 
+                  style={{ 
+                    width: `${project.progreso || 0}%`,
+                    transition: 'width 1s ease-out, background-color 0.5s ease',
+                    transform: 'translateZ(0)', // Hardware acceleration
+                    willChange: 'width' // Optimize for animations
+                  }}
                 ></div>
               </div>
             </div>
+            
             {/* Objetivo si existe */}
             {project.objetivo && (
               <div className="bg-green-100 px-2 py-2 rounded text-xs border border-green-200">
@@ -334,8 +384,6 @@ const KanbanView = () => {
       id: column.id,
     });
 
-    // Calcular estadísticas de la columna
-    const totalProjects = projects.length;
     return (
       <div
         ref={setNodeRef}
@@ -343,15 +391,15 @@ const KanbanView = () => {
           isOver ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
         }`}
       >
-        {/* Header de la columna */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
             <h2 className="font-semibold text-gray-700">{column.title}</h2>
             <span className="bg-white text-gray-700 px-2 py-1 rounded-full text-xs font-medium">
-              {totalProjects}
+              {projects.length}
             </span>
           </div>
         </div>
+        
         <SortableContext
           items={projects.map((p) => p.id.toString())}
           strategy={verticalListSortingStrategy}
@@ -375,44 +423,13 @@ const KanbanView = () => {
     return <div className="flex justify-center items-center h-64">Cargando...</div>;
   }
 
-  // Calcular estadísticas generales
-  const totalProjects = proyectos.length;
-  const completedProjects = proyectos.filter(p => p.column === 'terminados').length;
-  const inProgressProjects = proyectos.filter(p => p.column === 'enProceso').length;
-  const pendingProjects = proyectos.filter(p => p.column === 'pendientes').length;
-  const overallProgress = totalProjects > 0 
-    ? Math.round(proyectos.reduce((sum, p) => sum + (p.progreso || 0), 0) / totalProjects)
-    : 0;
-
   return (
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-2">Vista Kanban</h2>
       <p className="text-gray-600 mb-4">
-        Gestión ágil de proyectos. Arrastra las tarjetas para cambiar su estado o reordenarlas.
+        Gestión ágil de proyectos. Arrastra las tarjetas para cambiar su estado.
       </p>
 
-      {/* Panel de estadísticas generales */}
-      <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-        <h3 className="text-lg font-medium text-gray-800 mb-3">Resumen General</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <div className="text-blue-600 text-sm font-medium">Total Proyectos</div>
-            <div className="text-2xl font-bold text-blue-800">{totalProjects}</div>
-          </div>
-          <div className="bg-yellow-50 p-3 rounded-lg">
-            <div className="text-yellow-600 text-sm font-medium">Pendientes</div>
-            <div className="text-2xl font-bold text-yellow-800">{pendingProjects}</div>
-          </div>
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <div className="text-blue-600 text-sm font-medium">En Proceso</div>
-            <div className="text-2xl font-bold text-blue-800">{inProgressProjects}</div>
-          </div>
-          <div className="bg-green-50 p-3 rounded-lg">
-            <div className="text-green-600 text-sm font-medium">Terminados</div>
-            <div className="text-2xl font-bold text-green-800">{completedProjects}</div>
-          </div>
-        </div>
-      </div>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -428,6 +445,7 @@ const KanbanView = () => {
             />
           ))}
         </div>
+        
         <DragOverlay>
           {activeProject ? (
             <div className="bg-white p-3 rounded-md shadow-lg mb-2 border-l-4 border-blue-500 opacity-90 transform rotate-3">
@@ -439,56 +457,34 @@ const KanbanView = () => {
                 </span>
               </div>
               
-              {/* Responsable y equipo */}
+              {/* Responsable */}
               <div className="flex items-center mb-2">
                 <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 mr-2 text-xs">
                   {(activeProject.responsable_nombre || activeProject.responsable || 'S/A').charAt(0).toUpperCase()}
                 </div>
                 <span className="text-xs text-gray-500 truncate">
-                  {Array.isArray(activeProject.equipo) ? activeProject.equipo[0] : activeProject.equipo || 'Sin equipo'}
+                  {activeProject.responsable_nombre || activeProject.responsable || 'Sin responsable'}
                 </span>
               </div>
               
               {/* Estado actual */}
               <div className="text-xs bg-gray-100 px-2 py-1 rounded mb-2 text-center">
-                {activeProject.subcolumn || activeProject.estado}
+                {activeProject.estado}
               </div>
               
-              {/* Fechas */}
-              <div className="grid grid-cols-2 gap-2 mb-2 text-xs">
-                <div className="bg-blue-50 px-2 py-1 rounded">
-                  <div className="text-blue-600 font-medium">Inicio</div>
-                  <div className="text-blue-800">{formatDate(activeProject.fechaInicio)}</div>
-                </div>
-                <div className="bg-red-50 px-2 py-1 rounded">
-                  <div className="text-red-600 font-medium">Fin</div>
-                  <div className="text-red-800">{formatDate(activeProject.fechaFin)}</div>
-                </div>
+              {/* Progreso compacto */}
+              <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+                <div 
+                  key={activeProject.progressKey || `progress-drag-${activeProject.id}-${activeProject.progreso || 0}-${activeProject.lastUpdated || 0}`}
+                  className={`h-1.5 rounded-full transition-all duration-1000 ease-out ${getProgressColor(activeProject.progreso || 0)}`} 
+                  style={{ 
+                    width: `${activeProject.progreso || 0}%`,
+                    transition: 'width 1s ease-out, background-color 0.5s ease',
+                    transform: 'translateZ(0)', // Hardware acceleration
+                    willChange: 'width' // Optimize for animations
+                  }}
+                ></div>
               </div>
-              
-              {/* Progreso mejorado */}
-              <div className="mb-2">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs font-medium text-gray-700">Progreso</span>
-                  <span className="text-xs font-bold text-gray-800">{activeProject.progreso || 0}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${getProgressColor(activeProject.progreso || 0)}`} 
-                    style={{ width: `${activeProject.progreso || 0}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              {/* Objetivo si existe */}
-              {activeProject.objetivo && (
-                <div className="bg-green-50 px-2 py-1 rounded text-xs">
-                  <div className="text-green-600 font-medium mb-1">Objetivo:</div>
-                  <div className="text-green-800 text-xs leading-tight line-clamp-2">
-                    {activeProject.objetivo}
-                  </div>
-                </div>
-              )}
             </div>
           ) : null}
         </DragOverlay>
@@ -498,24 +494,3 @@ const KanbanView = () => {
 };
 
 export default KanbanView;
-
-const SUBESTADOS = {
-  pendientes: [
-    { name: 'Conceptual', color: 'bg-yellow-100 text-yellow-800' },
-    { name: 'Análisis', color: 'bg-yellow-100 text-yellow-800' },
-    { name: 'Sin empezar', color: 'bg-yellow-100 text-yellow-800' }
-  ],
-  enProceso: [
-    { name: 'En diseño', color: 'bg-blue-100 text-blue-800' },
-    { name: 'En desarrollo', color: 'bg-blue-100 text-blue-800' },
-    { name: 'En curso', color: 'bg-blue-100 text-blue-800' },
-    { name: 'Etapa pruebas', color: 'bg-blue-100 text-blue-800' }
-  ],
-  terminados: [
-    { name: 'Cancelado', color: 'bg-red-100 text-red-800' },
-    { name: 'Pausado', color: 'bg-red-100 text-red-800' },
-    { name: 'En producción', color: 'bg-green-100 text-green-800' },
-    { name: 'Desarollado', color: 'bg-green-100 text-green-800' },
-    { name: 'Listo', color: 'bg-green-100 text-green-800' }
-  ]
-};

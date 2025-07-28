@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import Modal from './Modal';
 import AlertDialog from './AlertDialog';
+import axiosInstance from '../services/axiosConfig';
 
 interface Usuario {
   id: number;
@@ -63,6 +63,11 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
   // Un solo estado para controlar el modal
   const [modalOpen, setModalOpen] = useState(false);
   
+  // Debug: log cuando cambia modalOpen
+  useEffect(() => {
+    console.log('🎭 Modal state cambió a:', modalOpen);
+  }, [modalOpen]);
+  
   // Estado para cargar estados, prioridades, tipos y equipos desde la API
   const [estados, setEstados] = useState<Estado[]>([]);
   const [prioridades, setPrioridades] = useState<Prioridad[]>([]);
@@ -88,6 +93,10 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Debug: log del progreso actual
+  console.log('📊 NuevoProyecto - Progreso actual en render:', formulario.progreso);
+  console.log('📊 Estado actual:', formulario.estado_id, 'Estados cargados:', estados.length);
+
   // Estado para el AlertDialog - simplificado a uno solo
   const [alertDialog, setAlertDialog] = useState({
     isOpen: false,
@@ -96,28 +105,97 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
     type: 'success' as 'success' | 'error' | 'info' | 'warning'
   });
 
+  // Función para obtener el progreso automático basado en el estado
+  const getProgresoByEstado = (estadoNombre: string) => {
+    console.log('🔍 getProgresoByEstado llamada con:', estadoNombre);
+    
+    const progresoMap: { [key: string]: number } = {
+      // Estados pendientes (0-25%)
+      'Conceptual': 5,
+      'Análisis': 15,
+      'Sin Empezar': 0,      // Cambiado para coincidir con backend
+      'Sin empezar': 0,       // Mantenido por compatibilidad
+      'Pendiente': 0,
+      
+      // Estados en proceso (30-80%)
+      'En diseño': 30,
+      'En desarrollo': 50,
+      'En curso': 65,
+      'Etapa pruebas': 80,
+      'En proceso': 50,
+      
+      // Estados terminados (85-100% o casos especiales)
+      'Cancelado': 0,
+      'Pausado': 25,
+      'En producción': 100,
+      'Desarrollado': 95,   // Corregido el error de escritura
+      'Desarollado': 95,    // Mantenido por compatibilidad
+      'Listo': 100,
+      'Terminado': 100
+    };
+    
+    const progreso = progresoMap[estadoNombre] !== undefined ? progresoMap[estadoNombre] : 0;
+    console.log('📊 Progreso calculado:', progreso, 'para estado:', estadoNombre);
+    console.log('🔍 Claves disponibles en progresoMap:', Object.keys(progresoMap));
+    return progreso;
+  };
+
+  // Test de la función al cargar el componente
+  useEffect(() => {
+    console.log('🧪 Test de getProgresoByEstado:');
+    console.log('Sin Empezar:', getProgresoByEstado('Sin Empezar'));
+    console.log('En curso:', getProgresoByEstado('En curso'));
+    console.log('Estado inexistente:', getProgresoByEstado('Estado que no existe'));
+  }, []);
+
   // Cargar datos cuando se abre el modal
   useEffect(() => {
+    console.log('🔄 useEffect modalOpen triggered, modalOpen:', modalOpen);
     if (modalOpen) {
       cargarDatos();
     }
   }, [modalOpen]);
 
+  // Actualizar progreso cuando cambien los estados o el estado_id del formulario
+  useEffect(() => {
+    if (estados.length > 0 && formulario.estado_id && formulario.estado_id !== 0) {
+      const estadoActual = estados.find(e => e.id === formulario.estado_id);
+      if (estadoActual) {
+        const progresoCalculado = getProgresoByEstado(estadoActual.nombre);
+        console.log(`🔄 Sincronizando progreso: ${formulario.progreso}% → ${progresoCalculado}% (Estado: ${estadoActual.nombre})`);
+        
+        // Solo actualizar si el progreso es diferente para evitar loops infinitos
+        if (progresoCalculado !== formulario.progreso) {
+          setFormulario(prev => ({
+            ...prev,
+            progreso: progresoCalculado
+          }));
+        }
+      }
+    }
+  }, [estados.length, formulario.estado_id]); // Removemos formulario.progreso de las dependencias
+
   // Función para cargar usuarios, estados, prioridades, tipos y equipos
   const cargarDatos = async () => {
     try {
+      console.log('🚀 Iniciando carga de datos...');
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
+      console.log('🔑 Token encontrado:', !!token);
       
       // Cargar todos los datos necesarios en paralelo
       const [usuariosRes, estadosRes, prioridadesRes, tiposRes, equiposRes] = await Promise.all([
-        axios.get('http://localhost:8000/usuarios', config),
-        axios.get('http://localhost:8000/estados', config),
-        axios.get('http://localhost:8000/prioridades', config),
-        axios.get('http://localhost:8000/tipos', config),
-        axios.get('http://localhost:8000/equipos', config)
+        axiosInstance.get('/usuarios'),
+        axiosInstance.get('/estados'),
+        axiosInstance.get('/prioridades'),
+        axiosInstance.get('/tipos'),
+        axiosInstance.get('/equipos')
       ]);
+
+      console.log('📡 Respuestas recibidas:');
+      console.log('Usuarios response:', usuariosRes.status, usuariosRes.data?.length || 0);
+      console.log('Estados response:', estadosRes.status, estadosRes.data?.length || 0);
+      console.log('Prioridades response:', prioridadesRes.status, prioridadesRes.data?.length || 0);
 
       // Verificar que las respuestas sean válidas y asignar datos con fallbacks
       const usuariosData = Array.isArray(usuariosRes.data) ? usuariosRes.data : [];
@@ -125,6 +203,11 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
       const prioridadesData = Array.isArray(prioridadesRes.data) ? prioridadesRes.data : [];
       const tiposData = Array.isArray(tiposRes.data) ? tiposRes.data : [];
       const equiposData = Array.isArray(equiposRes.data) ? equiposRes.data : [];
+
+      console.log('📊 Datos procesados:');
+      console.log('Usuarios:', usuariosData.length);
+      console.log('Estados:', estadosData.length);
+      console.log('Prioridades:', prioridadesData.length);
 
       setUsuarios(usuariosData);
       setEstados(estadosData);
@@ -142,14 +225,50 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
       
       // Establecer valores predeterminados usando IDs
       if (estadosData && estadosData.length > 0 && prioridadesData && prioridadesData.length > 0) {
-        const estadoDefault = estadosData.find((e: Estado) => e.nombre === 'Sin Empezar') || estadosData[0];
+        // Buscar estado por defecto de manera más robusta
+        let estadoDefault = estadosData.find((e: Estado) => 
+          e.nombre === 'Sin Empezar' || e.nombre === 'Sin empezar' || e.nombre === 'Pendiente'
+        );
+        
+        // Si no encuentra ningún estado específico, usar el primero
+        if (!estadoDefault) {
+          estadoDefault = estadosData[0];
+          console.log('⚠️ No se encontró estado específico, usando el primero:', estadoDefault);
+        }
+        
         const prioridadDefault = prioridadesData.find((p: Prioridad) => p.nivel === 'Media') || prioridadesData[0];
         
-        setFormulario(prev => ({
-          ...prev,
-          estado_id: estadoDefault?.id || 0,
-          prioridad_id: prioridadDefault?.id || 0
-        }));
+        console.log('🔍 Estado por defecto encontrado:', estadoDefault);
+        console.log('🔍 Todos los estados disponibles:', estadosData.map(e => ({ id: e.id, nombre: e.nombre })));
+        
+        if (estadoDefault) {
+          const progresoDefault = getProgresoByEstado(estadoDefault.nombre);
+          
+          console.log(`✨ Estableciendo progreso inicial a ${progresoDefault}% para estado: "${estadoDefault.nombre}"`);
+          console.log('🔧 Estado ID que se va a establecer:', estadoDefault.id);
+          
+          // Actualizar el formulario de una sola vez con todos los valores
+          setFormulario(prev => {
+            const nuevoFormulario = {
+              ...prev,
+              estado_id: estadoDefault.id,
+              prioridad_id: prioridadDefault?.id || 0,
+              progreso: progresoDefault
+            };
+            console.log('🔧 Formulario completo después de actualizar:', {
+              estado_id: nuevoFormulario.estado_id,
+              progreso: nuevoFormulario.progreso,
+              nombre_estado: estadoDefault.nombre
+            });
+            return nuevoFormulario;
+          });
+        } else {
+          console.log('❌ No se pudo establecer estado por defecto');
+        }
+      } else {
+        console.log('❌ No hay datos suficientes para establecer valores por defecto');
+        console.log('Estados length:', estadosData?.length || 0);
+        console.log('Prioridades length:', prioridadesData?.length || 0);
       }
       
     } catch (error) {
@@ -163,6 +282,8 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
+    console.log('🔄 handleChange llamado:', { name, value });
+    
     if (name === 'responsable_id' && value) {
       const usuarioSeleccionado = usuarios.find(u => u.id === parseInt(value));
       if (usuarioSeleccionado) {
@@ -175,13 +296,46 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
       }
     }
     
+    // Si se cambia el estado, actualizar automáticamente el progreso
+    if (name === 'estado_id' && value) {
+      console.log('🎯 Iniciando actualización de estado...');
+      console.log('🔍 Valor recibido:', value, 'tipo:', typeof value);
+      console.log('🔍 Estados disponibles:', estados);
+      
+      const estadoId = parseInt(value);
+      const estadoSeleccionado = estados.find(e => e.id === estadoId);
+      
+      console.log('🎯 Estado ID parseado:', estadoId);
+      console.log('🎯 Estado encontrado:', estadoSeleccionado);
+      
+      if (estadoSeleccionado && estadoSeleccionado.nombre) {
+        const nuevoProgreso = getProgresoByEstado(estadoSeleccionado.nombre);
+        console.log(`✨ Actualizando progreso de ${formulario.progreso}% a ${nuevoProgreso}% para estado: ${estadoSeleccionado.nombre}`);
+        
+        setFormulario(prev => {
+          const nuevoFormulario = {
+            ...prev,
+            estado_id: estadoId,
+            progreso: nuevoProgreso
+          };
+          console.log('🔧 Nuevo formulario:', nuevoFormulario);
+          return nuevoFormulario;
+        });
+        return;
+      } else {
+        console.log('❌ No se encontró el estado seleccionado o no tiene nombre');
+        console.log('❌ Estados disponibles:', estados.map(e => `ID: ${e.id}, Nombre: ${e.nombre}`));
+      }
+    }
+    
     if (name === 'progreso') {
       const numeroValue = Math.min(100, Math.max(0, parseInt(value) || 0));
-      setFormulario({ ...formulario, [name]: numeroValue });
+      setFormulario(prev => ({ ...prev, [name]: numeroValue }));
       return;
     }
     
-    setFormulario({ ...formulario, [name]: value });
+    // Para otros campos
+    setFormulario(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCheckboxChange = (name: 'tipos' | 'equipos', id: number, checked: boolean) => {
@@ -254,12 +408,7 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
       
       console.log('Datos enviados al backend:', JSON.stringify(datosAEnviar, null, 2));
       
-      const response = await axios.post('http://localhost:8000/proyectos/', datosAEnviar, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await axiosInstance.post('/proyectos/', datosAEnviar);
 
       if (response.status === 201 || response.status === 200) {
         // Mostrar mensaje personalizado de éxito
@@ -298,8 +447,10 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
   
   const resetForm = () => {
     // Mantener los IDs por defecto de estado y prioridad
-    const estadoDefault = estados.find(e => e.nombre === 'Sin Empezar')?.id || 0;
+    const estadoDefault = estados.find(e => e.nombre === 'Sin Empezar' || e.nombre === 'Sin empezar')?.id || 0;
     const prioridadDefault = prioridades.find(p => p.nivel === 'Media')?.id || 0;
+    const estadoNombre = estados.find(e => e.id === estadoDefault)?.nombre || 'Sin Empezar';
+    const progresoDefault = getProgresoByEstado(estadoNombre);
     
     setFormulario({
       nombre: '',
@@ -312,7 +463,7 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
       objetivo: '',
       fecha_inicio: new Date().toISOString().split('T')[0],
       fecha_fin: null,
-      progreso: 0,
+      progreso: progresoDefault,
       enlace: '',
       observaciones: ''
     });
@@ -335,7 +486,12 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
       {/* Único botón para abrir el modal */}
       <button 
         className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-        onClick={() => setModalOpen(true)}
+        onClick={() => {
+          console.log('🚀 Botón "+ Nuevo Proyecto" clickeado');
+          console.log('🔧 Estado actual del modal antes de abrir:', modalOpen);
+          setModalOpen(true);
+          console.log('🔧 setModalOpen(true) ejecutado');
+        }}
       >
         + Nuevo Proyecto
       </button>
@@ -347,6 +503,10 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
         title="Nuevo Proyecto"
       >
         <div className="p-6">
+          {(() => {
+            console.log('🎭 Modal renderizando, modalOpen:', modalOpen, 'loading:', loading);
+            return null;
+          })()}
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>

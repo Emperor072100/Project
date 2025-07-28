@@ -102,7 +102,10 @@ def listar_proyectos(
                 "prioridad": proyecto.prioridad.nivel,
                 "objetivo": proyecto.objetivo,
                 "fecha_inicio": proyecto.fecha_inicio,
-                "fecha_fin": proyecto.fecha_fin
+                "fecha_fin": proyecto.fecha_fin,
+                "progreso": proyecto.progreso or 0,  # ✨ Agregamos el progreso aquí
+                "enlace": proyecto.enlace,
+                "observaciones": proyecto.observaciones
             }
             for proyecto in proyectos
         ]
@@ -112,9 +115,11 @@ def listar_proyectos(
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 from pydantic import BaseModel
+from typing import Optional
 
 class EstadoUpdate(BaseModel):
     estado: str
+    progreso: Optional[int] = None  # Campo opcional para el progreso
 
 @router.patch("/{proyecto_id}/estado")
 def actualizar_estado_proyecto(
@@ -158,10 +163,24 @@ def actualizar_estado_proyecto(
 
     # Actualizar el estado_id
     proyecto.estado_id = estado_obj.id
+    
+    # Actualizar el progreso si se proporciona
+    if datos.progreso is not None:
+        print(f"Actualizando progreso de {proyecto.progreso}% a {datos.progreso}%")
+        proyecto.progreso = datos.progreso
+    
     db.commit()
     db.refresh(proyecto)
     
-    return {"message": "Estado actualizado correctamente", "nuevo_estado": datos.estado}
+    response_data = {
+        "message": "Estado actualizado correctamente", 
+        "nuevo_estado": datos.estado
+    }
+    
+    if datos.progreso is not None:
+        response_data["nuevo_progreso"] = datos.progreso
+    
+    return response_data
 
 @router.patch("/{proyecto_id}/equipo")
 def actualizar_equipo_proyecto(

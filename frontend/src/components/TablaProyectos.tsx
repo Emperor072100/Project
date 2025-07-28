@@ -54,6 +54,20 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   onVerDetalle,
   onEliminar
 }) => {
+  // Debug: Log de los proyectos que llegan
+  console.log('🎯 TablaProyectos - Proyectos recibidos:', proyectos.map(p => ({
+    id: p.id,
+    nombre: p.nombre,
+    progreso: p.progreso,
+    tipo_progreso: typeof p.progreso,
+    estado: p.estado
+  })));
+
+  // Si no hay proyectos debido a error de autenticación, mostrar mensaje
+  if (!proyectos || proyectos.length === 0) {
+    console.log('⚠️ No hay proyectos disponibles. Posible problema de autenticación.');
+  }
+
   const navigate = useNavigate();
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState<Proyecto | null>(null);
   const [showColumnEditor, setShowColumnEditor] = useState(false);
@@ -175,21 +189,6 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     return columnOrder.map(key => allColumns[key]);
   };
 
-  // Función para actualizar el estado en el backend
-  const actualizarEstado = async (proyectoId: number, nuevoEstado: string) => {
-    try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      await axios.patch(
-        `http://localhost:8000/proyectos/${proyectoId}/estado`,
-        { estado: nuevoEstado },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success('Estado actualizado');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || 'Error al actualizar estado');
-    }
-  };
-
   // Función para actualizar el equipo en el backend
   const actualizarEquipo = async (proyectoId: number, nuevoEquipo: string[]) => {
     try {
@@ -260,8 +259,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                   {opcionesEstado.pendientes.map(estado => (
                     <button
                       key={createUniqueKey('estado', proyecto.id, estado)}
-                      onClick={async () => {
-                        await actualizarEstado(proyecto.id, estado);
+                      onClick={() => {
+                        console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
                         handleSave(proyecto.id, 'estado', estado);
                       }}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium ${
@@ -280,8 +279,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                   {opcionesEstado.enProceso.map(estado => (
                     <button
                       key={createUniqueKey('estado', proyecto.id, estado)}
-                      onClick={async () => {
-                        await actualizarEstado(proyecto.id, estado);
+                      onClick={() => {
+                        console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
                         handleSave(proyecto.id, 'estado', estado);
                       }}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium ${
@@ -318,8 +317,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                     return (
                       <button
                         key={createUniqueKey('estado', proyecto.id, estado)}
-                        onClick={async () => {
-                          await actualizarEstado(proyecto.id, estado);
+                        onClick={() => {
+                          console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
                           handleSave(proyecto.id, 'estado', estado);
                         }}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium ${
@@ -607,6 +606,14 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
         );
 
       case 'progreso':
+        // Debug: Log del progreso actual
+        console.log(`📊 TablaProyectos - Renderizando progreso para proyecto ${proyecto.id}:`, {
+          progreso: proyecto.progreso,
+          tipo: typeof proyecto.progreso,
+          estado: proyecto.estado,
+          nombre: proyecto.nombre
+        });
+        
         return (
           <td key={`${proyecto.id}-progreso`} className="px-6 py-4 whitespace-normal">
             {editando.id === proyecto.id && editando.campo === 'progreso' ? (
@@ -614,7 +621,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 <div className="flex items-center gap-2">
                   <input
                     type="range"
-                    value={proyecto.progreso}
+                    value={proyecto.progreso || 0}
                     onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
                     min="0"
                     max="100"
@@ -622,7 +629,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                   />
                   <input
                     type="number"
-                    value={proyecto.progreso}
+                    value={proyecto.progreso || 0}
                     onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
                     min="0"
                     max="100"
@@ -636,12 +643,12 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 className="cursor-pointer space-y-1"
               >
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium">{proyecto.progreso}%</span>
+                  <span className="text-sm font-medium">{proyecto.progreso || 0}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
-                    className={`h-2.5 rounded-full ${getProgressColor(proyecto.progreso)}`}
-                    style={{ width: `${proyecto.progreso}%` }}
+                    className={`h-2.5 rounded-full ${getProgressColor(proyecto.progreso || 0)}`}
+                    style={{ width: `${proyecto.progreso || 0}%` }}
                   ></div>
                 </div>
               </div>
