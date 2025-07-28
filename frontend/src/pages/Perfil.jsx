@@ -190,11 +190,27 @@ export default function Perfil({ sidebarCollapsed = false }) {
       {proyectos && proyectos.length > 0 && (
         <div className={`bg-white rounded-xl shadow-lg p-6 w-full ${maxWidth} mb-8`}>
           <h3 className="text-lg font-semibold mb-4">{usuario.rol === 'admin' ? 'Todos los Proyectos' : 'Mis Proyectos'}</h3>
-          <ul className="list-disc pl-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {proyectos.map(proy => (
-              <li key={proy.id || proy.nombre}>{proy.nombre}</li>
+              <div key={proy.id} className="rounded-lg border border-gray-200 shadow-sm p-4 flex flex-col bg-gradient-to-br from-blue-50 to-white hover:shadow-lg transition-shadow duration-200">
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-blue-700 text-lg">{proy.nombre}</span>
+                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">{proy.estado || 'Sin estado'}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 text-sm mt-2">
+                  <span className="text-gray-500">Responsable: <span className="font-semibold text-gray-700">{proy.responsable_nombre || proy.responsable_id}</span></span>
+                  {proy.fecha_inicio && (
+                    <span className="text-gray-500">Inicio: <span className="font-semibold text-gray-700">{new Date(proy.fecha_inicio).toLocaleDateString()}</span></span>
+                  )}
+                  {proy.fecha_fin && (
+                    <span className="text-gray-500">Fin: <span className="font-semibold text-gray-700">{new Date(proy.fecha_fin).toLocaleDateString()}</span></span>
+                  )}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
       {/* Campañas relacionadas */}
