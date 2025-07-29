@@ -493,7 +493,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                           console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
                           handleSave(proyecto.id, 'estado', estado);
                         }}
-                        className={`px-2 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                        className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
                           estado === proyecto.estado
                             ? 'bg-yellow-200 text-yellow-800 ring-2 ring-yellow-500 shadow-md scale-105'
                             : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:shadow-md hover:scale-105'
@@ -515,7 +515,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                           console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
                           handleSave(proyecto.id, 'estado', estado);
                         }}
-                        className={`px-2 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                        className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
                           estado === proyecto.estado
                             ? 'bg-blue-200 text-blue-800 ring-2 ring-blue-500 shadow-md scale-105'
                             : 'bg-blue-100 text-blue-800 hover:bg-blue-200 hover:shadow-md hover:scale-105'
@@ -595,7 +595,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               </div>
             ) : (
               <span
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center justify-center ${getColorEstado(proyecto.estado)} cursor-pointer hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[100px]`}
+                className={`px-2 py-1 rounded-full text-xs font-semibold inline-flex items-center justify-center ${getColorEstado(proyecto.estado)} cursor-pointer hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[85px]`}
                 onClick={() => handleEdit(proyecto.id, 'estado')}
               >
                 {proyecto.estado}
@@ -625,7 +625,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               </select>
             ) : (
               <div onClick={() => handleEdit(proyecto.id, 'tipo')} className="cursor-pointer group">
-                <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-emerald-100 to-green-200 text-emerald-800 hover:from-emerald-200 hover:to-green-300 hover:shadow-lg hover:scale-110 transition-all duration-200 inline-block min-w-[80px] text-center">
+                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-emerald-100 to-green-200 text-emerald-800 hover:from-emerald-200 hover:to-green-300 hover:shadow-lg hover:scale-110 transition-all duration-200 inline-block min-w-[70px] text-center">
                   {formatArrayOrString(proyecto.tipo) || 'Sin tipo'}
                 </span>
               </div>
@@ -792,7 +792,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               <select
                 value={proyecto.prioridad}
                 onChange={(e) => handleSave(proyecto.id, 'prioridad', e.target.value)}
-                className="border-2 p-2 rounded-xl w-full max-w-xs font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg"
+                className="border-2 p-1.5 rounded-xl w-full max-w-xs font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg"
                 style={{
                   backgroundColor: getPrioridadColors(proyecto.prioridad).bg,
                   color: getPrioridadColors(proyecto.prioridad).text,
@@ -819,7 +819,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               </select>
             ) : (
               <span
-                className={`${getColorPrioridad(proyecto.prioridad)} px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer hover:opacity-90 hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[64px] text-center inline-block`}
+                className={`${getColorPrioridad(proyecto.prioridad)} px-2 py-1 rounded-full text-xs font-bold cursor-pointer hover:opacity-90 hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[55px] text-center inline-block`}
                 onClick={() => handleEdit(proyecto.id, 'prioridad')}
               >
                 {proyecto.prioridad}
@@ -928,8 +928,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               <div className="flex justify-center items-center">
                 <CircularProgress 
                   progress={proyecto.progreso || 0}
-                  size={45}
-                  strokeWidth={4}
+                  size={38}
+                  strokeWidth={3}
                   onClick={() => handleEdit(proyecto.id, 'progreso')}
                 />
               </div>
@@ -1006,7 +1006,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                   e.stopPropagation();
                   handleEliminarProyecto(proyecto.id, proyecto.nombre);
                 }}
-                className="inline-flex items-center px-2 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold hover:from-red-600 hover:to-red-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
+                className="inline-flex items-center px-2 py-1 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold hover:from-red-600 hover:to-red-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
               >
                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1025,16 +1025,16 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   return (
     <>
       {/* Header con botón de nuevo proyecto - Mejorado */}
-      <div className="flex flex-wrap gap-3 justify-between items-center mb-5 p-4 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 rounded-2xl border border-emerald-200 shadow-lg">
-        <div className="flex flex-wrap gap-3 items-center">
+      <div className="flex flex-wrap gap-2 justify-between items-center mb-4 p-3 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 rounded-2xl border border-emerald-200 shadow-lg">
+        <div className="flex flex-wrap gap-2 items-center">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-800 bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+              <h2 className="text-lg font-bold text-gray-800 bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
                 Gestión de Proyectos
               </h2>
               <p className="text-xs text-gray-600 font-medium">
@@ -1047,7 +1047,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowColumnEditor(!showColumnEditor)}
-              className="px-3 py-1.5 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl text-xs font-semibold hover:from-gray-200 hover:to-gray-300 hover:shadow-md flex items-center gap-2 transition-all duration-200 border border-gray-300"
+              className="px-3 py-1 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl text-xs font-semibold hover:from-gray-200 hover:to-gray-300 hover:shadow-md flex items-center gap-2 transition-all duration-200 border border-gray-300"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -1126,7 +1126,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
             <tr className="border-b border-green-700/20">
               {getOrderedColumnConfig().filter(col => visibleColumns[col.key]).map(column => (
                 <th key={`header-${column.key}`}
-                  className="px-4 py-3 text-center font-bold text-xs tracking-wider uppercase text-white/95 bg-gradient-to-b from-transparent to-black/10">
+                  className="px-3 py-2 text-center font-bold text-xs tracking-wider uppercase text-white/95 bg-gradient-to-b from-transparent to-black/10">
                   <div className="flex items-center justify-center gap-2">
                     <span>{column.label}</span>
                     <div className="w-1 h-4 bg-white/30 rounded-full"></div>
@@ -1148,8 +1148,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                   .filter(col => visibleColumns[col.key])
                   .map(column => (
                     <td key={`${proyecto.id}-${column.key}`} 
-                        className="px-4 py-3 text-center align-middle">
-                      <div className="flex justify-center items-center min-h-[2rem]">
+                        className="px-3 py-2 text-center align-middle">
+                      <div className="flex justify-center items-center min-h-[1.75rem]">
                         {renderCell(column.key, proyecto)}
                       </div>
                     </td>
@@ -1171,7 +1171,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
             className="fixed inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setProyectoSeleccionado(null)}
           ></div>
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto z-10">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto z-10">
             <PanelDetalleProyecto
               proyecto={proyectoSeleccionado}
               onClose={() => setProyectoSeleccionado(null)}
