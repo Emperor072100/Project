@@ -11,8 +11,20 @@ const Campañas = () => {
   const location = useLocation();
   // Estados principales
   const [campañas, setCampañas] = useState([]);
+  const [usuario, setUsuario] = useState({ nombre: '', rol: 'usuario' });
+  // Obtener usuario del localStorage/sessionStorage al montar
+  useEffect(() => {
+    const userRaw = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (userRaw) {
+      try {
+        const userObj = JSON.parse(userRaw);
+        setUsuario({ nombre: userObj.nombre || '', rol: userObj.rol || 'usuario' });
+      } catch {}
+    }
+  }, []);
   const [clientesCorporativos, setClientesCorporativos] = useState([]);
   const [contactos, setContactos] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [estadisticas, setEstadisticas] = useState({
     total_clientes_corporativos: 0,
     total_contactos: 0,
@@ -28,6 +40,7 @@ const Campañas = () => {
   const [modalHistorial, setModalHistorial] = useState(false);
   const [historial, setHistorial] = useState([]);
   const [campañaSeleccionada, setCampañaSeleccionada] = useState(null);
+  const [filtroHistorial, setFiltroHistorial] = useState('');
   
   // Nuevos modales independientes
   const [modalProductos, setModalProductos] = useState(false);
@@ -96,9 +109,13 @@ const Campañas = () => {
   const [loading, setLoading] = useState(false);
 
   // Cargar datos al montar el componente
+  // Ejecutar cargarDatos solo cuando el usuario esté listo
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    if (usuario && usuario.nombre) {
+      cargarDatos();
+    }
+    // eslint-disable-next-line
+  }, [usuario]);
 
   // Abrir modal administrar si adminId está en la URL
   useEffect(() => {
@@ -118,10 +135,11 @@ const Campañas = () => {
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const [campañasRes, clientesCorporativosRes, contactosRes, estadisticasRes] = await Promise.all([
+      const [campañasRes, clientesCorporativosRes, contactosRes, usuariosRes, estadisticasRes] = await Promise.all([
         axios.get('http://localhost:8000/campanas', config),
         axios.get('http://localhost:8000/clientes-corporativos', config),
         axios.get('http://localhost:8000/contactos', config),
+        axios.get('http://localhost:8000/usuarios', config),
         axios.get('http://localhost:8000/campanas/estadisticas', config)
       ]);
 
@@ -147,10 +165,36 @@ const Campañas = () => {
         };
       });
 
-      setCampañas(campañasConDatos);
+      // Filtrar campañas si el usuario es normal
+      if ((usuario.rol || '').toLowerCase() === 'admin') {
+        setCampañas(campañasConDatos);
+      } else {
+        setCampañas(campañasConDatos.filter(c => c.lider_de_campaña === usuario.nombre || c.ejecutivo === usuario.nombre));
+      }
       setClientesCorporativos(clientesCorporativosRes.data);
       setContactos(contactosRes.data);
-      setEstadisticas(estadisticasRes.data);
+      setUsuarios(usuariosRes.data);
+      // Si es admin, mostrar estadísticas globales. Si es usuario, calcular solo de sus campañas.
+      if ((usuario.rol || '').toLowerCase() === 'admin') {
+        setEstadisticas(estadisticasRes.data);
+      } else {
+        // Calcular estadísticas solo de campañas filtradas
+        const campañasUsuario = campañasConDatos.filter(c => c.lider_de_campaña === usuario.nombre || c.ejecutivo === usuario.nombre);
+        const total_campañas = campañasUsuario.length;
+        const total_clientes_corporativos = [...new Set(campañasUsuario.map(c => c.cliente_corporativo_id))].length;
+        const total_contactos = [...new Set(campañasUsuario.map(c => c.contacto_id))].length;
+        const por_servicio = { SAC: 0, TMC: 0, TVT: 0, CBZ: 0 };
+        campañasUsuario.forEach(c => {
+          const tipo = (c.tipo || '').toUpperCase().replace(/\s/g, '');
+          if (por_servicio.hasOwnProperty(tipo)) por_servicio[tipo]++;
+        });
+        setEstadisticas({
+          total_clientes_corporativos,
+          total_contactos,
+          total_campañas,
+          por_servicio
+        });
+      }
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast.error('Error al cargar los datos');
@@ -344,10 +388,33 @@ const Campañas = () => {
     }
   };
 
+  // Formatea el valor a pesos colombianos con puntos de miles
+  const formatCOP = (value) => {
+    if (!value) return '';
+    // Solo números
+    const num = value.toString().replace(/\D/g, '');
+    return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  // Estado auxiliar para mostrar el valor formateado en el input
+  const [valorFormateado, setValorFormateado] = useState('');
+
   const handleFacturacionChange = (e) => {
     const { name, value } = e.target;
-    setFormFacturacion((prev) => ({ ...prev, [name]: value }));
+    if (name === 'valor') {
+      // Solo números
+      const raw = value.replace(/\D/g, '');
+      setFormFacturacion((prev) => ({ ...prev, valor: raw }));
+      setValorFormateado(formatCOP(raw));
+    } else {
+      setFormFacturacion((prev) => ({ ...prev, [name]: value }));
+    }
   };
+
+  // Sincronizar el valor formateado cuando se edita una facturación existente
+  useEffect(() => {
+    setValorFormateado(formatCOP(formFacturacion.valor));
+  }, [formFacturacion.valor]);
 
   const handleGuardarFacturacion = async (e) => {
     e.preventDefault();
@@ -358,7 +425,7 @@ const Campañas = () => {
       const facturacionData = {
         unidad: formFacturacion.unidad,
         cantidad: parseInt(formFacturacion.cantidad),
-        valor: parseFloat(formFacturacion.valor),
+        valor: parseFloat((formFacturacion.valor || '').toString().replace(/\./g, '')),
         periodicidad: formFacturacion.periodicidad
       };
 
@@ -573,6 +640,66 @@ const Campañas = () => {
               <p className="text-sm text-gray-500">Historial completo de actividad</p>
             </div>
           </div>
+
+          {/* Filtro de búsqueda */}
+          <div className="mb-6">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Buscar por producto, acción (agregar, eliminar, actualizar) o usuario..."
+                value={filtroHistorial}
+                onChange={(e) => setFiltroHistorial(e.target.value)}
+              />
+              {filtroHistorial && (
+                <button
+                  onClick={() => setFiltroHistorial('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                onClick={() => setFiltroHistorial('actualizada')}
+                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
+              >
+                📝 Actualizaciones
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('agregó')}
+                className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors"
+              >
+                ➕ Agregados
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('eliminó')}
+                className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+              >
+                🗑️ Eliminados
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('producto')}
+                className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors"
+              >
+                📦 Productos
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('facturación')}
+                className="px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded-full hover:bg-orange-200 transition-colors"
+              >
+                💰 Facturación
+              </button>
+            </div>
+          </div>
           
           {historial.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
@@ -585,74 +712,134 @@ const Campañas = () => {
               <p className="text-gray-400 text-sm">Los cambios aparecerán aquí cuando se modifique la campaña</p>
             </div>
           ) : (
-            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-              {historial.map((h, idx) => {
-                const fecha = new Date(new Date(h.fecha).getTime() - (5 * 60 * 60 * 1000));
-                const fechaTexto = fecha.toLocaleString('es-CO', {
-                  day: '2-digit',
-                  month: '2-digit', 
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false
-                });
+            (() => {
+              // Filtrar historial
+              const historialFiltrado = historial.filter(h => {
+                if (!filtroHistorial) return true;
+                const busqueda = filtroHistorial.toLowerCase();
+                const observaciones = h.observaciones?.toLowerCase() || '';
+                const accion = h.accion?.toLowerCase() || '';
                 
+                return observaciones.includes(busqueda) || accion.includes(busqueda);
+              });
+
+              if (historialFiltrado.length === 0) {
                 return (
-                  <div key={idx} className="relative">
-                    {/* Línea vertical del timeline */}
-                    {idx !== historial.length - 1 && (
-                      <div className="absolute left-6 top-12 w-0.5 h-full bg-gradient-to-b from-blue-200 to-transparent"></div>
-                    )}
-                    
-                    {/* Contenido del evento */}
-                    <div className="flex gap-4">
-                      {/* Indicador circular */}
-                      <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </div>
-                      
-                      {/* Tarjeta de contenido */}
-                      <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
-                        <div className="p-4">
-                          {/* Header con fecha */}
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <div className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                                {idx === 0 ? 'Más reciente' : `Hace ${idx === 1 ? '1 cambio' : `${idx} cambios`}`}
-                              </div>
-                            </div>
-                            <div className="text-sm text-gray-500 font-mono">
-                              {fechaTexto}
-                            </div>
-                          </div>
-                          
-                          {/* Contenido del cambio */}
-                          <div className="text-gray-700">
-                            {h.observaciones ? (
-                              <p className="leading-relaxed">{h.observaciones}</p>
-                            ) : (
-                              <div className="space-y-1">
-                                {Object.entries(h.cambios || {}).map(([k, v]) => (
-                                  <div key={k} className="flex items-start gap-2">
-                                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                                    <span><span className="font-semibold text-gray-800">{k}:</span> {String(v)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Footer con gradiente sutil */}
-                        <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-b-xl"></div>
-                      </div>
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
                     </div>
+                    <p className="text-gray-500 text-lg font-medium">No se encontraron resultados</p>
+                    <p className="text-gray-400 text-sm">Intenta con otros términos de búsqueda</p>
                   </div>
                 );
-              })}
-            </div>
+              }
+
+              return (
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                  {historialFiltrado.map((h, idx) => {
+                    const fecha = new Date(new Date(h.fecha).getTime() - (5 * 60 * 60 * 1000));
+                    const fechaTexto = fecha.toLocaleString('es-CO', {
+                      day: '2-digit',
+                      month: '2-digit', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    });
+
+                    // Determinar el tipo de acción para el icono y color
+                    const accion = h.accion || '';
+                    const observaciones = h.observaciones || '';
+                    let tipoAccion = 'actualizado';
+                    let colorIcono = 'from-blue-500 to-indigo-600';
+                    let icono = 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
+
+                    if (observaciones.includes('agregó') || accion.includes('agregado')) {
+                      tipoAccion = 'agregado';
+                      colorIcono = 'from-green-500 to-emerald-600';
+                      icono = 'M12 4v16m8-8H4';
+                    } else if (observaciones.includes('eliminó') || accion.includes('eliminado')) {
+                      tipoAccion = 'eliminado';
+                      colorIcono = 'from-red-500 to-rose-600';
+                      icono = 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16';
+                    }
+                    
+                    return (
+                      <div key={idx} className="relative">
+                        {/* Línea vertical del timeline */}
+                        {idx !== historialFiltrado.length - 1 && (
+                          <div className="absolute left-6 top-12 w-0.5 h-full bg-gradient-to-b from-blue-200 to-transparent"></div>
+                        )}
+                        
+                        {/* Contenido del evento */}
+                        <div className="flex gap-4">
+                          {/* Indicador circular */}
+                          <div className={`flex-shrink-0 w-12 h-12 bg-gradient-to-r ${colorIcono} rounded-full flex items-center justify-center shadow-lg`}>
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icono} />
+                            </svg>
+                          </div>
+                          
+                          {/* Tarjeta de contenido */}
+                          <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
+                            <div className="p-4">
+                              {/* Header con fecha */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    tipoAccion === 'agregado' ? 'bg-green-50 text-green-700' :
+                                    tipoAccion === 'eliminado' ? 'bg-red-50 text-red-700' :
+                                    'bg-blue-50 text-blue-700'
+                                  }`}>
+                                    {tipoAccion === 'agregado' ? '➕ Agregado' :
+                                     tipoAccion === 'eliminado' ? '🗑️ Eliminado' :
+                                     '📝 Actualizado'}
+                                  </div>
+                                  {idx === 0 && (
+                                    <div className="px-2 py-1 bg-yellow-50 text-yellow-700 text-xs font-medium rounded-full">
+                                      Más reciente
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-sm text-gray-500 font-mono">
+                                  {fechaTexto}
+                                </div>
+                              </div>
+                              
+                              {/* Contenido del cambio */}
+                              <div className="text-gray-700">
+                                {h.observaciones ? (
+                                  <p className="leading-relaxed">{h.observaciones}</p>
+                                ) : (
+                                  <div className="space-y-1">
+                                    {Object.entries(h.cambios || {}).map(([k, v]) => (
+                                      <div key={k} className="flex items-start gap-2">
+                                        <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                                        <span><span className="font-semibold text-gray-800">{k}:</span> {String(v)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Footer con gradiente sutil */}
+                            <div className={`h-1 rounded-b-xl ${
+                              tipoAccion === 'agregado' ? 'bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500' :
+                              tipoAccion === 'eliminado' ? 'bg-gradient-to-r from-red-500 via-rose-500 to-pink-500' :
+                              'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500'
+                            }`}></div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()
           )}
         </div>
       </Modal>
@@ -693,6 +880,13 @@ const Campañas = () => {
                         <span className="block text-xs font-semibold text-gray-500">Contacto Asociado</span>
                         <span className="text-base text-gray-800">{campañaSeleccionada.contacto_nombre || <span className='italic text-gray-400'>Sin contacto</span>}</span>
                       </div>
+                     <div>
+                       <span className="block text-xs font-semibold text-gray-500">Correo del Contacto</span>
+                       <span className="text-base text-gray-800">{(() => {
+                         const contacto = contactos.find(c => c.id === campañaSeleccionada.contacto_id);
+                         return contacto?.correo || <span className='italic text-gray-400'>Sin correo</span>;
+                       })()}</span>
+                     </div>
                       <div>
                         <span className="block text-xs font-semibold text-gray-500">Número de Contacto</span>
                         <span className="text-base text-gray-800">{campañaSeleccionada.contacto_telefono || <span className='italic text-gray-400'>Sin número</span>}</span>
@@ -802,6 +996,7 @@ const Campañas = () => {
                           onChange={(e) => setFormEditar({...formEditar, nombre: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
                           placeholder="Nombre de la campaña"
+                          disabled
                         />
                       </div>
 
@@ -815,6 +1010,7 @@ const Campañas = () => {
                           value={formEditar.tipo}
                           onChange={(e) => setFormEditar({...formEditar, tipo: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                          disabled
                         >
                           <option value="">Seleccionar tipo</option>
                           <option value="SAC">SAC - Atención al Cliente</option>
@@ -834,6 +1030,7 @@ const Campañas = () => {
                           value={formEditar.cliente_id}
                           onChange={(e) => setFormEditar({...formEditar, cliente_id: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                          disabled
                         >
                           <option value="">Seleccionar empresa</option>
                           {clientesCorporativos.map(cliente => (
@@ -865,6 +1062,13 @@ const Campañas = () => {
                             </option>
                           ))}
                         </select>
+                       {/* Mostrar correo del contacto seleccionado */}
+                       <div className="mt-1 text-xs text-gray-600">
+                         Correo: {(() => {
+                           const contactoSel = contactos.find(c => c.id === formEditar.contacto_id);
+                           return contactoSel?.correo || <span className='italic text-gray-400'>Sin correo</span>;
+                         })()}
+                       </div>
                       </div>
 
                       {/* Líder de Campaña */}
@@ -872,14 +1076,17 @@ const Campañas = () => {
                         <label className="block text-sm font-semibold text-gray-700 mb-1">
                           Líder de Campaña *
                         </label>
-                        <input
-                          type="text"
+                        <select
                           required
                           value={formEditar.lider}
                           onChange={(e) => setFormEditar({...formEditar, lider: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
-                          placeholder="Nombre del líder"
-                        />
+                        >
+                          <option value="">Seleccionar líder</option>
+                          {usuarios.map(usuario => (
+                            <option key={usuario.id} value={usuario.nombre}>{usuario.nombre} {usuario.apellido}</option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Ejecutivo */}
@@ -887,14 +1094,17 @@ const Campañas = () => {
                         <label className="block text-sm font-semibold text-gray-700 mb-1">
                           Ejecutivo *
                         </label>
-                        <input
-                          type="text"
+                        <select
                           required
                           value={formEditar.cje}
                           onChange={(e) => setFormEditar({...formEditar, cje: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
-                          placeholder="Nombre del ejecutivo"
-                        />
+                        >
+                          <option value="">Seleccionar ejecutivo</option>
+                          {usuarios.map(usuario => (
+                            <option key={usuario.id} value={usuario.nombre}>{usuario.nombre} {usuario.apellido}</option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Fecha de Producción */}
@@ -908,6 +1118,7 @@ const Campañas = () => {
                           value={formEditar.fecha_inicio}
                           onChange={(e) => setFormEditar({...formEditar, fecha_inicio: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                          disabled
                         />
                       </div>
 
@@ -967,7 +1178,19 @@ const Campañas = () => {
                         <label className="block text-sm font-semibold text-green-800 mb-1">Valor</label>
                         <div className="flex items-center">
                           <span className="mr-2 text-green-500 font-semibold">$</span>
-                          <input type="number" name="valor" value={formFacturacion.valor} min={0} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: 1000" />
+                          <input
+                            type="text"
+                            name="valor"
+                            value={valorFormateado}
+                            min={0}
+                            onChange={handleFacturacionChange}
+                            className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white"
+                            required
+                            placeholder="Ej: 1.000.000"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            maxLength={15}
+                          />
                         </div>
                       </div>
                     </div>
@@ -992,7 +1215,7 @@ const Campañas = () => {
                             <tr>
                               <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.unidad}</td>
                               <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.cantidad}</td>
-                              <td className="px-3 py-2 border-b border-green-100">${facturacionGuardada.valor}</td>
+                              <td className="px-3 py-2 border-b border-green-100">${formatCOP(facturacionGuardada.valor)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -1521,6 +1744,7 @@ const Campañas = () => {
         isOpen={modalCampaña}
         onClose={() => setModalCampaña(false)}
         title="Agregar Nueva Campaña"
+     
       >
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 mb-4">
           <div className="flex items-center space-x-4">
@@ -1611,28 +1835,34 @@ const Campañas = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Líder de Campaña *
               </label>
-              <input
-                type="text"
+              <select
                 required
                 value={formCampaña.lider_de_campaña}
-                onChange={(e) => setFormCampaña({...formCampaña, lider_de_campaña: e.target.value})}
+                onChange={e => setFormCampaña({ ...formCampaña, lider_de_campaña: e.target.value })}
                 className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                placeholder="Nombre del líder"
-              />
+              >
+                <option value="">Seleccionar líder</option>
+                {usuarios.map(usuario => (
+                  <option key={usuario.id} value={usuario.nombre}>{usuario.nombre} {usuario.apellido}</option>
+                ))}
+              </select>
             </div>
 
             <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Ejecutivo *
               </label>
-              <input
-                type="text"
+              <select
                 required
                 value={formCampaña.ejecutivo}
-                onChange={(e) => setFormCampaña({...formCampaña, ejecutivo: e.target.value})}
+                onChange={e => setFormCampaña({ ...formCampaña, ejecutivo: e.target.value })}
                 className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                placeholder="Nombre del ejecutivo"
-              />
+              >
+                <option value="">Seleccionar ejecutivo</option>
+                {usuarios.map(usuario => (
+                  <option key={usuario.id} value={usuario.nombre}>{usuario.nombre} {usuario.apellido}</option>
+                ))}
+              </select>
             </div>
 
             <div className="relative">
@@ -1757,30 +1987,17 @@ const Campañas = () => {
                 value={formProducto.cantidad} 
                 min={1} 
                 onChange={handleProductoChange} 
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
+                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 bg-white" 
                 required 
               />
             </div>
           </div>
           
-          <div className="flex gap-4 pt-4">
-            <button
-              type="button"
-              onClick={() => setFormProducto({ tipo: 'Producto', producto_servicio: '', proveedor: '', propiedad: 'Propia', cantidad: 1 })}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
-            >
-              Limpiar
-            </button>
-            <button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              Agregar Producto
-            </button>
+          <div className="flex justify-end gap-3">
+            <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
+            <button type="submit" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
           </div>
         </form>
-
-        {/* Mostrar productos guardados */}
         {productoGuardado.length > 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
             <h4 className="font-semibold text-yellow-700 mb-2">Productos/servicios guardados:</h4>
@@ -1910,15 +2127,18 @@ const Campañas = () => {
               <label className="block text-sm font-medium mb-1">Valor</label>
               <div className="flex items-center">
                 <span className="mr-2 text-gray-500 font-semibold">$</span>
-                <input 
-                  type="number" 
-                  name="valor" 
-                  value={formFacturacion.valor} 
-                  min={0} 
-                  onChange={handleFacturacionChange} 
-                  className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200" 
+                <input
+                  type="text"
+                  name="valor"
+                  value={valorFormateado}
+                  min={0}
+                  onChange={handleFacturacionChange}
+                  className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200"
                   placeholder="0.00"
-                  required 
+                  required
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={15}
                 />
               </div>
             </div>
@@ -1973,9 +2193,9 @@ const Campañas = () => {
                     <tr key={factura.id || index}>
                       <td className="px-3 py-2 border-b border-green-100">{factura.unidad}</td>
                       <td className="px-3 py-2 border-b border-green-100">{factura.cantidad}</td>
-                      <td className="px-3 py-2 border-b border-green-100">${factura.valor}</td>
+                      <td className="px-3 py-2 border-b border-green-100">${formatCOP(factura.valor)}</td>
                       <td className="px-3 py-2 border-b border-green-100">{factura.periodicidad}</td>
-                      <td className="px-3 py-2 border-b border-green-100">${(factura.cantidad * factura.valor).toLocaleString()}</td>
+                      <td className="px-3 py-2 border-b border-green-100">${formatCOP(factura.cantidad * factura.valor)}</td>
                       <td className="px-3 py-2 border-b border-green-100">
                         <button 
                           onClick={async () => {

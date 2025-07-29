@@ -5,6 +5,7 @@ import { Proyecto } from '../views';
 import { useNavigate } from 'react-router-dom';
 import PanelDetalleProyecto from './PanelDetalleProyecto';
 import NuevoProyecto from './NuevoProyecto';
+import GestionarTareas from './GestionarTareas';
 import { toast } from 'react-hot-toast';
 import { useProyectos } from '../context/ProyectosContext';
 import Swal from 'sweetalert2';
@@ -252,6 +253,10 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   const navigate = useNavigate();
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState<Proyecto | null>(null);
   const [showColumnEditor, setShowColumnEditor] = useState(false);
+  const [gestionarTareasModal, setGestionarTareasModal] = useState({
+    isOpen: false,
+    proyecto: null as Proyecto | null
+  });
   // Leer configuración de columnas desde localStorage
   const defaultVisibleColumns = {
     nombre: true,
@@ -266,21 +271,53 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     progreso: true,
     enlace: false,
     observaciones: false,
-    acciones: true
+    tareas: true,
+    verDetalles: true,
+    eliminar: true
   };
   const defaultColumnOrder = [
     'nombre', 'responsable', 'estado', 'tipo', 'equipo', 'prioridad',
-    'objetivo', 'fechaInicio', 'fechaFin', 'progreso', 'enlace', 'observaciones', 'acciones'
+    'objetivo', 'fechaInicio', 'fechaFin', 'progreso', 'enlace', 'observaciones', 'tareas', 'verDetalles', 'eliminar'
   ];
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const saved = localStorage.getItem('tablaProyectos_visibleColumns');
-    return saved ? JSON.parse(saved) : defaultVisibleColumns;
+    const savedData = saved ? JSON.parse(saved) : defaultVisibleColumns;
+    
+    // Limpiar configuraciones obsoletas (como 'acciones')
+    const cleanedData = { ...defaultVisibleColumns };
+    Object.keys(savedData).forEach(key => {
+      if (defaultVisibleColumns.hasOwnProperty(key)) {
+        cleanedData[key] = savedData[key];
+      }
+    });
+    
+    return cleanedData;
   });
   const [columnOrder, setColumnOrder] = useState(() => {
     const saved = localStorage.getItem('tablaProyectos_columnOrder');
-    return saved ? JSON.parse(saved) : defaultColumnOrder;
+    const savedOrder = saved ? JSON.parse(saved) : defaultColumnOrder;
+    
+    // Filtrar columnas obsoletas y agregar nuevas columnas al final
+    const validKeys = Object.keys(defaultVisibleColumns);
+    const cleanedOrder = savedOrder.filter(key => validKeys.includes(key));
+    
+    // Agregar nuevas columnas que no estén en el orden guardado
+    validKeys.forEach(key => {
+      if (!cleanedOrder.includes(key)) {
+        cleanedOrder.push(key);
+      }
+    });
+    
+    return cleanedOrder;
   });
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+
+  // Limpiar localStorage de configuraciones obsoletas al cargar el componente
+  React.useEffect(() => {
+    // Actualizar localStorage con configuraciones limpias
+    localStorage.setItem('tablaProyectos_visibleColumns', JSON.stringify(visibleColumns));
+    localStorage.setItem('tablaProyectos_columnOrder', JSON.stringify(columnOrder));
+  }, []); // Solo al montar el componente
 
   const createUniqueKey = (prefix: string, id: number, value: string) =>
     `${prefix}-${id}-${value.replace(/\s+/g, '-')}`;
@@ -412,10 +449,12 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
       progreso: { key: 'progreso', label: 'Progreso' },
       enlace: { key: 'enlace', label: 'Enlace' },
       observaciones: { key: 'observaciones', label: 'Observaciones' },
-      acciones: { key: 'acciones', label: 'Acciones', fixed: true }
+      tareas: { key: 'tareas', label: 'Tareas' },
+      verDetalles: { key: 'verDetalles', label: 'Ver', fixed: true },
+      eliminar: { key: 'eliminar', label: 'Eliminar', fixed: true }
     };
 
-    return columnOrder.map(key => allColumns[key]);
+    return columnOrder.map(key => allColumns[key]).filter(col => col !== undefined);
   };
 
   // Función para actualizar el equipo en el backend
@@ -493,7 +532,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                           console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
                           handleSave(proyecto.id, 'estado', estado);
                         }}
-                        className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                        className={`px-2 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                           estado === proyecto.estado
                             ? 'bg-yellow-200 text-yellow-800 ring-2 ring-yellow-500 shadow-md scale-105'
                             : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:shadow-md hover:scale-105'
@@ -515,7 +554,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                           console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
                           handleSave(proyecto.id, 'estado', estado);
                         }}
-                        className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                        className={`px-2 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                           estado === proyecto.estado
                             ? 'bg-blue-200 text-blue-800 ring-2 ring-blue-500 shadow-md scale-105'
                             : 'bg-blue-100 text-blue-800 hover:bg-blue-200 hover:shadow-md hover:scale-105'
@@ -595,7 +634,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               </div>
             ) : (
               <span
-                className={`px-2 py-1 rounded-full text-xs font-semibold inline-flex items-center justify-center ${getColorEstado(proyecto.estado)} cursor-pointer hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[85px]`}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center justify-center ${getColorEstado(proyecto.estado)} cursor-pointer hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[100px]`}
                 onClick={() => handleEdit(proyecto.id, 'estado')}
               >
                 {proyecto.estado}
@@ -832,7 +871,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               </div>
             ) : (
               <span
-                className={`${getColorPrioridad(proyecto.prioridad)} px-2 py-1 rounded-full text-xs font-bold cursor-pointer hover:opacity-90 hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[55px] text-center inline-block`}
+                className={`${getColorPrioridad(proyecto.prioridad)} px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer hover:opacity-90 hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[64px] text-center inline-block`}
                 onClick={() => handleEdit(proyecto.id, 'prioridad')}
               >
                 {proyecto.prioridad}
@@ -941,8 +980,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               <div className="flex justify-center items-center">
                 <CircularProgress 
                   progress={proyecto.progreso || 0}
-                  size={38}
-                  strokeWidth={3}
+                  size={45}
+                  strokeWidth={4}
                   onClick={() => handleEdit(proyecto.id, 'progreso')}
                 />
               </div>
@@ -1000,26 +1039,48 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
 
       case 'acciones':
         return (
-          <div className="flex flex-col items-center justify-center gap-2">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onVerDetalle?.(proyecto)}
-                className="inline-flex items-center px-2 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
-              >
-                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Ver Detalle
-              </button>
-            </div>
+          <div className="flex items-center justify-center">
+            <button
+              onClick={() => onVerDetalle?.(proyecto)}
+              className="inline-flex items-center px-2 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
+            >
+              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Ver
+            </button>
+          </div>
+        );
+
+      case 'tareas':
+        return (
+          <div className="flex items-center justify-center">
+            <button
+              onClick={() => setGestionarTareasModal({ 
+                isOpen: true, 
+                proyecto: proyecto 
+              })}
+              className="inline-flex items-center px-2 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-semibold hover:from-purple-600 hover:to-purple-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
+            >
+              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              Tareas
+            </button>
+          </div>
+        );
+
+      case 'eliminar':
+        return (
+          <div className="flex items-center justify-center">
             {onEliminar && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleEliminarProyecto(proyecto.id, proyecto.nombre);
                 }}
-                className="inline-flex items-center px-2 py-1 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold hover:from-red-600 hover:to-red-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
+                className="inline-flex items-center px-2 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold hover:from-red-600 hover:to-red-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
               >
                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1074,16 +1135,16 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   return (
     <>
       {/* Header con botón de nuevo proyecto - Mejorado */}
-      <div className="flex flex-wrap gap-2 justify-between items-center mb-4 p-3 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 rounded-2xl border border-emerald-200 shadow-lg">
-        <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap gap-3 justify-between items-center mb-5 p-4 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 rounded-2xl border border-emerald-200 shadow-lg">
+        <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-800 bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+              <h2 className="text-xl font-bold text-gray-800 bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
                 Gestión de Proyectos
               </h2>
               <p className="text-xs text-gray-600 font-medium">
@@ -1096,7 +1157,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowColumnEditor(!showColumnEditor)}
-              className="px-3 py-1 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl text-xs font-semibold hover:from-gray-200 hover:to-gray-300 hover:shadow-md flex items-center gap-2 transition-all duration-200 border border-gray-300"
+              className="px-3 py-1.5 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl text-xs font-semibold hover:from-gray-200 hover:to-gray-300 hover:shadow-md flex items-center gap-2 transition-all duration-200 border border-gray-300"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -1210,13 +1271,22 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
             className="fixed inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setProyectoSeleccionado(null)}
           ></div>
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto z-10">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto z-10">
             <PanelDetalleProyecto
               proyecto={proyectoSeleccionado}
               onClose={() => setProyectoSeleccionado(null)}
             />
           </div>
         </div>
+      )}
+
+      {/* Modal de Gestión de Tareas */}
+      {gestionarTareasModal.isOpen && gestionarTareasModal.proyecto && (
+        <GestionarTareas
+          proyecto={gestionarTareasModal.proyecto}
+          isOpen={gestionarTareasModal.isOpen}
+          onClose={() => setGestionarTareasModal({ isOpen: false, proyecto: null })}
+        />
       )}
     </>
   );
