@@ -608,26 +608,46 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
         return (
           <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'tipo' ? (
-              <select
-                multiple
-                value={Array.isArray(proyecto.tipo) ? proyecto.tipo : [proyecto.tipo]}
-                onChange={(e) => {
-                  const values = Array.from(e.target.selectedOptions, o => o.value);
-                  handleSave(proyecto.id, 'tipo', values);
-                }}
-                className="border-2 border-emerald-300 p-1.5 rounded-xl w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg"
-              >
-                {opcionesTipo.map(op => (
-                  <option key={createUniqueKey('tipo', proyecto.id, op)} value={op} className="py-2">
-                    {op}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {opcionesTipo.map(op => {
+                  const isSelected = Array.isArray(proyecto.tipo)
+                    ? proyecto.tipo.includes(op)
+                    : proyecto.tipo === op;
+                  return (
+                    <button
+                      key={createUniqueKey('tipo', proyecto.id, op)}
+                      onClick={() => {
+                        let newTipos = Array.isArray(proyecto.tipo)
+                          ? [...proyecto.tipo]
+                          : proyecto.tipo ? [proyecto.tipo] : [];
+                        if (isSelected) {
+                          newTipos = newTipos.filter(t => t !== op);
+                        } else {
+                          newTipos.push(op);
+                        }
+                        handleSave(proyecto.id, 'tipo', newTipos);
+                      }}
+                      className={`px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 ${isSelected ? 'bg-emerald-200 text-emerald-800 ring-2 ring-emerald-500 shadow-md scale-105' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 hover:shadow-md hover:scale-105'}`}
+                    >
+                      {op}
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
-              <div onClick={() => handleEdit(proyecto.id, 'tipo')} className="cursor-pointer group">
-                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-emerald-100 to-green-200 text-emerald-800 hover:from-emerald-200 hover:to-green-300 hover:shadow-lg hover:scale-110 transition-all duration-200 inline-block min-w-[70px] text-center">
-                  {formatArrayOrString(proyecto.tipo) || 'Sin tipo'}
-                </span>
+              <div onClick={() => handleEdit(proyecto.id, 'tipo')} className="cursor-pointer group flex flex-wrap gap-1 justify-center items-center min-h-[2rem]">
+                {Array.isArray(proyecto.tipo) && proyecto.tipo.length > 0 ? proyecto.tipo.map(tipo => (
+                  <span
+                    key={createUniqueKey('tipo-display', proyecto.id, tipo)}
+                    className="px-2 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-emerald-100 to-green-200 text-emerald-800 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+                  >
+                    {tipo}
+                  </span>
+                )) : (
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 shadow-md">
+                    Sin tipo
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -789,34 +809,27 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
         return (
           <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'prioridad' ? (
-              <select
-                value={proyecto.prioridad}
-                onChange={(e) => handleSave(proyecto.id, 'prioridad', e.target.value)}
-                className="border-2 p-1.5 rounded-xl w-full max-w-xs font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg"
-                style={{
-                  backgroundColor: getPrioridadColors(proyecto.prioridad).bg,
-                  color: getPrioridadColors(proyecto.prioridad).text,
-                  borderColor: getPrioridadColors(proyecto.prioridad).border
-                }}
-              >
+              <div className="flex flex-wrap gap-2 justify-center">
                 {opcionesPrioridadDinamicas.map(p => {
                   const colors = getPrioridadColors(p);
+                  const isSelected = proyecto.prioridad === p;
                   return (
-                    <option 
-                      key={createUniqueKey('prioridad', proyecto.id, p)} 
-                      value={p}
+                    <button
+                      key={createUniqueKey('prioridad', proyecto.id, p)}
+                      onClick={() => handleSave(proyecto.id, 'prioridad', p)}
+                      className={`px-3 py-2 rounded-full text-xs font-bold transition-all duration-200 focus:outline-none shadow-md ${isSelected ? 'scale-105 ring-2 ring-emerald-500' : 'hover:scale-105 hover:ring-2 hover:ring-emerald-300'} `}
                       style={{
                         backgroundColor: colors.bg,
                         color: colors.text,
-                        fontWeight: '600',
-                        padding: '12px'
+                        border: `2px solid ${colors.border}`,
+                        boxShadow: isSelected ? '0 2px 8px rgba(16,185,129,0.15)' : '0 1px 4px rgba(0,0,0,0.08)'
                       }}
                     >
                       {p}
-                    </option>
+                    </button>
                   );
                 })}
-              </select>
+              </div>
             ) : (
               <span
                 className={`${getColorPrioridad(proyecto.prioridad)} px-2 py-1 rounded-full text-xs font-bold cursor-pointer hover:opacity-90 hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[55px] text-center inline-block`}
@@ -958,32 +971,32 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
           </div>
         );
 
+
+
       case 'observaciones':
         return (
           <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'observaciones' ? (
-              <textarea
-                value={proyecto.observaciones}
-                onChange={(e) => handleSave(proyecto.id, 'observaciones', e.target.value)}
-                className="border-2 border-emerald-300 p-1.5 rounded-xl w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg resize-none"
-                rows={2}
-                placeholder="Ingrese observaciones..."
+              <ObservacionesEditor
+                proyecto={proyecto}
+                handleSave={handleSave}
               />
             ) : (
               <span
                 onClick={() => handleEdit(proyecto.id, 'observaciones')}
-                className="block max-w-xs text-center cursor-pointer px-3 py-2 rounded-lg bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200"
+                className={`block max-w-xs text-center cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${proyecto.observaciones ? 'bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700' : 'bg-yellow-50 text-yellow-700 border border-yellow-300 hover:bg-yellow-100 hover:text-yellow-900'}`}
                 title={proyecto.observaciones}
               >
                 {proyecto.observaciones ? (
                   proyecto.observaciones.length > 50 
                     ? `${proyecto.observaciones.substring(0, 50)}...` 
                     : proyecto.observaciones
-                ) : 'Sin observaciones'}
+                ) : <span className="italic font-semibold">+ Agregar observación</span>}
               </span>
             )}
           </div>
         );
+
 
       case 'acciones':
         return (
@@ -1020,6 +1033,42 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
       default:
         return null;
     }
+  };
+
+  // Editor de observaciones con estado local
+  const ObservacionesEditor: React.FC<{ proyecto: any; handleSave: (id: number, campo: keyof Proyecto, valor: any) => void }> = ({ proyecto, handleSave }) => {
+    const [valor, setValor] = React.useState(proyecto.observaciones || '');
+
+    React.useEffect(() => {
+      setValor(proyecto.observaciones || '');
+    }, [proyecto.id]);
+
+    const handleBlur = () => {
+      if (valor !== proyecto.observaciones) {
+        handleSave(proyecto.id, 'observaciones', valor);
+      }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        handleSave(proyecto.id, 'observaciones', valor);
+        (e.target as HTMLTextAreaElement).blur();
+      }
+    };
+
+    return (
+      <textarea
+        value={valor}
+        onChange={e => setValor(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        className="border-2 border-emerald-300 p-1.5 rounded-xl w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg resize-none"
+        rows={2}
+        placeholder="Ingrese observaciones..."
+        autoFocus
+      />
+    );
   };
 
   return (
@@ -1119,36 +1168,29 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
         </div>
       </div>
 
-      {/* Tabla con Edición Inline - Mejorada */}
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-auto backdrop-blur-sm">
+      {/* Tabla con estilo similar a la de campañas */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <table className="min-w-full text-xs bg-white">
-          <thead className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 text-white sticky top-0 z-20">
-            <tr className="border-b border-green-700/20">
+          <thead className="bg-gray-50">
+            <tr className="border-b border-gray-200">
               {getOrderedColumnConfig().filter(col => visibleColumns[col.key]).map(column => (
                 <th key={`header-${column.key}`}
-                  className="px-3 py-2 text-center font-bold text-xs tracking-wider uppercase text-white/95 bg-gradient-to-b from-transparent to-black/10">
-                  <div className="flex items-center justify-center gap-2">
-                    <span>{column.label}</span>
-                    <div className="w-1 h-4 bg-white/30 rounded-full"></div>
-                  </div>
+                  className="px-4 py-3 font-semibold text-sm text-gray-700 uppercase tracking-wide text-center">
+                  {column.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-gradient-to-b from-gray-50/30 to-white">
+          <tbody>
             {filtrarProyectos().map((proyecto, index) => (
               <tr key={proyecto.id}
-                className={`
-                  hover:bg-gradient-to-r hover:from-emerald-50/70 hover:via-green-50/50 hover:to-teal-50/70 
-                  transition-all duration-300 ease-in-out transform hover:scale-[1.01] hover:shadow-md
-                  ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}
-                  border-l-4 border-transparent hover:border-emerald-400
-                `}>
+                className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+              >
                 {getOrderedColumnConfig()
                   .filter(col => visibleColumns[col.key])
                   .map(column => (
                     <td key={`${proyecto.id}-${column.key}`} 
-                        className="px-3 py-2 text-center align-middle">
+                        className="px-4 py-2 text-center align-middle">
                       <div className="flex justify-center items-center min-h-[1.75rem]">
                         {renderCell(column.key, proyecto)}
                       </div>
@@ -1159,9 +1201,6 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
             ))}
           </tbody>
         </table>
-        
-        {/* Footer decorativo */}
-        <div className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 h-2"></div>
       </div>
 
       {/* Panel de Detalle Modal */}
