@@ -4,14 +4,12 @@ from datetime import date
 
 class TareaBase(BaseModel):
     descripcion: str
-    completado: Optional[bool] = False
 
 class TareaCreate(TareaBase):
-    proyecto_id: int  # ✅ agregado
+    proyecto_id: int
 
 class TareaUpdate(BaseModel):
     descripcion: Optional[str]
-    completado: Optional[bool]
 
 class TareaOut(TareaBase):
     id: int

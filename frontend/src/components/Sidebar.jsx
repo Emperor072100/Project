@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 import Swal from 'sweetalert2';
 
 const Sidebar = ({ collapsed, setCollapsed }) => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState({
     nombre: '',
@@ -113,7 +114,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           <div className="space-y-1">
             <button
               onClick={() => navigate('/')}
-              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded hover:bg-gray-700 transition-all duration-300`}
+              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded transition-all duration-300 ${location.pathname === '/' ? '' : 'hover:bg-gray-700'}`}
+              style={location.pathname === '/' ? { backgroundColor: '#374151' } : {}}
               title="Inicio"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,7 +128,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             
             <button
               onClick={() => navigate('/kanban')}
-              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded hover:bg-gray-700 transition-all duration-300`}
+              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded transition-all duration-300 ${location.pathname === '/kanban' ? '' : 'hover:bg-gray-700'}`}
+              style={location.pathname === '/kanban' ? { backgroundColor: '#374151' } : {}}
               title="Kanban"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -140,7 +143,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             {/* Nuevo botón para la vista Gantt */}
             <button
               onClick={() => navigate('/gantt')}
-              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded hover:bg-gray-700 transition-all duration-300`}
+              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded transition-all duration-300 ${location.pathname === '/gantt' ? '' : 'hover:bg-gray-700'}`}
+              style={location.pathname === '/gantt' ? { backgroundColor: '#374151' } : {}}
               title="Gantt"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -155,7 +159,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             {user.rol === 'admin' && (
               <button
                 onClick={() => navigate('/usuarios')}
-                className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded hover:bg-gray-700 transition-all duration-300`}
+                className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded transition-all duration-300 ${location.pathname === '/usuarios' ? '' : 'hover:bg-gray-700'}`}
+                style={location.pathname === '/usuarios' ? { backgroundColor: '#374151' } : {}}
                 title="Gestión de Usuarios"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -170,7 +175,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             {/* Opción de Campañas */}
             <button
               onClick={() => navigate('/campañas')}
-              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded hover:bg-gray-700 transition-all duration-300`}
+              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded transition-all duration-300 ${location.pathname === '/campañas' ? '' : 'hover:bg-gray-700'}`}
+              style={location.pathname === '/campañas' ? { backgroundColor: '#374151' } : {}}
               title="Gestión de Campañas"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -183,7 +189,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             
             <button
               onClick={() => navigate('/perfil')}
-              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded hover:bg-gray-700 transition-all duration-300`}
+              className={`flex items-center w-full text-left ${collapsed ? 'justify-center px-2' : 'px-4'} py-2 rounded transition-all duration-300 ${location.pathname === '/perfil' ? '' : 'hover:bg-gray-700'}`}
+              style={location.pathname === '/perfil' ? { backgroundColor: '#374151' } : {}}
               title="Mi Perfil"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
