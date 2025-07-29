@@ -14,6 +14,52 @@ export const ProyectosProvider = ({ children }) => {
   const [proyectos, setProyectos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [estadosDisponibles, setEstadosDisponibles] = useState([]);
+  const [prioridadesDisponibles, setPrioridadesDisponibles] = useState([]);
+  
+  // Función para obtener prioridades disponibles del backend
+  const fetchPrioridades = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const response = await axios.get('http://localhost:8000/prioridades', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('🎯 Prioridades disponibles en el backend:', response.data);
+      setPrioridadesDisponibles(response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener prioridades:', error);
+      // Prioridades por defecto si no se pueden cargar del backend
+      const prioridadesDefault = [
+        { id: 1, nivel: 'Alta' },
+        { id: 2, nivel: 'Media' },
+        { id: 3, nivel: 'Baja' }
+      ];
+      setPrioridadesDisponibles(prioridadesDefault);
+      return prioridadesDefault;
+    }
+  };
+  const fetchEstados = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const response = await axios.get('http://localhost:8000/estados', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('📋 Estados disponibles en el backend:', response.data);
+      setEstadosDisponibles(response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener estados:', error);
+      // Estados por defecto si no se pueden cargar del backend
+      const estadosDefault = [
+        'Conceptual', 'Análisis', 'Sin empezar', 'En diseño', 'En desarrollo', 
+        'En curso', 'Etapa pruebas', 'Cancelado', 'Pausado', 'En producción', 
+        'Desarrollado', 'Listo'
+      ];
+      setEstadosDisponibles(estadosDefault);
+      return estadosDefault;
+    }
+  };
   
   // Función para obtener todos los proyectos
   const fetchProyectos = async () => {
@@ -93,45 +139,129 @@ export const ProyectosProvider = ({ children }) => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       
-      // Preparar los datos para la API
-      const apiData = {};
+      // Obtener el proyecto actual
+      const proyectoActual = proyectos.find(p => p.id === id);
+      if (!proyectoActual) {
+        throw new Error('Proyecto no encontrado');
+      }
+      
+      // Crear una copia completa del proyecto con la actualización
+      const proyectoActualizado = { ...proyectoActual };
       
       // Mapear los nombres de campos de frontend a backend si es necesario
       switch(campo) {
         case 'fechaInicio':
-          apiData['fecha_inicio'] = valor;
+          proyectoActualizado['fecha_inicio'] = valor;
           break;
         case 'fechaFin':
-          apiData['fecha_fin'] = valor;
+          proyectoActualizado['fecha_fin'] = valor;
           break;
         case 'tipo':
         case 'equipo':
           // Asegurar que estos campos siempre sean arrays
-          apiData[campo] = Array.isArray(valor) ? valor : [valor].filter(Boolean);
+          proyectoActualizado[campo] = Array.isArray(valor) ? valor : [valor].filter(Boolean);
           break;
         case 'responsable':
           // El backend espera responsable_nombre, no responsable
-          apiData['responsable_nombre'] = valor;
+          proyectoActualizado['responsable_nombre'] = valor;
           break;
         case 'progreso':
           // Asegurar que progreso sea un número
-          apiData[campo] = typeof valor === 'number' ? valor : parseFloat(valor) || 0;
+          proyectoActualizado[campo] = typeof valor === 'number' ? valor : parseFloat(valor) || 0;
           break;
         case 'nombre':
         case 'objetivo':
         case 'observaciones':
         case 'enlace':
+          proyectoActualizado[campo] = String(valor);
+          break;
         case 'prioridad':
+          // Validar que la prioridad sea válida antes de asignarla
+          const prioridadValida = prioridadesDisponibles.find(p => 
+            (typeof p === 'string' && p === valor) || 
+            (typeof p === 'object' && p.nivel === valor)
+          );
+          
+          if (!prioridadValida && prioridadesDisponibles.length > 0) {
+            console.error(`⚠️ Prioridad "${valor}" no es válida. Prioridades disponibles:`, prioridadesDisponibles);
+            toast.error(`Prioridad "${valor}" no es válida`);
+            return false;
+          }
+          
+          proyectoActualizado[campo] = String(valor);
+          break;
         case 'estado':
-          // Asegurar que estos campos sean strings
-          apiData[campo] = String(valor);
+          // Validar que el estado sea válido antes de asignarlo
+          const estadoValido = estadosDisponibles.find(e => 
+            (typeof e === 'string' && e === valor) || 
+            (typeof e === 'object' && e.nombre === valor)
+          );
+          
+          if (!estadoValido && estadosDisponibles.length > 0) {
+            console.error(`⚠️ Estado "${valor}" no es válido. Estados disponibles:`, estadosDisponibles);
+            toast.error(`Estado "${valor}" no es válido`);
+            return false;
+          }
+          
+          proyectoActualizado[campo] = String(valor);
           break;
         default:
-          apiData[campo] = valor;
+          proyectoActualizado[campo] = valor;
+      }
+      
+      // Preparar los datos ESPECÍFICOS para PATCH (solo el campo modificado)
+      let patchData = {};
+      
+      // Mapear campos del frontend a campos del backend para PATCH
+      switch(campo) {
+        case 'estado':
+          patchData.estado = proyectoActualizado.estado;
+          break;
+        case 'tipo':
+          patchData.tipos = Array.isArray(proyectoActualizado.tipo) ? proyectoActualizado.tipo : 
+                           (proyectoActualizado.tipos ? proyectoActualizado.tipos : []);
+          break;
+        case 'equipo':
+          patchData.equipos = Array.isArray(proyectoActualizado.equipo) ? proyectoActualizado.equipo : 
+                              (proyectoActualizado.equipos ? proyectoActualizado.equipos : []);
+          break;
+        case 'prioridad':
+          patchData.prioridad = proyectoActualizado.prioridad;
+          break;
+        case 'fechaInicio':
+        case 'fecha_inicio':
+          patchData.fecha_inicio = proyectoActualizado.fecha_inicio || proyectoActualizado.fechaInicio;
+          break;
+        case 'fechaFin':
+        case 'fecha_fin':
+          patchData.fecha_fin = proyectoActualizado.fecha_fin || proyectoActualizado.fechaFin;
+          break;
+        case 'progreso':
+          patchData.progreso = Number(proyectoActualizado.progreso) || 0;
+          break;
+        case 'nombre':
+          patchData.nombre = proyectoActualizado.nombre;
+          break;
+        case 'objetivo':
+          patchData.objetivo = proyectoActualizado.objetivo;
+          break;
+        case 'observaciones':
+          patchData.observaciones = proyectoActualizado.observaciones;
+          break;
+        case 'enlace':
+          patchData.enlace = proyectoActualizado.enlace;
+          break;
+        case 'responsable':
+        case 'responsable_nombre':
+          patchData.responsable_nombre = proyectoActualizado.responsable_nombre || proyectoActualizado.responsable;
+          break;
+        default:
+          // Para campos no reconocidos, usar el nombre tal como viene
+          patchData[campo] = valor;
       }
       
       console.log(`Actualizando campo ${campo} con valor:`, valor);
-      console.log('Datos enviados a la API:', apiData);
+      console.log('📤 Datos PATCH enviados a la API (solo campos modificados):', JSON.stringify(patchData, null, 2));
       
       // Si estamos actualizando el estado, también actualizamos la columna para Kanban
       if (campo === 'estado') {
@@ -140,8 +270,10 @@ export const ProyectosProvider = ({ children }) => {
         
         console.log(`📊 Estado "${valor}" → Progreso automático: ${progresoAutomatico}%`);
         
-        // Incluir progreso en los datos a enviar al backend
-        apiData.progreso = progresoAutomatico;
+        // Incluir progreso en los datos PATCH si cambió automáticamente
+        if (progresoAutomatico !== (proyectoActual.progreso || 0)) {
+          patchData.progreso = progresoAutomatico;
+        }
         
         // Actualizar localmente primero para UI responsiva
         setProyectos(prev =>
@@ -174,9 +306,10 @@ export const ProyectosProvider = ({ children }) => {
         );
       }
       
-      // Enviar actualización a la API
-      console.log('📤 Enviando datos a la API:', JSON.stringify(apiData, null, 2));
-      const response = await axiosInstance.put(`/proyectos/${id}`, apiData);
+      // Enviar PATCH con solo los campos modificados
+      console.log('📤 Enviando PATCH con datos específicos:', JSON.stringify(patchData, null, 2));
+      // Temporalmente usar PUT mientras debuggeamos PATCH
+      const response = await axiosInstance.put(`/proyectos/${id}`, patchData);
       
       console.log('📥 Respuesta del servidor:', {
         status: response.status,
@@ -201,23 +334,26 @@ export const ProyectosProvider = ({ children }) => {
         message: error.message
       });
       
-      toast.error("Error al guardar: " + (error.response?.data?.detail || error.message || "Error desconocido"));
+      // Mostrar detalles específicos del error 422
+      if (error.response?.status === 422) {
+        console.error('🔍 Error de validación 422 - Detalles completos:', JSON.stringify(error.response.data, null, 2));
+        const validationErrors = error.response?.data?.detail;
+        if (Array.isArray(validationErrors)) {
+          validationErrors.forEach((err, index) => {
+            console.error(`Error ${index + 1}:`, err);
+          });
+          const errorMessages = validationErrors.map(err => `${err.loc?.join('.')}: ${err.msg}`).join(', ');
+          toast.error(`Error de validación: ${errorMessages}`);
+        } else {
+          toast.error("Error de validación: " + (error.response?.data?.detail || "Datos inválidos"));
+        }
+      } else {
+        toast.error("Error al guardar: " + (error.response?.data?.detail || error.message || "Error desconocido"));
+      }
       
       // Recargar proyectos para asegurar consistencia
       fetchProyectos();
       return false;
-    }
-  };
-  
-  // Función para obtener estados disponibles (para debug)
-  const fetchEstados = async () => {
-    try {
-      const response = await axiosInstance.get('/estados');
-      console.log('Estados disponibles en la base de datos:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error al obtener estados:', error);
-      return [];
     }
   };
 
@@ -411,9 +547,14 @@ export const ProyectosProvider = ({ children }) => {
     }
   };
   
-  // Cargar proyectos al montar el componente
+  // Cargar proyectos y estados al montar el componente
   useEffect(() => {
-    fetchProyectos();
+    const initializeData = async () => {
+      await fetchEstados(); // Cargar estados primero
+      await fetchPrioridades(); // Cargar prioridades
+      await fetchProyectos(); // Luego cargar proyectos
+    };
+    initializeData();
   }, []);
   
   // Valor del contexto
@@ -421,12 +562,15 @@ export const ProyectosProvider = ({ children }) => {
     proyectos,
     loading,
     error,
+    estadosDisponibles,
+    prioridadesDisponibles,
     fetchProyectos,
+    fetchEstados,
+    fetchPrioridades,
     updateProyecto,
     updateProyectoFromKanban,
     deleteProyecto,
     createProyecto,
-    fetchEstados
   };
   
   return (

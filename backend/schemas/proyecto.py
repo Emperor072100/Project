@@ -35,18 +35,33 @@ class ProyectoCreate(BaseModel):
     equipos: Optional[List[int]] = [] # Para IDs de equipos
 
 class ProyectoUpdate(BaseModel):
-    nombre: Optional[str]
-    tipo: Optional[List[str]] = []
-    equipo: Optional[List[str]] = []
+    nombre: Optional[str] = None
+    tipos: Optional[List[str]] = None  # Cambiado para usar nombres directamente
+    equipos: Optional[List[str]] = None  # Cambiado para usar nombres directamente
     responsable_nombre: Optional[str] = None
-    estado: Optional[str]
-    prioridad: Optional[str]
-    objetivo: Optional[str]
-    enlace: Optional[str]
-    observaciones: Optional[str]
-    fecha_inicio: Optional[date]
-    fecha_fin: Optional[date]
-    progreso: Optional[float]
+    estado: Optional[str] = None
+    prioridad: Optional[str] = None
+    objetivo: Optional[str] = None
+    enlace: Optional[str] = None
+    observaciones: Optional[str] = None
+    fecha_inicio: Optional[date] = None
+    fecha_fin: Optional[date] = None
+    progreso: Optional[float] = None
+
+class ProyectoPatch(BaseModel):
+    """Schema específico para operaciones PATCH - todos los campos son opcionales"""
+    nombre: Optional[str] = None
+    tipos: Optional[List[str]] = None
+    equipos: Optional[List[str]] = None
+    responsable_nombre: Optional[str] = None
+    estado: Optional[str] = None
+    prioridad: Optional[str] = None
+    objetivo: Optional[str] = None
+    enlace: Optional[str] = None
+    observaciones: Optional[str] = None
+    fecha_inicio: Optional[date] = None
+    fecha_fin: Optional[date] = None
+    progreso: Optional[float] = None
 
 class TipoOut(BaseModel):
     id: int

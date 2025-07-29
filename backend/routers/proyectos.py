@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from schemas.proyecto import ProyectoCreate, ProyectoUpdate, ProyectoOut
+from schemas.proyecto import ProyectoCreate, ProyectoUpdate, ProyectoOut, ProyectoPatch
 from app.models import proyecto as modelo
 from app.models.tipo_equipo import Tipo, Equipo  # 👈 Import directo aquí
 from app.dependencies import get_db
@@ -11,6 +11,8 @@ from app.models.usuario import RolUsuario
 import traceback
 from sqlalchemy.orm import joinedload
 from datetime import date
+from app.models.estado import Estado  # Importar el modelo Estado
+from app.models.prioridad import Prioridad  # Importar el modelo Prioridad
 
 
 router = APIRouter(prefix="/proyectos", tags=["Proyectos"])
@@ -237,14 +239,42 @@ def actualizar_proyecto(
 
     update_data = datos.dict(exclude_unset=True)
 
+    # Manejar campos de relaciones especiales
+    if 'tipos' in update_data:
+        if update_data['tipos']:
+            tipos_objs = db.query(Tipo).filter(Tipo.nombre.in_(update_data['tipos'])).all()
+            proyecto.tipos = tipos_objs
+        else:
+            proyecto.tipos = []
+        update_data.pop('tipos', None)
+    
+    # Mantener compatibilidad con 'tipo' (plural)
     if 'tipo' in update_data:
         if update_data['tipo']:
             tipos_objs = db.query(Tipo).filter(Tipo.nombre.in_(update_data['tipo'])).all()
             proyecto.tipos = tipos_objs
+        else:
+            proyecto.tipos = []
         update_data.pop('tipo', None)
 
+    if 'equipos' in update_data:
+        print(f"DEBUG: Equipos recibidos: {update_data['equipos']}")
+        if update_data['equipos']:
+            # Verificar qué equipos existen en la base de datos
+            todos_equipos = db.query(Equipo).all()
+            print(f"DEBUG: Equipos disponibles en BD: {[e.nombre for e in todos_equipos]}")
+            
+            equipos_objs = db.query(Equipo).filter(Equipo.nombre.in_(update_data['equipos'])).all()
+            print(f"DEBUG: Equipos encontrados: {[e.nombre for e in equipos_objs]}")
+            proyecto.equipos = equipos_objs
+        else:
+            # Si se envía una lista vacía, limpiar los equipos
+            proyecto.equipos = []
+        update_data.pop('equipos', None)
+    
+    # Mantener compatibilidad con 'equipo' (singular)
     if 'equipo' in update_data:
-        print(f"DEBUG: Equipos recibidos: {update_data['equipo']}")
+        print(f"DEBUG: Equipos recibidos (singular): {update_data['equipo']}")
         if update_data['equipo']:
             # Verificar qué equipos existen en la base de datos
             todos_equipos = db.query(Equipo).all()
@@ -258,20 +288,162 @@ def actualizar_proyecto(
             proyecto.equipos = []
         update_data.pop('equipo', None)
 
-    if 'estado' in update_data and update_data['estado'] not in [
-        'Conceptual', 'Análisis', 'Sin Empezar', 'En diseño', 'En desarrollo', 'En curso',
-        'Etapa pruebas', 'Cancelado', 'Pausado', 'En producción', 'Desarrollado']:
-        raise HTTPException(status_code=422, detail="Estado no válido")
+    # Validar estado dinámicamente desde la base de datos
+    if 'estado' in update_data:
+        print(f"🔍 DEBUG: Procesando actualización de estado...")
+        print(f"🔍 DEBUG: Estado recibido: '{update_data['estado']}'")
+        print(f"🔍 DEBUG: Tipo del estado: {type(update_data['estado'])}")
+        
+        try:
+            # Buscar el estado por nombre para obtener el ID
+            estado_obj = db.query(Estado).filter(Estado.nombre == update_data['estado']).first()
+            print(f"🔍 DEBUG: Objeto estado encontrado: {estado_obj}")
+            
+            if not estado_obj:
+                estados_validos = db.query(Estado).all()
+                nombres_estados_validos = [e.nombre for e in estados_validos]
+                print(f"❌ DEBUG: Estado '{update_data['estado']}' NO encontrado en estados válidos: {nombres_estados_validos}")
+                raise HTTPException(status_code=422, detail=f"Estado no válido. Estados disponibles: {nombres_estados_validos}")
+            
+            print(f"✅ DEBUG: Estado '{update_data['estado']}' es válido, ID: {estado_obj.id}")
+            # Convertir el nombre del estado a estado_id para la base de datos
+            update_data['estado_id'] = estado_obj.id
+            # Remover el campo 'estado' ya que no existe en el modelo
+            update_data.pop('estado', None)
+            print(f"🔍 DEBUG: Datos actualizados: estado_id = {estado_obj.id}")
+                
+        except Exception as e:
+            print(f"💥 ERROR en validación de estado: {e}")
+            import traceback
+            print(f"💥 Stack trace: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"Error interno en validación de estado: {str(e)}")
 
-    if 'prioridad' in update_data and update_data['prioridad'] not in ['Alta', 'Media', 'Baja']:
-        raise HTTPException(status_code=422, detail="Prioridad no válida")
+    # Validar prioridad dinámicamente desde la base de datos
+    if 'prioridad' in update_data:
+        print(f"🔍 DEBUG: Procesando actualización de prioridad...")
+        print(f"🔍 DEBUG: Prioridad recibida: '{update_data['prioridad']}'")
+        print(f"🔍 DEBUG: Tipo de la prioridad: {type(update_data['prioridad'])}")
+        
+        try:
+            # Buscar la prioridad por nivel para obtener el ID
+            prioridad_obj = db.query(Prioridad).filter(Prioridad.nivel == update_data['prioridad']).first()
+            print(f"🔍 DEBUG: Objeto prioridad encontrado: {prioridad_obj}")
+            
+            if not prioridad_obj:
+                prioridades_validas = db.query(Prioridad).all()
+                niveles_prioridades_validas = [p.nivel for p in prioridades_validas]
+                print(f"❌ DEBUG: Prioridad '{update_data['prioridad']}' NO encontrada en prioridades válidas: {niveles_prioridades_validas}")
+                raise HTTPException(status_code=422, detail=f"Prioridad no válida. Prioridades disponibles: {niveles_prioridades_validas}")
+            
+            print(f"✅ DEBUG: Prioridad '{update_data['prioridad']}' es válida, ID: {prioridad_obj.id}")
+            # Convertir el nivel de prioridad a prioridad_id para la base de datos
+            update_data['prioridad_id'] = prioridad_obj.id
+            # Remover el campo 'prioridad' ya que no existe en el modelo
+            update_data.pop('prioridad', None)
+            print(f"🔍 DEBUG: Datos actualizados: prioridad_id = {prioridad_obj.id}")
+                
+        except Exception as e:
+            print(f"💥 ERROR en validación de prioridad: {e}")
+            import traceback
+            print(f"💥 Stack trace: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"Error interno en validación de prioridad: {str(e)}")
 
-    for campo, valor in update_data.items():
-        setattr(proyecto, campo, valor)
-
-    db.commit()
-    db.refresh(proyecto)
+    print(f"🔍 DEBUG: Aplicando cambios al proyecto...")
+    print(f"🔍 DEBUG: Campos a actualizar: {list(update_data.keys())}")
+    
+    try:
+        for campo, valor in update_data.items():
+            print(f"🔍 DEBUG: Actualizando {campo} = {valor}")
+            setattr(proyecto, campo, valor)
+            
+        print(f"🔍 DEBUG: Guardando cambios en la base de datos...")
+        db.commit()
+        print(f"🔍 DEBUG: Refrescando objeto proyecto...")
+        db.refresh(proyecto)
+        print(f"✅ DEBUG: Proyecto actualizado exitosamente")
+        
+    except Exception as e:
+        print(f"💥 ERROR al actualizar proyecto: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error interno al actualizar proyecto: {str(e)}")
+        
     return proyecto
+
+
+# @router.patch("/{proyecto_id}", response_model=ProyectoOut)
+# def actualizar_proyecto_parcial(
+#     proyecto_id: int,
+#     datos: ProyectoPatch,
+#     db: Session = Depends(get_db),
+#     usuario: UserInDB = Depends(get_current_user)
+# ):
+#     """
+#     Endpoint PATCH para actualizar solo campos específicos de un proyecto.
+#     Más eficiente que PUT ya que solo valida y actualiza los campos enviados.
+#     """
+#     proyecto = db.query(modelo.Proyecto).filter_by(id=proyecto_id).first()
+#     if not proyecto:
+#         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+#     if usuario.rol != "admin" and proyecto.responsable_id != usuario.id:
+#         raise HTTPException(status_code=403, detail="No tienes permisos para modificar este proyecto")
+
+#     # Solo obtener campos que realmente fueron enviados (exclude_unset=True)
+#     update_data = datos.dict(exclude_unset=True)
+    
+#     print(f"🔧 PATCH: Actualizando proyecto {proyecto_id} con datos: {update_data}")
+
+#     # Validar responsable_id si se está cambiando
+#     if 'responsable_id' in update_data and datos.responsable_id != proyecto.responsable_id:
+#         if usuario.rol != "admin":
+#             raise HTTPException(status_code=403, detail="Solo los administradores pueden cambiar el responsable de un proyecto")
+
+#     # Procesar campos especiales que requieren manejo de relaciones
+#     if 'tipos' in update_data:
+#         if update_data['tipos']:
+#             tipos_objs = db.query(Tipo).filter(Tipo.nombre.in_(update_data['tipos'])).all()
+#             proyecto.tipos = tipos_objs
+#         else:
+#             proyecto.tipos = []
+#         update_data.pop('tipos', None)
+
+#     if 'equipos' in update_data:
+#         print(f"🔧 PATCH: Equipos recibidos: {update_data['equipos']}")
+#         if update_data['equipos']:
+#             equipos_objs = db.query(Equipo).filter(Equipo.nombre.in_(update_data['equipos'])).all()
+#             print(f"🔧 PATCH: Equipos encontrados: {[e.nombre for e in equipos_objs]}")
+#             proyecto.equipos = equipos_objs
+#         else:
+#             proyecto.equipos = []
+#         update_data.pop('equipos', None)
+
+#     # Validar estado dinámicamente desde la base de datos
+#     if 'estado' in update_data:
+#         estados_validos = db.query(Estado).all()
+#         nombres_estados_validos = [e.nombre for e in estados_validos]
+#         print(f"🔧 PATCH: Estados válidos en BD: {nombres_estados_validos}")
+#         print(f"🔧 PATCH: Estado recibido: {update_data['estado']}")
+        
+#         if update_data['estado'] not in nombres_estados_validos:
+#             raise HTTPException(status_code=422, detail=f"Estado no válido. Estados disponibles: {nombres_estados_validos}")
+
+#     # Validar prioridad si se está actualizando
+#     if 'prioridad' in update_data and update_data['prioridad'] not in ['Alta', 'Media', 'Baja']:
+#         raise HTTPException(status_code=422, detail="Prioridad no válida")
+
+#     # Aplicar los cambios de campos simples
+#     for campo, valor in update_data.items():
+#         if hasattr(proyecto, campo):
+#             print(f"🔧 PATCH: Actualizando {campo} = {valor}")
+#             setattr(proyecto, campo, valor)
+#         else:
+#             print(f"⚠️ PATCH: Campo '{campo}' no existe en el modelo Proyecto")
+
+#     db.commit()
+#     db.refresh(proyecto)
+    
+#     print(f"✅ PATCH: Proyecto {proyecto_id} actualizado exitosamente")
+#     return proyecto
 
 
 @router.delete("/{proyecto_id}")

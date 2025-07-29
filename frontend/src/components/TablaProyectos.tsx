@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import PanelDetalleProyecto from './PanelDetalleProyecto';
 import NuevoProyecto from './NuevoProyecto';
 import { toast } from 'react-hot-toast';
+import { useProyectos } from '../context/ProyectosContext';
+import Swal from 'sweetalert2';
 
 interface TablaProyectosProps {
   proyectos: Proyecto[];
@@ -31,16 +33,41 @@ const opcionesEquipo = [
   'Desarrollo CX'
 ];
 const opcionesPrioridad = ['Alta', 'Media', 'Baja'];
-const opcionesEstado = {
-  pendientes: ['Conceptual', 'Análisis', 'Sin empezar'],
-  enProceso: ['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas'],
-  terminados: ['Cancelado', 'Pausado', 'En producción', 'Desarollado', 'Listo']
-};
 
 const formatArrayOrString = (value: string[] | string | undefined): string => {
   if (!value) return '';
   if (Array.isArray(value)) return value.join(', ');
   return value;
+};
+
+// Función auxiliar para obtener colores de prioridad de forma más limpia
+const getPrioridadColors = (prioridad: string) => {
+  switch (prioridad) {
+    case 'Alta': 
+      return {
+        bg: '#f0fdf4',
+        text: '#16a34a',
+        border: '#bbf7d0'
+      };
+    case 'Media': 
+      return {
+        bg: '#fffbeb',
+        text: '#d97706',
+        border: '#fed7aa'
+      };
+    case 'Baja': 
+      return {
+        bg: '#fef2f2',
+        text: '#dc2626',
+        border: '#fecaca'
+      };
+    default: 
+      return {
+        bg: '#f9fafb',
+        text: '#374151',
+        border: '#d1d5db'
+      };
+  }
 };
 
 const TablaProyectos: React.FC<TablaProyectosProps> = ({
@@ -54,6 +81,71 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   onVerDetalle,
   onEliminar
 }) => {
+  // Obtener estados y prioridades del contexto
+  const { estadosDisponibles, prioridadesDisponibles } = useProyectos();
+  
+  // Organizar estados dinámicamente basado en los datos del backend
+  const opcionesEstado = React.useMemo(() => {
+    if (!estadosDisponibles || estadosDisponibles.length === 0) {
+      // Estados por defecto si no hay datos del backend
+      return {
+        pendientes: ['Conceptual', 'Análisis', 'Sin empezar'],
+        enProceso: ['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas'],
+        terminados: ['Cancelado', 'Pausado', 'En producción', 'Desarrollado', 'Listo']
+      };
+    }
+    
+    // Extraer nombres de estados del backend
+    const estados = estadosDisponibles.map(e => typeof e === 'string' ? e : e.nombre || e);
+    console.log('📋 Estados disponibles para la tabla:', estados);
+    
+    // Organizar estados por categorías basándose en nombres comunes
+    const pendientes = estados.filter(e => 
+      ['conceptual', 'análisis', 'analisis', 'sin empezar', 'pendiente'].some(keyword => 
+        e.toLowerCase().includes(keyword)
+      )
+    );
+    
+    const enProceso = estados.filter(e => 
+      ['diseño', 'desarrollo', 'curso', 'pruebas', 'proceso'].some(keyword => 
+        e.toLowerCase().includes(keyword)
+      )
+    );
+    
+    const terminados = estados.filter(e => 
+      ['cancelado', 'pausado', 'producción', 'produccion', 'desarrollado', 'listo', 'completado', 'terminado'].some(keyword => 
+        e.toLowerCase().includes(keyword)
+      )
+    );
+    
+    // Si hay estados que no se categorizaron, ponerlos en pendientes
+    const categorizados = [...pendientes, ...enProceso, ...terminados];
+    const sinCategorizar = estados.filter(e => !categorizados.includes(e));
+    
+    return {
+      pendientes: pendientes.length > 0 ? pendientes : ['Conceptual', 'Análisis', 'Sin empezar'],
+      enProceso: enProceso.length > 0 ? enProceso : ['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas'],
+      terminados: terminados.length > 0 ? terminados : ['Cancelado', 'Pausado', 'En producción', 'Desarrollado', 'Listo'],
+      otros: sinCategorizar // Estados que no se pudieron categorizar
+    };
+  }, [estadosDisponibles]);
+
+  // Obtener prioridades dinámicamente del backend
+  const opcionesPrioridadDinamicas = React.useMemo(() => {
+    if (!prioridadesDisponibles || prioridadesDisponibles.length === 0) {
+      // Prioridades por defecto si no hay datos del backend
+      return ['Alta', 'Media', 'Baja'];
+    }
+
+    // Extraer los niveles de prioridad del backend
+    const prioridades = prioridadesDisponibles.map(p => 
+      typeof p === 'string' ? p : p.nivel
+    );
+
+    console.log('🎯 Prioridades dinámicas procesadas:', prioridades);
+    
+    return prioridades;
+  }, [prioridadesDisponibles]);
   // Debug: Log de los proyectos que llegan
   console.log('🎯 TablaProyectos - Proyectos recibidos:', proyectos.map(p => ({
     id: p.id,
@@ -115,6 +207,54 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
   // Manejar la creación de un nuevo proyecto
   const handleProyectoCreado = () => {
     toast.success("Proyecto creado exitosamente");
+  };
+
+  // Función para confirmar eliminación con SweetAlert2
+  const handleEliminarProyecto = async (proyectoId: number, nombreProyecto: string) => {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      html: `
+        <p>Esta acción eliminará permanentemente el proyecto:</p>
+        <p><strong>"${nombreProyecto}"</strong></p>
+        <p>Para confirmar, escribe <strong>ELIMINAR</strong> en el campo de abajo:</p>
+      `,
+      input: 'text',
+      inputPlaceholder: 'Escribe ELIMINAR para confirmar',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (value !== 'ELIMINAR') {
+          return 'Debes escribir exactamente "ELIMINAR" para confirmar';
+        }
+      },
+      preConfirm: (value) => {
+        if (value !== 'ELIMINAR') {
+          Swal.showValidationMessage('Debes escribir exactamente "ELIMINAR" para confirmar');
+          return false;
+        }
+        return true;
+      }
+    });
+
+    if (result.isConfirmed) {
+      // Llamar a la función onEliminar si está definida
+      if (onEliminar) {
+        onEliminar(proyectoId);
+        
+        // Mostrar mensaje de éxito
+        Swal.fire({
+          title: 'Eliminado!',
+          text: 'El proyecto ha sido eliminado correctamente.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    }
   };
 
   // Manejar la visibilidad de columnas
@@ -230,123 +370,154 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     switch (columnKey) {
       case 'nombre':
         return (
-          <td key={`${proyecto.id}-nombre`} className="px-6 py-4 whitespace-normal">
-            <span className="text-green-700 font-medium hover:text-green-900 hover:underline cursor-pointer">
+          <div className="flex flex-col items-center justify-center">
+            <span className="text-emerald-700 font-semibold hover:text-emerald-900 hover:underline cursor-pointer transition-colors duration-200 text-center px-2">
               {proyecto.nombre}
             </span>
-          </td>
+          </div>
         );
 
       case 'responsable':
         return (
-          <td key={`${proyecto.id}-responsable`} className="px-6 py-4 whitespace-normal">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-green-100 text-green-700 text-sm font-medium">
-                {(proyecto.responsable_nombre || 'S/A').charAt(0).toUpperCase()}
-              </span>
-              <span>{proyecto.responsable_nombre || 'Sin asignar'}</span>
-            </div>
-          </td>
+          <div className="flex flex-col items-center justify-center gap-2">
+            <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-emerald-100 to-green-200 text-emerald-700 text-sm font-bold shadow-md">
+              {(proyecto.responsable_nombre || 'S/A').charAt(0).toUpperCase()}
+            </span>
+            <span className="text-center font-medium text-gray-700">
+              {proyecto.responsable_nombre || 'Sin asignar'}
+            </span>
+          </div>
         );
 
       case 'estado':
         return (
-          <td key={`${proyecto.id}-estado`} className="px-6 py-4 whitespace-normal">
+          <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'estado' ? (
-              <div className="space-y-2">
-                <div className="font-medium text-xs text-gray-500 mb-1">Pendiente</div>
-                <div className="flex flex-wrap gap-1">
-                  {opcionesEstado.pendientes.map(estado => (
-                    <button
-                      key={createUniqueKey('estado', proyecto.id, estado)}
-                      onClick={() => {
-                        console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
-                        handleSave(proyecto.id, 'estado', estado);
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                        estado === proyecto.estado
-                          ? 'bg-yellow-200 text-yellow-800 ring-2 ring-yellow-500'
-                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                      }`}
-                    >
-                      {estado}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="font-medium text-xs text-gray-500 mb-1 mt-3">En curso</div>
-                <div className="flex flex-wrap gap-1">
-                  {opcionesEstado.enProceso.map(estado => (
-                    <button
-                      key={createUniqueKey('estado', proyecto.id, estado)}
-                      onClick={() => {
-                        console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
-                        handleSave(proyecto.id, 'estado', estado);
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                        estado === proyecto.estado
-                          ? 'bg-blue-200 text-blue-800 ring-2 ring-blue-500'
-                          : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                      }`}
-                    >
-                      {estado}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="font-medium text-xs text-gray-500 mb-1 mt-3">Completado</div>
-                <div className="flex flex-wrap gap-1">
-                  {opcionesEstado.terminados.map(estado => {
-                    let bgColor = 'bg-green-100';
-                    let textColor = 'text-green-800';
-                    let hoverColor = 'hover:bg-green-200';
-                    let ringColor = 'ring-green-500';
-
-                    if (estado === 'Cancelado') {
-                      bgColor = 'bg-red-100';
-                      textColor = 'text-red-800';
-                      hoverColor = 'hover:bg-red-200';
-                      ringColor = 'ring-red-500';
-                    } else if (estado === 'Pausado') {
-                      bgColor = 'bg-red-100';
-                      textColor = 'text-red-800';
-                      hoverColor = 'hover:bg-red-200';
-                      ringColor = 'ring-red-500';
-                    }
-
-                    return (
+              <div className="space-y-3 w-full max-w-sm">
+                <div className="text-center">
+                  <div className="font-semibold text-xs text-gray-600 mb-2 bg-yellow-50 rounded-lg py-1 px-3">📋 Pendiente</div>
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {opcionesEstado.pendientes.map(estado => (
                       <button
                         key={createUniqueKey('estado', proyecto.id, estado)}
                         onClick={() => {
                           console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
                           handleSave(proyecto.id, 'estado', estado);
                         }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                        className={`px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
                           estado === proyecto.estado
-                            ? `${bgColor} ${textColor} ring-2 ${ringColor}`
-                            : `${bgColor} ${textColor} ${hoverColor}`
+                            ? 'bg-yellow-200 text-yellow-800 ring-2 ring-yellow-500 shadow-md scale-105'
+                            : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:shadow-md hover:scale-105'
                         }`}
                       >
                         {estado}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
+
+                <div className="text-center">
+                  <div className="font-semibold text-xs text-gray-600 mb-2 bg-blue-50 rounded-lg py-1 px-3">🚀 En Curso</div>
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {opcionesEstado.enProceso.map(estado => (
+                      <button
+                        key={createUniqueKey('estado', proyecto.id, estado)}
+                        onClick={() => {
+                          console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
+                          handleSave(proyecto.id, 'estado', estado);
+                        }}
+                        className={`px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
+                          estado === proyecto.estado
+                            ? 'bg-blue-200 text-blue-800 ring-2 ring-blue-500 shadow-md scale-105'
+                            : 'bg-blue-100 text-blue-800 hover:bg-blue-200 hover:shadow-md hover:scale-105'
+                        }`}
+                      >
+                        {estado}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <div className="font-semibold text-xs text-gray-600 mb-2 bg-green-50 rounded-lg py-1 px-3">✅ Completado</div>
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {opcionesEstado.terminados.map(estado => {
+                      let bgColor = 'bg-green-100';
+                      let textColor = 'text-green-800';
+                      let hoverColor = 'hover:bg-green-200';
+                      let ringColor = 'ring-green-500';
+
+                      if (estado === 'Cancelado') {
+                        bgColor = 'bg-red-100';
+                        textColor = 'text-red-800';
+                        hoverColor = 'hover:bg-red-200';
+                        ringColor = 'ring-red-500';
+                      } else if (estado === 'Pausado') {
+                        bgColor = 'bg-orange-100';
+                        textColor = 'text-orange-800';
+                        hoverColor = 'hover:bg-orange-200';
+                        ringColor = 'ring-orange-500';
+                      }
+
+                      return (
+                        <button
+                          key={createUniqueKey('estado', proyecto.id, estado)}
+                          onClick={() => {
+                            console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
+                            handleSave(proyecto.id, 'estado', estado);
+                          }}
+                          className={`px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
+                            estado === proyecto.estado
+                              ? `${bgColor} ${textColor} ring-2 ${ringColor} shadow-md scale-105`
+                              : `${bgColor} ${textColor} ${hoverColor} hover:shadow-md hover:scale-105`
+                          }`}
+                        >
+                          {estado}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {/* Agregar categoría "otros" si hay estados sin categorizar */}
+                {opcionesEstado.otros && opcionesEstado.otros.length > 0 && (
+                  <div className="text-center">
+                    <div className="font-semibold text-xs text-gray-600 mb-2 bg-purple-50 rounded-lg py-1 px-3">🔮 Otros</div>
+                    <div className="flex flex-wrap gap-1 justify-center">
+                      {opcionesEstado.otros.map(estado => (
+                        <button
+                          key={createUniqueKey('estado', proyecto.id, estado)}
+                          onClick={() => {
+                            console.log(`🎯 Cambiando estado a: ${estado} para proyecto ${proyecto.id}`);
+                            handleSave(proyecto.id, 'estado', estado);
+                          }}
+                          className={`px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
+                            estado === proyecto.estado
+                              ? 'bg-purple-200 text-purple-800 ring-2 ring-purple-500 shadow-md scale-105'
+                              : 'bg-purple-100 text-purple-800 hover:bg-purple-200 hover:shadow-md hover:scale-105'
+                          }`}
+                        >
+                          {estado}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <span
-                className={`px-3 py-1.5 rounded-full text-xs font-medium inline-flex items-center ${getColorEstado(proyecto.estado)} cursor-pointer`}
+                className={`px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center justify-center ${getColorEstado(proyecto.estado)} cursor-pointer hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[120px]`}
                 onClick={() => handleEdit(proyecto.id, 'estado')}
               >
                 {proyecto.estado}
               </span>
             )}
-          </td>
+          </div>
         );
 
       case 'tipo':
         return (
-          <td key={`${proyecto.id}-tipo`} className="px-6 py-4 whitespace-normal">
+          <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'tipo' ? (
               <select
                 multiple
@@ -355,66 +526,75 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                   const values = Array.from(e.target.selectedOptions, o => o.value);
                   handleSave(proyecto.id, 'tipo', values);
                 }}
-                className="border p-1 rounded w-full"
+                className="border-2 border-emerald-300 p-2 rounded-xl w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg"
               >
                 {opcionesTipo.map(op => (
-                  <option key={createUniqueKey('tipo', proyecto.id, op)} value={op}>
+                  <option key={createUniqueKey('tipo', proyecto.id, op)} value={op} className="py-2">
                     {op}
                   </option>
                 ))}
               </select>
             ) : (
-              <div onClick={() => handleEdit(proyecto.id, 'tipo')} className="cursor-pointer">
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {formatArrayOrString(proyecto.tipo)}
+              <div onClick={() => handleEdit(proyecto.id, 'tipo')} className="cursor-pointer group">
+                <span className="px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-emerald-100 to-green-200 text-emerald-800 hover:from-emerald-200 hover:to-green-300 hover:shadow-lg hover:scale-110 transition-all duration-200 inline-block min-w-[100px] text-center">
+                  {formatArrayOrString(proyecto.tipo) || 'Sin tipo'}
                 </span>
               </div>
             )}
-          </td>
+          </div>
         );
 
       case 'equipo':
         return (
-          <td key={`${proyecto.id}-equipo`} className="px-6 py-4 whitespace-normal">
+          <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'equipo' ? (
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-1">
+              <div className="space-y-3 w-full max-w-md">
+                <div className="flex flex-wrap gap-2 justify-center">
                   {opcionesEquipo.map(equipo => {
                     let bgColor = '';
                     let textColor = '';
+                    let hoverColor = '';
 
                     switch (equipo) {
                       case 'Dirección TI':
                         bgColor = 'bg-red-100';
                         textColor = 'text-red-800';
+                        hoverColor = 'hover:bg-red-200';
                         break;
                       case 'Estrategia CX':
                         bgColor = 'bg-orange-100';
                         textColor = 'text-orange-800';
+                        hoverColor = 'hover:bg-orange-200';
                         break;
                       case 'Dirección Financiera':
                         bgColor = 'bg-gray-100';
                         textColor = 'text-gray-800';
+                        hoverColor = 'hover:bg-gray-200';
                         break;
                       case 'Dirección de Servicios':
                         bgColor = 'bg-blue-100';
                         textColor = 'text-blue-800';
+                        hoverColor = 'hover:bg-blue-200';
                         break;
                       case 'Dirección Comercial':
                         bgColor = 'bg-green-100';
                         textColor = 'text-green-800';
+                        hoverColor = 'hover:bg-green-200';
                         break;
                       case 'Dirección GH':
-                        bgColor = 'bg-blue-100';
-                        textColor = 'text-blue-800';
+                        bgColor = 'bg-purple-100';
+                        textColor = 'text-purple-800';
+                        hoverColor = 'hover:bg-purple-200';
                         break;
                       case 'Desarrollo CX':
                         bgColor = 'bg-amber-100';
                         textColor = 'text-amber-800';
+                        hoverColor = 'hover:bg-amber-200';
                         break;
                       default:
                         bgColor = 'bg-gray-100';
                         textColor = 'text-gray-800';
+                        hoverColor = 'hover:bg-gray-200';
                     }
 
                     const isSelected = Array.isArray(proyecto.equipo)
@@ -441,8 +621,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                           // Luego actualizar en el frontend
                           handleSave(proyecto.id, 'equipo', newEquipo);
                         }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium ${bgColor} ${textColor} ${
-                          isSelected ? `ring-2 ring-${textColor.replace('text-', '')}` : 'opacity-70 hover:opacity-100'
+                        className={`px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 ${bgColor} ${textColor} ${hoverColor} ${
+                          isSelected ? 'ring-2 ring-blue-500 shadow-md scale-105' : 'opacity-80 hover:opacity-100 hover:shadow-md hover:scale-105'
                         }`}
                       >
                         {equipo}
@@ -454,7 +634,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
             ) : (
               <div
                 onClick={() => handleEdit(proyecto.id, 'equipo')}
-                className="cursor-pointer flex flex-wrap gap-1 min-h-[2rem] items-center"
+                className="cursor-pointer flex flex-wrap gap-1 justify-center items-center min-h-[3rem]"
               >
                 {Array.isArray(proyecto.equipo) && proyecto.equipo.length > 0 ? proyecto.equipo.map(equipo => {
                   let bgColor = '';
@@ -462,147 +642,165 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
 
                   switch (equipo) {
                     case 'Dirección TI':
-                      bgColor = 'bg-red-100';
+                      bgColor = 'bg-gradient-to-r from-red-100 to-red-200';
                       textColor = 'text-red-800';
                       break;
                     case 'Estrategia CX':
-                      bgColor = 'bg-orange-100';
+                      bgColor = 'bg-gradient-to-r from-orange-100 to-orange-200';
                       textColor = 'text-orange-800';
                       break;
                     case 'Dirección Financiera':
-                      bgColor = 'bg-gray-100';
+                      bgColor = 'bg-gradient-to-r from-gray-100 to-gray-200';
                       textColor = 'text-gray-800';
                       break;
                     case 'Dirección de Servicios':
-                      bgColor = 'bg-blue-100';
+                      bgColor = 'bg-gradient-to-r from-blue-100 to-blue-200';
                       textColor = 'text-blue-800';
                       break;
                     case 'Dirección Comercial':
-                      bgColor = 'bg-green-100';
+                      bgColor = 'bg-gradient-to-r from-green-100 to-green-200';
                       textColor = 'text-green-800';
                       break;
                     case 'Dirección GH':
-                      bgColor = 'bg-blue-100';
-                      textColor = 'text-blue-800';
+                      bgColor = 'bg-gradient-to-r from-purple-100 to-purple-200';
+                      textColor = 'text-purple-800';
                       break;
                     case 'Desarrollo CX':
-                      bgColor = 'bg-amber-100';
+                      bgColor = 'bg-gradient-to-r from-amber-100 to-amber-200';
                       textColor = 'text-amber-800';
                       break;
                     default:
-                      bgColor = 'bg-gray-100';
+                      bgColor = 'bg-gradient-to-r from-gray-100 to-gray-200';
                       textColor = 'text-gray-800';
                   }
 
                   return (
                     <span
                       key={createUniqueKey('equipo-display', proyecto.id, equipo)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}
+                      className={`px-3 py-2 rounded-full text-xs font-semibold ${bgColor} ${textColor} shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200`}
                     >
                       {equipo}
                     </span>
                   );
                 }) : proyecto.equipo && !Array.isArray(proyecto.equipo) ? (
-                  <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  <span className="px-3 py-2 rounded-full text-xs font-semibold bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 shadow-md">
                     {proyecto.equipo}
                   </span>
                 ) : (
-                  <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-dashed border-gray-300 hover:bg-gray-100 transition-colors">
+                  <span className="px-4 py-3 rounded-full text-sm font-medium bg-gradient-to-r from-gray-50 to-gray-100 text-gray-500 border-2 border-dashed border-gray-300 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-green-50 hover:border-emerald-300 hover:text-emerald-600 transition-all duration-200 cursor-pointer">
                     + Seleccionar equipo
                   </span>
                 )}
               </div>
             )}
-          </td>
+          </div>
         );
 
       case 'prioridad':
         return (
-          <td key={`${proyecto.id}-prioridad`} className="px-6 py-4 whitespace-normal">
+          <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'prioridad' ? (
               <select
                 value={proyecto.prioridad}
                 onChange={(e) => handleSave(proyecto.id, 'prioridad', e.target.value)}
-                className="border p-1 rounded w-full"
+                className="border-2 p-3 rounded-xl w-full max-w-xs font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg"
+                style={{
+                  backgroundColor: getPrioridadColors(proyecto.prioridad).bg,
+                  color: getPrioridadColors(proyecto.prioridad).text,
+                  borderColor: getPrioridadColors(proyecto.prioridad).border
+                }}
               >
-                {opcionesPrioridad.map(p => (
-                  <option key={createUniqueKey('prioridad', proyecto.id, p)} value={p}>
-                    {p}
-                  </option>
-                ))}
+                {opcionesPrioridadDinamicas.map(p => {
+                  const colors = getPrioridadColors(p);
+                  return (
+                    <option 
+                      key={createUniqueKey('prioridad', proyecto.id, p)} 
+                      value={p}
+                      style={{
+                        backgroundColor: colors.bg,
+                        color: colors.text,
+                        fontWeight: '600',
+                        padding: '12px'
+                      }}
+                    >
+                      {p}
+                    </option>
+                  );
+                })}
               </select>
             ) : (
               <span
-                className={`${getColorPrioridad(proyecto.prioridad)} px-2 py-1 rounded-full text-xs cursor-pointer`}
+                className={`${getColorPrioridad(proyecto.prioridad)} px-4 py-2 rounded-full text-sm font-bold cursor-pointer hover:opacity-90 hover:shadow-lg hover:scale-110 transition-all duration-200 min-w-[80px] text-center inline-block`}
                 onClick={() => handleEdit(proyecto.id, 'prioridad')}
               >
                 {proyecto.prioridad}
               </span>
             )}
-          </td>
+          </div>
         );
 
       case 'objetivo':
         return (
-          <td key={`${proyecto.id}-objetivo`} className="px-6 py-4 whitespace-normal">
+          <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'objetivo' ? (
               <input
                 type="text"
                 value={proyecto.objetivo}
                 onChange={(e) => handleSave(proyecto.id, 'objetivo', e.target.value)}
-                className="border p-1 rounded w-full"
+                className="border-2 border-emerald-300 p-2 rounded-xl w-full max-w-xs text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg"
+                placeholder="Ingrese el objetivo..."
               />
             ) : (
               <span
                 onClick={() => handleEdit(proyecto.id, 'objetivo')}
-                className="cursor-pointer"
+                className="cursor-pointer text-center px-3 py-2 rounded-lg bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200 max-w-xs block"
               >
-                {proyecto.objetivo}
+                {proyecto.objetivo || 'Sin objetivo definido'}
               </span>
             )}
-          </td>
+          </div>
         );
 
       case 'fechaInicio':
         return (
-          <td key={`${proyecto.id}-fechaInicio`} className="px-6 py-4 whitespace-normal">
+          <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'fechaInicio' ? (
               <input
                 type="date"
                 value={proyecto.fechaInicio}
                 onChange={(e) => handleSave(proyecto.id, 'fechaInicio', e.target.value)}
-                className="border p-1 rounded w-full"
+                className="border-2 border-emerald-300 p-2 rounded-xl w-full max-w-xs text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg"
               />
             ) : (
               <span
                 onClick={() => handleEdit(proyecto.id, 'fechaInicio')}
-                className="cursor-pointer"
+                className="cursor-pointer text-center px-3 py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 hover:shadow-md transition-all duration-200 font-medium"
               >
-                {proyecto.fechaInicio}
+                {proyecto.fechaInicio || 'Sin fecha'}
               </span>
             )}
-          </td>
+          </div>
         );
 
       case 'fechaFin':
         return (
-          <td key={`${proyecto.id}-fechaFin`} className="px-6 py-4 whitespace-normal">
+          <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'fechaFin' ? (
               <input
                 type="date"
                 value={proyecto.fechaFin}
                 onChange={(e) => handleSave(proyecto.id, 'fechaFin', e.target.value)}
-                className="border p-1 rounded w-full"
+                className="border-2 border-emerald-300 p-2 rounded-xl w-full max-w-xs text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg"
               />
             ) : (
               <span
                 onClick={() => handleEdit(proyecto.id, 'fechaFin')}
-                className="cursor-pointer"
+                className="cursor-pointer text-center px-3 py-2 rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 hover:shadow-md transition-all duration-200 font-medium"
               >
-                {proyecto.fechaFin}
+                {proyecto.fechaFin || 'Sin fecha'}
               </span>
             )}
-          </td>
+          </div>
         );
 
       case 'progreso':
@@ -615,9 +813,9 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
         });
         
         return (
-          <td key={`${proyecto.id}-progreso`} className="px-6 py-4 whitespace-normal">
+          <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'progreso' ? (
-              <div className="space-y-2">
+              <div className="space-y-3 w-full max-w-xs">
                 <div className="flex items-center gap-2">
                   <input
                     type="range"
@@ -625,7 +823,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                     onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
                     min="0"
                     max="100"
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <input
                     type="number"
@@ -633,94 +831,111 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                     onChange={(e) => handleSave(proyecto.id, 'progreso', parseInt(e.target.value))}
                     min="0"
                     max="100"
-                    className="w-16 border p-1 rounded"
+                    className="w-16 border-2 border-emerald-300 p-1 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
               </div>
             ) : (
               <div
                 onClick={() => handleEdit(proyecto.id, 'progreso')}
-                className="cursor-pointer space-y-1"
+                className="cursor-pointer space-y-2 w-full max-w-xs group"
               >
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">{proyecto.progreso || 0}%</span>
+                <div className="flex justify-center">
+                  <span className="text-lg font-bold text-gray-700 group-hover:text-emerald-600 transition-colors duration-200">
+                    {proyecto.progreso || 0}%
+                  </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="w-full bg-gray-200 rounded-full h-4 shadow-inner">
                   <div
-                    className={`h-2.5 rounded-full ${getProgressColor(proyecto.progreso || 0)}`}
+                    className={`h-4 rounded-full transition-all duration-500 shadow-sm ${getProgressColor(proyecto.progreso || 0)} relative overflow-hidden`}
                     style={{ width: `${proyecto.progreso || 0}%` }}
-                  ></div>
+                  >
+                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                  </div>
                 </div>
               </div>
             )}
-          </td>
+          </div>
         );
 
       case 'enlace':
         return (
-          <td key={`${proyecto.id}-enlace`} className="px-6 py-4 whitespace-normal">
-            <a
-              href={proyecto.enlace}
-              target="_blank"
-              rel="noreferrer"
-              className="text-blue-600 underline"
-            >
-              Ver
-            </a>
-          </td>
+          <div className="flex flex-col items-center justify-center">
+            {proyecto.enlace ? (
+              <a
+                href={proyecto.enlace}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-sm hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                Ver enlace
+              </a>
+            ) : (
+              <span className="text-gray-400 text-sm italic">Sin enlace</span>
+            )}
+          </div>
         );
 
       case 'observaciones':
         return (
-          <td key={`${proyecto.id}-observaciones`} className="px-6 py-4 whitespace-normal">
+          <div className="flex flex-col items-center justify-center">
             {editando.id === proyecto.id && editando.campo === 'observaciones' ? (
               <textarea
                 value={proyecto.observaciones}
                 onChange={(e) => handleSave(proyecto.id, 'observaciones', e.target.value)}
-                className="border p-1 rounded w-full"
+                className="border-2 border-emerald-300 p-2 rounded-xl w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-lg resize-none"
                 rows={3}
+                placeholder="Ingrese observaciones..."
               />
             ) : (
               <span
                 onClick={() => handleEdit(proyecto.id, 'observaciones')}
-                className="block max-w-xs truncate cursor-pointer"
+                className="block max-w-xs text-center cursor-pointer px-3 py-2 rounded-lg bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200"
                 title={proyecto.observaciones}
               >
-                {proyecto.observaciones}
+                {proyecto.observaciones ? (
+                  proyecto.observaciones.length > 50 
+                    ? `${proyecto.observaciones.substring(0, 50)}...` 
+                    : proyecto.observaciones
+                ) : 'Sin observaciones'}
               </span>
             )}
-          </td>
+          </div>
         );
 
       case 'acciones':
         return (
-          <td key={`${proyecto.id}-acciones`} className="px-6 py-4 whitespace-nowrap">
+          <div className="flex flex-col items-center justify-center gap-2">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onVerDetalle?.(proyecto)}
-                className="inline-flex items-center px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 text-sm font-medium transition-colors duration-200"
+                className="inline-flex items-center px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
               >
-                Ver más
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Ver Detalle
               </button>
-              <button
-                onClick={() => navigate(`/proyecto/${proyecto.id}`)}
-                className="inline-flex items-center px-3 py-1.5 rounded-md bg-green-50 text-green-700 hover:bg-green-100 text-sm font-medium transition-colors duration-200"
-              >
-                Editar
-              </button>
-              {onEliminar && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEliminar(proyecto.id);
-                  }}
-                  className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium transition-colors duration-200"
-                >
-                  Eliminar
-                </button>
-              )}
             </div>
-          </td>
+            {onEliminar && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEliminarProyecto(proyecto.id, proyecto.nombre);
+                }}
+                className="inline-flex items-center px-3 py-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-semibold hover:from-red-600 hover:to-red-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Eliminar
+              </button>
+            )}
+          </div>
         );
 
       default:
@@ -730,33 +945,59 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
 
   return (
     <>
-      {/* Header con botón de nuevo proyecto */}
-      <div className="flex flex-wrap gap-2 justify-between items-center mb-4">
-        <div className="flex flex-wrap gap-2">
-          <h2 className="text-xl font-semibold text-gray-800">Gestión de Proyectos</h2>
+      {/* Header con botón de nuevo proyecto - Mejorado */}
+      <div className="flex flex-wrap gap-4 justify-between items-center mb-6 p-6 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 rounded-2xl border border-emerald-200 shadow-lg">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                Gestión de Proyectos
+              </h2>
+              <p className="text-sm text-gray-600 font-medium">
+                {filtrarProyectos().length} proyecto{filtrarProyectos().length !== 1 ? 's' : ''} encontrado{filtrarProyectos().length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
           
-          {/* Editor de columnas */}
+          {/* Editor de columnas mejorado */}
           <div className="relative">
             <button
               onClick={() => setShowColumnEditor(!showColumnEditor)}
-              className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 flex items-center gap-1"
+              className="px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:from-gray-200 hover:to-gray-300 hover:shadow-md flex items-center gap-2 transition-all duration-200 border border-gray-300"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
               Columnas
+              <svg className={`w-4 h-4 transform transition-transform duration-200 ${showColumnEditor ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
             
             {showColumnEditor && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-3 min-w-64">
-                <div className="text-sm font-medium text-gray-700 mb-2">Mostrar/Ocultar y Reordenar Columnas</div>
-                <div className="text-xs text-gray-500 mb-3">Arrastra las columnas para reordenarlas</div>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 p-4 min-w-80 backdrop-blur-sm bg-white/95">
+                <div className="text-base font-bold text-gray-800 mb-2 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                  </svg>
+                  Configurar Columnas
+                </div>
+                <div className="text-sm text-gray-600 mb-4 bg-blue-50 p-2 rounded-lg">
+                  💡 Arrastra las columnas para reordenarlas
+                </div>
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
                   {getOrderedColumnConfig().map(column => (
                     <div 
                       key={column.key} 
-                      className={`flex items-center gap-2 text-sm p-2 rounded border ${
-                        draggedColumn === column.key ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                      className={`flex items-center gap-3 text-sm p-3 rounded-xl border-2 transition-all duration-200 ${
+                        draggedColumn === column.key 
+                          ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-300 shadow-md' 
+                          : 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 hover:from-emerald-50 hover:to-green-50 hover:border-emerald-200'
                       } ${!column.fixed ? 'cursor-move' : 'cursor-default'}`}
                       draggable={!column.fixed}
                       onDragStart={(e) => !column.fixed && handleColumnDragStart(e, column.key)}
@@ -764,9 +1005,9 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                       onDrop={(e) => handleColumnDrop(e, column.key)}
                       onDragEnd={handleColumnDragEnd}
                     >
-                      <div className="flex items-center gap-2 flex-1">
+                      <div className="flex items-center gap-3 flex-1">
                         {!column.fixed && (
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
                           </svg>
                         )}
@@ -775,14 +1016,16 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                           checked={visibleColumns[column.key]}
                           onChange={() => !column.fixed && toggleColumn(column.key)}
                           disabled={column.fixed}
-                          className="rounded"
+                          className="rounded-md w-4 h-4 text-emerald-600 focus:ring-emerald-500"
                         />
-                        <span className={column.fixed ? 'text-gray-400' : 'text-gray-700'}>
+                        <span className={`font-semibold ${column.fixed ? 'text-gray-500' : 'text-gray-800'}`}>
                           {column.label}
                         </span>
                       </div>
                       {column.fixed && (
-                        <span className="text-xs text-gray-400 italic">Fija</span>
+                        <span className="text-xs text-gray-500 italic bg-gray-200 px-2 py-1 rounded-lg">
+                          Fija
+                        </span>
                       )}
                     </div>
                   ))}
@@ -792,37 +1035,55 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
           </div>
         </div>
         
-        <div>
+        <div className="flex items-center gap-3">
           <NuevoProyecto onCreado={handleProyectoCreado} />
         </div>
       </div>
 
-      {/* Tabla con Edición Inline */}
-      <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-300">
-          <table className="min-w-full text-xs text-left bg-white">
-            <thead className="bg-gradient-to-r from-green-500 to-green-600 text-white top-0 z-10">
-              <tr>
-                {getOrderedColumnConfig().filter(col => visibleColumns[col.key]).map(column => (
-                  <th key={`header-${column.key}`}
-                    className="px-4 py-2 font-semibold text-xs tracking-wide">
-                    {column.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filtrarProyectos().map((proyecto) => (
-                <tr key={proyecto.id}
-                  className="hover:bg-green-50/50 transition-all duration-200">
-                  {getOrderedColumnConfig()
-                    .filter(col => visibleColumns[col.key])
-                    .map(column => renderCell(column.key, proyecto))
-                  }
-                </tr>
+      {/* Tabla con Edición Inline - Mejorada */}
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-auto backdrop-blur-sm">
+        <table className="min-w-full text-sm bg-white">
+          <thead className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 text-white sticky top-0 z-20">
+            <tr className="border-b border-green-700/20">
+              {getOrderedColumnConfig().filter(col => visibleColumns[col.key]).map(column => (
+                <th key={`header-${column.key}`}
+                  className="px-6 py-4 text-center font-bold text-sm tracking-wider uppercase text-white/95 bg-gradient-to-b from-transparent to-black/10">
+                  <div className="flex items-center justify-center gap-2">
+                    <span>{column.label}</span>
+                    <div className="w-1 h-4 bg-white/30 rounded-full"></div>
+                  </div>
+                </th>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-gradient-to-b from-gray-50/30 to-white">
+            {filtrarProyectos().map((proyecto, index) => (
+              <tr key={proyecto.id}
+                className={`
+                  hover:bg-gradient-to-r hover:from-emerald-50/70 hover:via-green-50/50 hover:to-teal-50/70 
+                  transition-all duration-300 ease-in-out transform hover:scale-[1.01] hover:shadow-md
+                  ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}
+                  border-l-4 border-transparent hover:border-emerald-400
+                `}>
+                {getOrderedColumnConfig()
+                  .filter(col => visibleColumns[col.key])
+                  .map(column => (
+                    <td key={`${proyecto.id}-${column.key}`} 
+                        className="px-6 py-4 text-center align-middle">
+                      <div className="flex justify-center items-center min-h-[2.5rem]">
+                        {renderCell(column.key, proyecto)}
+                      </div>
+                    </td>
+                  ))
+                }
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        
+        {/* Footer decorativo */}
+        <div className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 h-2"></div>
+      </div>
 
       {/* Panel de Detalle Modal */}
       {proyectoSeleccionado && (
