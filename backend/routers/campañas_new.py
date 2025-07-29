@@ -49,11 +49,17 @@ def listar_campañas(
     usuario: UserInDB = Depends(get_current_user)
 ):
     """Listar todas las campañas con información completa"""
-    campañas = db.query(Campaña).options(
+    query = db.query(Campaña).options(
         joinedload(Campaña.cliente_corporativo),
         joinedload(Campaña.contacto)
-    ).all()
-    
+    )
+    # Si no es admin, solo ve campañas donde es líder o ejecutivo
+    if usuario.rol != "admin":
+        query = query.filter(
+            (Campaña.lider_de_campaña == usuario.nombre) |
+            (Campaña.ejecutivo == usuario.nombre)
+        )
+    campañas = query.all()
     return campañas
 
 

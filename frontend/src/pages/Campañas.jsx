@@ -11,6 +11,17 @@ const Campañas = () => {
   const location = useLocation();
   // Estados principales
   const [campañas, setCampañas] = useState([]);
+  const [usuario, setUsuario] = useState({ nombre: '', rol: 'usuario' });
+  // Obtener usuario del localStorage/sessionStorage al montar
+  useEffect(() => {
+    const userRaw = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (userRaw) {
+      try {
+        const userObj = JSON.parse(userRaw);
+        setUsuario({ nombre: userObj.nombre || '', rol: userObj.rol || 'usuario' });
+      } catch {}
+    }
+  }, []);
   const [clientesCorporativos, setClientesCorporativos] = useState([]);
   const [contactos, setContactos] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -98,9 +109,13 @@ const Campañas = () => {
   const [loading, setLoading] = useState(false);
 
   // Cargar datos al montar el componente
+  // Ejecutar cargarDatos solo cuando el usuario esté listo
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    if (usuario && usuario.nombre) {
+      cargarDatos();
+    }
+    // eslint-disable-next-line
+  }, [usuario]);
 
   // Abrir modal administrar si adminId está en la URL
   useEffect(() => {
@@ -150,7 +165,12 @@ const Campañas = () => {
         };
       });
 
-      setCampañas(campañasConDatos);
+      // Filtrar campañas si el usuario es normal
+      if ((usuario.rol || '').toLowerCase() === 'admin') {
+        setCampañas(campañasConDatos);
+      } else {
+        setCampañas(campañasConDatos.filter(c => c.lider_de_campaña === usuario.nombre || c.ejecutivo === usuario.nombre));
+      }
       setClientesCorporativos(clientesCorporativosRes.data);
       setContactos(contactosRes.data);
       setUsuarios(usuariosRes.data);

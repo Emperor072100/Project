@@ -55,8 +55,12 @@ export default function Perfil({ sidebarCollapsed = false }) {
         });
         if (response.ok) {
           const data = await response.json();
-          const proyectosUsuario = data.filter(p => p.responsable_id === userData.id);
-          setProyectos(proyectosUsuario);
+          if (userData.rol === 'admin') {
+            setProyectos(data);
+          } else {
+            const proyectosUsuario = data.filter(p => p.responsable_id === userData.id);
+            setProyectos(proyectosUsuario);
+          }
         } else {
           setProyectos([]);
         }
@@ -88,7 +92,11 @@ export default function Perfil({ sidebarCollapsed = false }) {
         if (respClientes.ok) {
           clientesData = await respClientes.json();
         }
-        setCampañas(campañasData);
+        if (usuario.rol === 'admin') {
+          setCampañas(campañasData);
+        } else {
+          setCampañas(campañasData.filter(camp => camp.lider_de_campaña === usuario.nombre || camp.ejecutivo === usuario.nombre));
+        }
         setClientesCorporativos(clientesData);
       } catch {
         setCampañas([]);
@@ -96,7 +104,7 @@ export default function Perfil({ sidebarCollapsed = false }) {
       }
     };
     fetchCampañasYClientes();
-  }, [usuario.id, usuario.nombre]);
+  }, [usuario.id, usuario.nombre, usuario.rol]);
 
   // Función para obtener las iniciales del usuario
   const getUserInitials = () => {
@@ -221,7 +229,7 @@ export default function Perfil({ sidebarCollapsed = false }) {
             Campañas Relacionadas
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {campañas.map(camp => {
+            {(usuario.rol === 'admin' ? campañas : campañas.filter(camp => camp.lider_de_campaña === usuario.nombre || camp.ejecutivo === usuario.nombre)).map(camp => {
               // Buscar el cliente corporativo relacionado
               const cliente = clientesCorporativos.find(c => c.id === camp.cliente_corporativo_id);
               const logo = cliente?.logo;
