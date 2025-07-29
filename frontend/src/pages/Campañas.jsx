@@ -13,6 +13,7 @@ const Campañas = () => {
   const [campañas, setCampañas] = useState([]);
   const [clientesCorporativos, setClientesCorporativos] = useState([]);
   const [contactos, setContactos] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [estadisticas, setEstadisticas] = useState({
     total_clientes_corporativos: 0,
     total_contactos: 0,
@@ -118,10 +119,11 @@ const Campañas = () => {
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const [campañasRes, clientesCorporativosRes, contactosRes, estadisticasRes] = await Promise.all([
+      const [campañasRes, clientesCorporativosRes, contactosRes, usuariosRes, estadisticasRes] = await Promise.all([
         axios.get('http://localhost:8000/campanas', config),
         axios.get('http://localhost:8000/clientes-corporativos', config),
         axios.get('http://localhost:8000/contactos', config),
+        axios.get('http://localhost:8000/usuarios', config),
         axios.get('http://localhost:8000/campanas/estadisticas', config)
       ]);
 
@@ -150,6 +152,7 @@ const Campañas = () => {
       setCampañas(campañasConDatos);
       setClientesCorporativos(clientesCorporativosRes.data);
       setContactos(contactosRes.data);
+      setUsuarios(usuariosRes.data);
       setEstadisticas(estadisticasRes.data);
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -802,6 +805,7 @@ const Campañas = () => {
                           onChange={(e) => setFormEditar({...formEditar, nombre: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
                           placeholder="Nombre de la campaña"
+                          disabled
                         />
                       </div>
 
@@ -815,6 +819,7 @@ const Campañas = () => {
                           value={formEditar.tipo}
                           onChange={(e) => setFormEditar({...formEditar, tipo: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                          disabled
                         >
                           <option value="">Seleccionar tipo</option>
                           <option value="SAC">SAC - Atención al Cliente</option>
@@ -834,6 +839,7 @@ const Campañas = () => {
                           value={formEditar.cliente_id}
                           onChange={(e) => setFormEditar({...formEditar, cliente_id: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                          disabled
                         >
                           <option value="">Seleccionar empresa</option>
                           {clientesCorporativos.map(cliente => (
@@ -872,14 +878,17 @@ const Campañas = () => {
                         <label className="block text-sm font-semibold text-gray-700 mb-1">
                           Líder de Campaña *
                         </label>
-                        <input
-                          type="text"
+                        <select
                           required
                           value={formEditar.lider}
                           onChange={(e) => setFormEditar({...formEditar, lider: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
-                          placeholder="Nombre del líder"
-                        />
+                        >
+                          <option value="">Seleccionar líder</option>
+                          {usuarios.map(usuario => (
+                            <option key={usuario.id} value={usuario.nombre}>{usuario.nombre} {usuario.apellido}</option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Ejecutivo */}
@@ -887,14 +896,17 @@ const Campañas = () => {
                         <label className="block text-sm font-semibold text-gray-700 mb-1">
                           Ejecutivo *
                         </label>
-                        <input
-                          type="text"
+                        <select
                           required
                           value={formEditar.cje}
                           onChange={(e) => setFormEditar({...formEditar, cje: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
-                          placeholder="Nombre del ejecutivo"
-                        />
+                        >
+                          <option value="">Seleccionar ejecutivo</option>
+                          {usuarios.map(usuario => (
+                            <option key={usuario.id} value={usuario.nombre}>{usuario.nombre} {usuario.apellido}</option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Fecha de Producción */}
@@ -908,6 +920,7 @@ const Campañas = () => {
                           value={formEditar.fecha_inicio}
                           onChange={(e) => setFormEditar({...formEditar, fecha_inicio: e.target.value})}
                           className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                          disabled
                         />
                       </div>
 
@@ -1521,6 +1534,7 @@ const Campañas = () => {
         isOpen={modalCampaña}
         onClose={() => setModalCampaña(false)}
         title="Agregar Nueva Campaña"
+     
       >
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 mb-4">
           <div className="flex items-center space-x-4">
@@ -1611,28 +1625,34 @@ const Campañas = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Líder de Campaña *
               </label>
-              <input
-                type="text"
+              <select
                 required
                 value={formCampaña.lider_de_campaña}
-                onChange={(e) => setFormCampaña({...formCampaña, lider_de_campaña: e.target.value})}
+                onChange={e => setFormCampaña({ ...formCampaña, lider_de_campaña: e.target.value })}
                 className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                placeholder="Nombre del líder"
-              />
+              >
+                <option value="">Seleccionar líder</option>
+                {usuarios.map(usuario => (
+                  <option key={usuario.id} value={usuario.nombre}>{usuario.nombre} {usuario.apellido}</option>
+                ))}
+              </select>
             </div>
 
             <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Ejecutivo *
               </label>
-              <input
-                type="text"
+              <select
                 required
                 value={formCampaña.ejecutivo}
-                onChange={(e) => setFormCampaña({...formCampaña, ejecutivo: e.target.value})}
+                onChange={e => setFormCampaña({ ...formCampaña, ejecutivo: e.target.value })}
                 className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
-                placeholder="Nombre del ejecutivo"
-              />
+              >
+                <option value="">Seleccionar ejecutivo</option>
+                {usuarios.map(usuario => (
+                  <option key={usuario.id} value={usuario.nombre}>{usuario.nombre} {usuario.apellido}</option>
+                ))}
+              </select>
             </div>
 
             <div className="relative">
@@ -1757,30 +1777,17 @@ const Campañas = () => {
                 value={formProducto.cantidad} 
                 min={1} 
                 onChange={handleProductoChange} 
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition-all duration-200"
+                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 bg-white" 
                 required 
               />
             </div>
           </div>
           
-          <div className="flex gap-4 pt-4">
-            <button
-              type="button"
-              onClick={() => setFormProducto({ tipo: 'Producto', producto_servicio: '', proveedor: '', propiedad: 'Propia', cantidad: 1 })}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
-            >
-              Limpiar
-            </button>
-            <button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              Agregar Producto
-            </button>
+          <div className="flex justify-end gap-3">
+            <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition" onClick={() => { setMostrarProductos(false); setProductoGuardado(null); }}>Cancelar</button>
+            <button type="submit" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition">Guardar</button>
           </div>
         </form>
-
-        {/* Mostrar productos guardados */}
         {productoGuardado.length > 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
             <h4 className="font-semibold text-yellow-700 mb-2">Productos/servicios guardados:</h4>
