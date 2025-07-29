@@ -348,10 +348,33 @@ const Campañas = () => {
     }
   };
 
+  // Formatea el valor a pesos colombianos con puntos de miles
+  const formatCOP = (value) => {
+    if (!value) return '';
+    // Solo números
+    const num = value.toString().replace(/\D/g, '');
+    return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  // Estado auxiliar para mostrar el valor formateado en el input
+  const [valorFormateado, setValorFormateado] = useState('');
+
   const handleFacturacionChange = (e) => {
     const { name, value } = e.target;
-    setFormFacturacion((prev) => ({ ...prev, [name]: value }));
+    if (name === 'valor') {
+      // Solo números
+      const raw = value.replace(/\D/g, '');
+      setFormFacturacion((prev) => ({ ...prev, valor: raw }));
+      setValorFormateado(formatCOP(raw));
+    } else {
+      setFormFacturacion((prev) => ({ ...prev, [name]: value }));
+    }
   };
+
+  // Sincronizar el valor formateado cuando se edita una facturación existente
+  useEffect(() => {
+    setValorFormateado(formatCOP(formFacturacion.valor));
+  }, [formFacturacion.valor]);
 
   const handleGuardarFacturacion = async (e) => {
     e.preventDefault();
@@ -362,7 +385,7 @@ const Campañas = () => {
       const facturacionData = {
         unidad: formFacturacion.unidad,
         cantidad: parseInt(formFacturacion.cantidad),
-        valor: parseFloat(formFacturacion.valor),
+        valor: parseFloat((formFacturacion.valor || '').toString().replace(/\./g, '')),
         periodicidad: formFacturacion.periodicidad
       };
 
@@ -817,6 +840,13 @@ const Campañas = () => {
                         <span className="block text-xs font-semibold text-gray-500">Contacto Asociado</span>
                         <span className="text-base text-gray-800">{campañaSeleccionada.contacto_nombre || <span className='italic text-gray-400'>Sin contacto</span>}</span>
                       </div>
+                     <div>
+                       <span className="block text-xs font-semibold text-gray-500">Correo del Contacto</span>
+                       <span className="text-base text-gray-800">{(() => {
+                         const contacto = contactos.find(c => c.id === campañaSeleccionada.contacto_id);
+                         return contacto?.correo || <span className='italic text-gray-400'>Sin correo</span>;
+                       })()}</span>
+                     </div>
                       <div>
                         <span className="block text-xs font-semibold text-gray-500">Número de Contacto</span>
                         <span className="text-base text-gray-800">{campañaSeleccionada.contacto_telefono || <span className='italic text-gray-400'>Sin número</span>}</span>
@@ -992,6 +1022,13 @@ const Campañas = () => {
                             </option>
                           ))}
                         </select>
+                       {/* Mostrar correo del contacto seleccionado */}
+                       <div className="mt-1 text-xs text-gray-600">
+                         Correo: {(() => {
+                           const contactoSel = contactos.find(c => c.id === formEditar.contacto_id);
+                           return contactoSel?.correo || <span className='italic text-gray-400'>Sin correo</span>;
+                         })()}
+                       </div>
                       </div>
 
                       {/* Líder de Campaña */}
@@ -1101,7 +1138,19 @@ const Campañas = () => {
                         <label className="block text-sm font-semibold text-green-800 mb-1">Valor</label>
                         <div className="flex items-center">
                           <span className="mr-2 text-green-500 font-semibold">$</span>
-                          <input type="number" name="valor" value={formFacturacion.valor} min={0} onChange={handleFacturacionChange} className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white" required placeholder="Ej: 1000" />
+                          <input
+                            type="text"
+                            name="valor"
+                            value={valorFormateado}
+                            min={0}
+                            onChange={handleFacturacionChange}
+                            className="w-full border-2 border-green-200 rounded-lg px-3 py-2 focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-white"
+                            required
+                            placeholder="Ej: 1.000.000"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            maxLength={15}
+                          />
                         </div>
                       </div>
                     </div>
@@ -1126,7 +1175,7 @@ const Campañas = () => {
                             <tr>
                               <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.unidad}</td>
                               <td className="px-3 py-2 border-b border-green-100">{facturacionGuardada.cantidad}</td>
-                              <td className="px-3 py-2 border-b border-green-100">${facturacionGuardada.valor}</td>
+                              <td className="px-3 py-2 border-b border-green-100">${formatCOP(facturacionGuardada.valor)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -2038,15 +2087,18 @@ const Campañas = () => {
               <label className="block text-sm font-medium mb-1">Valor</label>
               <div className="flex items-center">
                 <span className="mr-2 text-gray-500 font-semibold">$</span>
-                <input 
-                  type="number" 
-                  name="valor" 
-                  value={formFacturacion.valor} 
-                  min={0} 
-                  onChange={handleFacturacionChange} 
-                  className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200" 
+                <input
+                  type="text"
+                  name="valor"
+                  value={valorFormateado}
+                  min={0}
+                  onChange={handleFacturacionChange}
+                  className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200"
                   placeholder="0.00"
-                  required 
+                  required
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={15}
                 />
               </div>
             </div>
@@ -2101,9 +2153,9 @@ const Campañas = () => {
                     <tr key={factura.id || index}>
                       <td className="px-3 py-2 border-b border-green-100">{factura.unidad}</td>
                       <td className="px-3 py-2 border-b border-green-100">{factura.cantidad}</td>
-                      <td className="px-3 py-2 border-b border-green-100">${factura.valor}</td>
+                      <td className="px-3 py-2 border-b border-green-100">${formatCOP(factura.valor)}</td>
                       <td className="px-3 py-2 border-b border-green-100">{factura.periodicidad}</td>
-                      <td className="px-3 py-2 border-b border-green-100">${(factura.cantidad * factura.valor).toLocaleString()}</td>
+                      <td className="px-3 py-2 border-b border-green-100">${formatCOP(factura.cantidad * factura.valor)}</td>
                       <td className="px-3 py-2 border-b border-green-100">
                         <button 
                           onClick={async () => {
