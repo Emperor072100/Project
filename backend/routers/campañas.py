@@ -321,75 +321,113 @@ def generar_mensaje_historial(accion: str, cambios: dict, usuario_id: int = None
     if accion == "producto_agregado":
         producto_servicio = cambios.get("producto_servicio", "producto")
         cantidad = cambios.get("cantidad", 1)
-        return f"{usuario_nombre} agregó {producto_servicio} por {cantidad}"
-    
+        tipo = cambios.get("tipo", "Producto")
+        proveedor = cambios.get("proveedor", "")
+        
+        mensaje_base = f"{usuario_nombre} agregó {tipo.lower()}: {producto_servicio}"
+        if cantidad > 1:
+            mensaje_base += f" (cantidad: {cantidad})"
+        if proveedor:
+            mensaje_base += f" - Proveedor: {proveedor}"
+        
+        return mensaje_base
+
     elif accion == "producto_actualizado":
         anterior = cambios.get("anterior", {})
         nuevo = cambios.get("nuevo", {})
+        
+        # Obtener el contexto del producto para ser más específico
+        producto_contexto = nuevo.get("producto_servicio") or anterior.get("producto_servicio", "producto")
         
         # Mostrar todos los cambios de manera clara
         cambios_texto = []
         
         if anterior.get("producto_servicio") != nuevo.get("producto_servicio"):
-            cambios_texto.append(f"producto de '{anterior.get('producto_servicio', '')}' a '{nuevo.get('producto_servicio', '')}'")
+            cambios_texto.append(f"nombre de '{anterior.get('producto_servicio', '')}' a '{nuevo.get('producto_servicio', '')}'")
         
         if anterior.get("cantidad") != nuevo.get("cantidad"):
-            cambios_texto.append(f"cantidad de {anterior.get('cantidad', 0)} a {nuevo.get('cantidad', 0)}")
+            cambios_texto.append(f"cantidad de {producto_contexto} de {anterior.get('cantidad', 0)} a {nuevo.get('cantidad', 0)} unidades")
             
         if anterior.get("proveedor") != nuevo.get("proveedor"):
-            cambios_texto.append(f"proveedor de '{anterior.get('proveedor', '')}' a '{nuevo.get('proveedor', '')}'")
+            cambios_texto.append(f"proveedor de {producto_contexto} de '{anterior.get('proveedor', '')}' a '{nuevo.get('proveedor', '')}'")
             
         if anterior.get("tipo") != nuevo.get("tipo"):
-            cambios_texto.append(f"tipo de '{anterior.get('tipo', '')}' a '{nuevo.get('tipo', '')}'")
+            cambios_texto.append(f"tipo de {producto_contexto} de '{anterior.get('tipo', '')}' a '{nuevo.get('tipo', '')}'")
             
         if anterior.get("propiedad") != nuevo.get("propiedad"):
-            cambios_texto.append(f"propiedad de '{anterior.get('propiedad', '')}' a '{nuevo.get('propiedad', '')}'")
+            cambios_texto.append(f"propiedad de {producto_contexto} de '{anterior.get('propiedad', '')}' a '{nuevo.get('propiedad', '')}'")
         
         if cambios_texto:
-            return f"{usuario_nombre} modificó {' y '.join(cambios_texto)}"
+            return f"{usuario_nombre} modificó {', '.join(cambios_texto)}"
         else:
-            return f"{usuario_nombre} modificó producto"
+            return f"{usuario_nombre} modificó {producto_contexto}"
     
     elif accion == "producto_eliminado":
         producto_servicio = cambios.get("producto_servicio", "producto")
-        return f"{usuario_nombre} eliminó {producto_servicio}"
+        cantidad = cambios.get("cantidad", 1)
+        tipo = cambios.get("tipo", "producto")
+        
+        mensaje = f"{usuario_nombre} eliminó {tipo.lower()}: {producto_servicio}"
+        if cantidad > 1:
+            mensaje += f" (cantidad: {cantidad})"
+            
+        return mensaje
+
+    elif accion == "facturacion_eliminada":
+        unidad = cambios.get("unidad", "unidad")
+        valor = cambios.get("valor", 0)
+        
+        mensaje = f"{usuario_nombre} eliminó facturación: {unidad}"
+        if valor > 0:
+            mensaje += f" (valor: ${valor:,.0f})"
+            
+        return mensaje
     
     elif accion == "facturacion_agregada":
         unidad = cambios.get("unidad", "unidad")
         cantidad = cambios.get("cantidad", 1)
+        valor = cambios.get("valor", 0)
         periodicidad = cambios.get("periodicidad", "")
-        return f"{usuario_nombre} agregó facturación {unidad} por {cantidad} ({periodicidad})"
+        
+        mensaje = f"{usuario_nombre} agregó facturación: {unidad}"
+        if cantidad > 1:
+            mensaje += f" (cantidad: {cantidad})"
+        if valor > 0:
+            mensaje += f" - Valor: ${valor:,.0f}"
+        if periodicidad:
+            mensaje += f" - Periodicidad: {periodicidad}"
+            
+        return mensaje
     
     elif accion == "facturacion_actualizada":
         anterior = cambios.get("anterior", {})
         nuevo = cambios.get("nuevo", {})
         
+        # Obtener el contexto del producto/servicio para ser más específicos
+        unidad_contexto = nuevo.get("unidad") or anterior.get("unidad", "unidad")
+        
         # Mostrar todos los cambios de manera clara
         cambios_texto = []
         
         if anterior.get("unidad") != nuevo.get("unidad"):
-            cambios_texto.append(f"unidad de '{anterior.get('unidad', '')}' a '{nuevo.get('unidad', '')}'")
+            cambios_texto.append(f"unidad de facturación de '{anterior.get('unidad', '')}' a '{nuevo.get('unidad', '')}'")
         
         if anterior.get("cantidad") != nuevo.get("cantidad"):
-            cambios_texto.append(f"cantidad de {anterior.get('cantidad', 0)} a {nuevo.get('cantidad', 0)}")
+            cambios_texto.append(f"cantidad de {unidad_contexto} de {anterior.get('cantidad', 0)} a {nuevo.get('cantidad', 0)} unidades")
             
         if anterior.get("valor") != nuevo.get("valor"):
-            cambios_texto.append(f"valor de {anterior.get('valor', 0)} a {nuevo.get('valor', 0)}")
+            cambios_texto.append(f"valor de {unidad_contexto} de ${anterior.get('valor', 0):,.0f} a ${nuevo.get('valor', 0):,.0f}")
             
         if anterior.get("periodicidad") != nuevo.get("periodicidad"):
-            cambios_texto.append(f"periodicidad de '{anterior.get('periodicidad', '')}' a '{nuevo.get('periodicidad', '')}'")
+            cambios_texto.append(f"periodicidad de {unidad_contexto} de '{anterior.get('periodicidad', '')}' a '{nuevo.get('periodicidad', '')}'")
         
         if cambios_texto:
-            return f"{usuario_nombre} modificó facturación: {' y '.join(cambios_texto)}"
+            return f"{usuario_nombre} modificó {', '.join(cambios_texto)}"
         else:
-            return f"{usuario_nombre} modificó facturación"
-    
-    elif accion == "facturacion_eliminada":
-        unidad = cambios.get("unidad", "unidad")
-        return f"{usuario_nombre} eliminó facturación {unidad}"
+            return f"{usuario_nombre} modificó facturación de {unidad_contexto}"
     
     elif accion == "actualizada":
-        # Manejar actualizaciones de campaña
+        # Manejar actualizaciones de campaña con mensajes específicos
         if not cambios:
             return f"{usuario_nombre} actualizó la campaña"
         
@@ -399,23 +437,45 @@ def generar_mensaje_historial(accion: str, cambios: dict, usuario_id: int = None
                 anterior = valores["anterior"]
                 nuevo = valores["nuevo"]
                 
-                # Traducir nombres de campos al español
-                campo_esp = {
-                    "nombre": "nombre",
-                    "tipo": "tipo",
-                    "ejecutivo": "ejecutivo",
-                    "lider_de_campaña": "líder de campaña",
-                    "estado": "estado",
-                    "fecha_de_produccion": "fecha de producción",
-                    "cliente_corporativo_id": "cliente corporativo",
-                    "contacto_id": "contacto"
-                }.get(campo, campo)
-                
-                if anterior != nuevo:
+                # Traducir nombres de campos al español y manejar casos especiales
+                if campo == "nombre":
+                    cambios_texto.append(f"nombre de '{anterior}' a '{nuevo}'")
+                elif campo == "tipo":
+                    cambios_texto.append(f"tipo de campaña de '{anterior}' a '{nuevo}'")
+                elif campo == "ejecutivo":
+                    cambios_texto.append(f"ejecutivo de '{anterior}' a '{nuevo}'")
+                elif campo == "lider_de_campaña":
+                    cambios_texto.append(f"líder de campaña de '{anterior}' a '{nuevo}'")
+                elif campo == "estado":
+                    cambios_texto.append(f"estado de '{anterior}' a '{nuevo}'")
+                elif campo == "fecha_de_produccion":
+                    anterior_fecha = anterior if anterior else "sin fecha"
+                    nuevo_fecha = nuevo if nuevo else "sin fecha"
+                    cambios_texto.append(f"fecha de producción de '{anterior_fecha}' a '{nuevo_fecha}'")
+                elif campo == "cliente_corporativo_id":
+                    # Aquí podrías obtener el nombre del cliente en lugar del ID
+                    cambios_texto.append(f"cliente corporativo (ID: {anterior} → {nuevo})")
+                elif campo == "contacto_id":
+                    # Aquí podrías obtener el nombre del contacto en lugar del ID
+                    cambios_texto.append(f"contacto (ID: {anterior} → {nuevo})")
+                elif campo == "presupuesto":
+                    anterior_presup = f"${anterior:,.0f}" if anterior else "sin presupuesto"
+                    nuevo_presup = f"${nuevo:,.0f}" if nuevo else "sin presupuesto"
+                    cambios_texto.append(f"presupuesto de {anterior_presup} a {nuevo_presup}")
+                elif campo == "observaciones":
+                    anterior_obs = anterior[:50] + "..." if anterior and len(anterior) > 50 else anterior or "sin observaciones"
+                    nuevo_obs = nuevo[:50] + "..." if nuevo and len(nuevo) > 50 else nuevo or "sin observaciones"
+                    cambios_texto.append(f"observaciones de '{anterior_obs}' a '{nuevo_obs}'")
+                else:
+                    # Para campos no específicos, usar nombre genérico
+                    campo_esp = campo.replace("_", " ")
                     cambios_texto.append(f"{campo_esp} de '{anterior}' a '{nuevo}'")
         
         if cambios_texto:
-            return f"{usuario_nombre} actualizó {', '.join(cambios_texto)}"
+            if len(cambios_texto) == 1:
+                return f"{usuario_nombre} actualizó {cambios_texto[0]} de la campaña"
+            else:
+                return f"{usuario_nombre} actualizó: {', '.join(cambios_texto)}"
         else:
             return f"{usuario_nombre} actualizó la campaña"
     
