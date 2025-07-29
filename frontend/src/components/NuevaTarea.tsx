@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../services/axiosConfig.js';
 import Modal from './Modal.tsx';
-import AlertDialog from './AlertDialog.tsx';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 interface Proyecto {
   id: number;
@@ -34,14 +34,6 @@ const NuevaTarea: React.FC<Props> = ({
   const [formulario, setFormulario] = useState<FormularioTarea>({
     descripcion: '',
     proyecto_id: proyectoIdPorDefecto
-  });
-
-  // Estado para el AlertDialog
-  const [alertDialog, setAlertDialog] = useState({
-    isOpen: false,
-    title: 'Exitoso!',
-    message: '¡Tarea creada con éxito!',
-    type: 'success' as 'success' | 'error' | 'info' | 'warning'
   });
 
   // Cargar proyectos cuando se abre el modal
@@ -85,37 +77,43 @@ const NuevaTarea: React.FC<Props> = ({
     }
   };
 
-  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    setAlertDialog({
-      isOpen: true,
-      title,
-      message,
-      type
-    });
-  };
-
-  const closeAlert = () => {
-    setAlertDialog(prev => ({...prev, isOpen: false}));
-    
-    if (alertDialog.type === 'success') {
-      setModalOpen(false);
-      resetForm();
-      onCreada();
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formulario.descripcion.trim()) {
-      showAlert('Información!', 'La descripción de la tarea es obligatoria', 'warning');
+      Swal.fire({
+        title: '¡Información!',
+        text: 'La descripción de la tarea es obligatoria',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#f59e0b'
+      });
       return;
     }
 
     if (!formulario.proyecto_id || formulario.proyecto_id === 0) {
-      showAlert('Información!', 'Debes seleccionar un proyecto', 'warning');
+      Swal.fire({
+        title: '¡Información!',
+        text: 'Debes seleccionar un proyecto',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#f59e0b'
+      });
       return;
     }
+    
+    // Mostrar loading durante la creación
+    Swal.fire({
+      title: 'Creando tarea...',
+      text: 'Por favor espera un momento',
+      icon: 'info',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
     
     try {
       setLoading(true);
@@ -130,24 +128,78 @@ const NuevaTarea: React.FC<Props> = ({
       const response = await axiosInstance.post('/tareas/', datosAEnviar);
 
       if (response.status === 201 || response.status === 200) {
-        showAlert('Exitoso!', '¡Tarea creada con éxito!', 'success');
+        // Mostrar éxito
+        Swal.fire({
+          title: '¡Tarea creada!',
+          text: 'La nueva tarea se ha agregado correctamente',
+          icon: 'success',
+          confirmButtonText: '¡Excelente!',
+          confirmButtonColor: '#10b981',
+          timer: 2500,
+          timerProgressBar: true,
+          customClass: {
+            popup: 'animate__animated animate__bounceIn'
+          }
+        }).then(() => {
+          setModalOpen(false);
+          resetForm();
+          onCreada();
+        });
+        
+        toast.success('Tarea creada exitosamente! 🎉');
       }
     } catch (error: any) {
       console.error('Error al crear tarea:', error);
+      
+      let errorMessage = 'Error al crear la tarea';
       
       if (error.response?.data?.detail) {
         if (Array.isArray(error.response.data.detail)) {
           const mensajes = error.response.data.detail.map((err: any) => {
             const campo = err.loc[1];
             return `Error en ${campo}: ${err.msg}`;
-          }).join('\n');
+          }).join('<br>');
           
-          showAlert('Error!', mensajes, 'error');
+          Swal.fire({
+            title: '¡Error de validación!',
+            html: `<div class="text-left">${mensajes}</div>`,
+            icon: 'error',
+            confirmButtonText: 'Corregir',
+            confirmButtonColor: '#ef4444',
+            customClass: {
+              popup: 'animate__animated animate__shakeX'
+            }
+          });
         } else {
-          showAlert('Error!', error.response.data.detail, 'error');
+          Swal.fire({
+            title: '¡Error!',
+            text: error.response.data.detail,
+            icon: 'error',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#ef4444',
+            customClass: {
+              popup: 'animate__animated animate__shakeX'
+            }
+          });
         }
       } else {
-        showAlert('Error!', 'Error al crear la tarea', 'error');
+        Swal.fire({
+          title: '¡Error!',
+          html: `
+            <div class="text-center">
+              <p class="mb-3">No se pudo crear la tarea.</p>
+              <div class="bg-red-50 p-3 rounded-lg border border-red-200">
+                <p class="text-sm text-red-700">Por favor verifica tu conexión e inténtalo de nuevo</p>
+              </div>
+            </div>
+          `,
+          icon: 'error',
+          confirmButtonText: 'Reintentar',
+          confirmButtonColor: '#ef4444',
+          customClass: {
+            popup: 'animate__animated animate__shakeX'
+          }
+        });
       }
     } finally {
       setLoading(false);
@@ -255,14 +307,6 @@ const NuevaTarea: React.FC<Props> = ({
           )}
         </div>
       </Modal>
-      
-      <AlertDialog 
-        isOpen={alertDialog.isOpen}
-        title={alertDialog.title}
-        message={alertDialog.message}
-        type={alertDialog.type}
-        onClose={closeAlert}
-      />
     </>
   );
 };

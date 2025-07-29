@@ -1061,11 +1061,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
                 isOpen: true, 
                 proyecto: proyecto 
               })}
-              className="inline-flex items-center px-2 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-semibold hover:from-purple-600 hover:to-purple-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
+              className="inline-flex items-center px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
             >
-              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
               Tareas
             </button>
           </div>

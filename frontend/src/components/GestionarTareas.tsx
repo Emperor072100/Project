@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../services/axiosConfig.js';
 import Modal from './Modal.tsx';
-import AlertDialog from './AlertDialog.tsx';
 import NuevaTarea from './NuevaTarea.tsx';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 interface Tarea {
   id: number;
@@ -27,14 +27,6 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
   const [editandoTarea, setEditandoTarea] = useState<number | null>(null);
   const [tareaEditada, setTareaEditada] = useState<string>('');
 
-  // Estado para el AlertDialog
-  const [alertDialog, setAlertDialog] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    type: 'info' as 'success' | 'error' | 'info' | 'warning'
-  });
-
   useEffect(() => {
     if (isOpen && proyecto.id) {
       cargarTareas();
@@ -49,33 +41,70 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
       setTareas(tareasData);
     } catch (error) {
       console.error('Error al cargar tareas:', error);
-      showAlert('Error!', 'No se pudieron cargar las tareas', 'error');
+      Swal.fire({
+        title: '¡Error!',
+        text: 'No se pudieron cargar las tareas',
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ef4444'
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    setAlertDialog({
-      isOpen: true,
-      title,
-      message,
-      type
-    });
-  };
-
-  const closeAlert = () => {
-    setAlertDialog(prev => ({...prev, isOpen: false}));
-  };
-
   const toggleCompletado = async (tareaId: number, completado: boolean) => {
     try {
-      await axiosInstance.put(`/tareas/${tareaId}`, { completado: !completado });
-      cargarTareas(); // Recargar tareas
-      toast.success('Tarea actualizada correctamente');
-    } catch (error) {
-      console.error('Error al actualizar tarea:', error);
-      showAlert('Error!', 'Error al actualizar la tarea', 'error');
+      // Find the current task to get its description
+      const tareaActual = tareas.find(t => t.id === tareaId);
+      if (!tareaActual) {
+        Swal.fire({
+          title: '¡Error!',
+          text: 'No se encontró la tarea',
+          icon: 'error',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#ef4444'
+        });
+        return;
+      }
+
+      // Send complete task data with updated completed status
+      const datosActualizados = {
+        descripcion: tareaActual.descripcion,
+        completado: !completado,
+        proyecto_id: tareaActual.proyecto_id
+      };
+
+      console.log('🔄 Actualizando tarea:', { tareaId, datosActualizados });
+      
+      const response = await axiosInstance.put(`/tareas/${tareaId}`, datosActualizados);
+      console.log('✅ Respuesta del servidor:', response.data);
+      
+      // Update local state immediately for better UX
+      setTareas(prevTareas => 
+        prevTareas.map(tarea => 
+          tarea.id === tareaId 
+            ? { ...tarea, completado: !completado }
+            : tarea
+        )
+      );
+      
+      toast.success(!completado ? 'Tarea marcada como completada ✅' : 'Tarea marcada como pendiente 📝');
+    } catch (error: any) {
+      console.error('❌ Error al actualizar tarea:', error);
+      console.error('Detalles del error:', error.response?.data);
+      
+      const errorMessage = error.response?.data?.detail || 'Error al actualizar la tarea';
+      Swal.fire({
+        title: '¡Error!',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ef4444'
+      });
+      
+      // Reload tasks to ensure consistency
+      cargarTareas();
     }
   };
 
@@ -91,7 +120,13 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
 
   const guardarEdicion = async (tareaId: number) => {
     if (!tareaEditada.trim()) {
-      showAlert('Información!', 'La descripción no puede estar vacía', 'warning');
+      Swal.fire({
+        title: '¡Atención!',
+        text: 'La descripción no puede estar vacía',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#f59e0b'
+      });
       return;
     }
 
@@ -103,22 +138,139 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
       toast.success('Tarea actualizada correctamente');
     } catch (error) {
       console.error('Error al actualizar tarea:', error);
-      showAlert('Error!', 'Error al actualizar la tarea', 'error');
+      Swal.fire({
+        title: '¡Error!',
+        text: 'Error al actualizar la tarea',
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ef4444'
+      });
     }
   };
 
   const eliminarTarea = async (tareaId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
-      return;
-    }
+    // Encontrar la tarea para mostrar su descripción en la confirmación
+    const tarea = tareas.find(t => t.id === tareaId);
+    const descripcionTarea = tarea?.descripcion || 'esta tarea';
 
-    try {
-      await axiosInstance.delete(`/tareas/${tareaId}`);
-      cargarTareas(); // Recargar tareas
-      toast.success('Tarea eliminada correctamente');
-    } catch (error) {
-      console.error('Error al eliminar tarea:', error);
-      showAlert('Error!', 'Error al eliminar la tarea', 'error');
+    const result = await Swal.fire({
+      title: '¿Eliminar tarea?',
+      html: `
+        <div class="text-center">
+          <p class="mb-3">¿Estás seguro de que deseas eliminar la siguiente tarea?</p>
+          <div class="bg-gray-100 p-3 rounded-lg border-l-4 border-red-500">
+            <p class="font-semibold text-gray-800">"${descripcionTarea}"</p>
+          </div>
+          <p class="mt-3 text-sm text-red-600">
+            <strong>⚠️ Esta acción no se puede deshacer</strong>
+          </p>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: {
+        popup: 'animate__animated animate__pulse'
+      }
+    });
+
+    if (result.isConfirmed) {
+      // Mostrar loading
+      Swal.fire({
+        title: 'Eliminando tarea...',
+        text: 'Por favor espera un momento',
+        icon: 'info',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      try {
+        await axiosInstance.delete(`/tareas/${tareaId}`);
+        
+        // Mostrar éxito
+        Swal.fire({
+          title: '¡Eliminada!',
+          text: 'La tarea ha sido eliminada correctamente',
+          icon: 'success',
+          confirmButtonText: '¡Perfecto!',
+          confirmButtonColor: '#10b981',
+          timer: 2000,
+          timerProgressBar: true,
+          customClass: {
+            popup: 'animate__animated animate__bounceIn'
+          }
+        });
+
+        cargarTareas(); // Recargar tareas
+        toast.success('Tarea eliminada correctamente 🗑️');
+      } catch (error) {
+        console.error('Error al eliminar tarea:', error);
+        Swal.fire({
+          title: '¡Error!',
+          text: 'No se pudo eliminar la tarea. Inténtalo de nuevo.',
+          icon: 'error',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#ef4444',
+          customClass: {
+            popup: 'animate__animated animate__shakeX'
+          }
+        });
+      }
+    }
+  };
+
+  // Función alternativa para confirmar eliminación con información más detallada
+  const confirmarEliminarTarea = async (tareaId: number, descripcionTarea: string) => {
+    const result = await Swal.fire({
+      title: 'Confirmar eliminación',
+      html: `
+        <div class="text-center space-y-4">
+          <div class="flex justify-center mb-4">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+              <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </div>
+          </div>
+          <p class="text-lg font-semibold text-gray-800">¿Eliminar esta tarea?</p>
+          <div class="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-lg border border-red-200 max-w-md mx-auto">
+            <p class="text-sm text-gray-600 mb-2">Tarea a eliminar:</p>
+            <p class="font-semibold text-gray-800">"${descripcionTarea}"</p>
+          </div>
+          <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+            <p class="text-sm text-yellow-800">
+              <strong>⚠️ Advertencia:</strong> Esta acción es permanente y no se puede deshacer
+            </p>
+          </div>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar',
+      cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: {
+        popup: 'animate__animated animate__fadeInDown',
+        confirmButton: 'font-semibold',
+        cancelButton: 'font-semibold'
+      },
+      buttonsStyling: true
+    });
+
+    if (result.isConfirmed) {
+      await eliminarTarea(tareaId);
     }
   };
 
@@ -171,19 +323,33 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    {/* Checkbox para completado */}
+                    {/* Checkbox mejorado para completado */}
                     <button
                       onClick={() => toggleCompletado(tarea.id, tarea.completado)}
-                      className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                      className={`group relative mt-1 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                         tarea.completado
-                          ? 'bg-green-500 border-green-500 text-white'
-                          : 'border-gray-300 hover:border-blue-500'
+                          ? 'bg-gradient-to-br from-green-400 to-green-600 border-green-500 text-white shadow-lg shadow-green-500/30'
+                          : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50 hover:shadow-md'
                       }`}
+                      title={tarea.completado ? 'Marcar como pendiente' : 'Marcar como completada'}
                     >
                       {tarea.completado && (
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        <svg 
+                          className="w-4 h-4 animate-in zoom-in-75 duration-200" 
+                          fill="currentColor" 
+                          viewBox="0 0 20 20"
+                        >
+                          <path 
+                            fillRule="evenodd" 
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" 
+                            clipRule="evenodd" 
+                          />
                         </svg>
+                      )}
+                      
+                      {/* Efecto de hover para tareas no completadas */}
+                      {!tarea.completado && (
+                        <div className="absolute inset-0 rounded-lg bg-blue-500 opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
                       )}
                     </button>
 
@@ -212,40 +378,67 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
                           </div>
                         </div>
                       ) : (
-                        <div>
-                          <p className={`text-sm ${tarea.completado ? 'line-through text-gray-500' : 'text-gray-800'}`}>
-                            {tarea.descripcion}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <div className="flex-1">
+                          {/* Descripción de la tarea con mejor diseño */}
+                          <div className={`p-3 rounded-lg transition-all duration-300 ${
+                            tarea.completado 
+                              ? 'bg-green-50 border border-green-200' 
+                              : 'bg-gray-50 border border-gray-200'
+                          }`}>
+                            <p className={`text-sm transition-all duration-300 ${
                               tarea.completado 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
+                                ? 'line-through text-gray-500' 
+                                : 'text-gray-800 font-medium'
                             }`}>
-                              {tarea.completado ? 'Completada' : 'Pendiente'}
-                            </span>
+                              {tarea.descripcion}
+                            </p>
+                            
+                            {/* Indicador visual de estado */}
+                            <div className="flex items-center justify-between mt-2">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                                tarea.completado 
+                                  ? 'bg-green-100 text-green-800 border border-green-200' 
+                                  : 'bg-amber-100 text-amber-800 border border-amber-200'
+                              }`}>
+                                {tarea.completado ? (
+                                  <>
+                                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    Completada ✅
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                    </svg>
+                                    Pendiente 📝
+                                  </>
+                                )}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Acciones */}
-                    <div className="flex gap-1">
+                    {/* Acciones mejoradas */}
+                    <div className="flex flex-col gap-1 ml-2">
                       <button
                         onClick={() => iniciarEdicion(tarea)}
-                        className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                        className="p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 group"
                         title="Editar tarea"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
                       <button
                         onClick={() => eliminarTarea(tarea.id)}
-                        className="p-1 text-red-600 hover:bg-red-100 rounded"
+                        className="p-2 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all duration-200 group"
                         title="Eliminar tarea"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
@@ -256,13 +449,68 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
             </div>
           )}
           
-          {/* Footer con estadísticas */}
+          {/* Footer con estadísticas mejoradas */}
           {tareas.length > 0 && (
-            <div className="mt-6 pt-4 border-t bg-gray-50 rounded-lg p-3">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Total de tareas: {tareas.length}</span>
-                <span>Completadas: {tareas.filter(t => t.completado).length}</span>
-                <span>Pendientes: {tareas.filter(t => !t.completado).length}</span>
+            <div className="mt-6 pt-4 border-t">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-200">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Resumen del Proyecto
+                </h4>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Total de tareas */}
+                  <div className="text-center p-3 bg-white rounded-lg border border-gray-100 shadow-sm">
+                    <div className="text-2xl font-bold text-gray-800">{tareas.length}</div>
+                    <div className="text-xs text-gray-600 font-medium">Total de Tareas</div>
+                  </div>
+                  
+                  {/* Tareas completadas */}
+                  <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200 shadow-sm">
+                    <div className="text-2xl font-bold text-green-700">
+                      {tareas.filter(t => t.completado).length}
+                    </div>
+                    <div className="text-xs text-green-600 font-medium flex items-center justify-center">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Completadas
+                    </div>
+                  </div>
+                  
+                  {/* Tareas pendientes */}
+                  <div className="text-center p-3 bg-amber-50 rounded-lg border border-amber-200 shadow-sm">
+                    <div className="text-2xl font-bold text-amber-700">
+                      {tareas.filter(t => !t.completado).length}
+                    </div>
+                    <div className="text-xs text-amber-600 font-medium flex items-center justify-center">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                      Pendientes
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Barra de progreso */}
+                {tareas.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex justify-between text-xs text-gray-600 mb-1">
+                      <span>Progreso del proyecto</span>
+                      <span>{Math.round((tareas.filter(t => t.completado).length / tareas.length) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-500 ease-out"
+                        style={{ 
+                          width: `${Math.round((tareas.filter(t => t.completado).length / tareas.length) * 100)}%` 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -278,14 +526,6 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
           </button>
         </div>
       </Modal>
-      
-      <AlertDialog 
-        isOpen={alertDialog.isOpen}
-        title={alertDialog.title}
-        message={alertDialog.message}
-        type={alertDialog.type}
-        onClose={closeAlert}
-      />
     </>
   );
 };
