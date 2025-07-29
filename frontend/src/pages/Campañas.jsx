@@ -1297,13 +1297,14 @@ const Campañas = () => {
         <h1 className="text-3xl font-bold text-gray-800">Gestión de Campañas</h1>
       </div>
 
+
       {/* Tarjetas de estadísticas */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         {/* Columna izquierda - Tarjetas apiladas */}
-        <div className="flex flex-col h-full space-y-3">
+        <div className="flex flex-col h-full min-h-0 space-y-2 justify-stretch" style={{height: '100%'}}>
           {/* Tarjeta Clientes */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 flex-1">
-            <div className="flex items-center justify-between h-full">
+          <div className="bg-white border border-gray-200 rounded-lg p-2 shadow-sm hover:shadow-md transition-shadow duration-200 flex-1 flex min-h-0">
+            <div className="flex items-center justify-between w-full h-full min-h-0">
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <FaUsers className="text-blue-600 text-2xl" />
@@ -1319,9 +1320,27 @@ const Campañas = () => {
             </div>
           </div>
 
+          {/* Tarjeta Contactos */}
+          <div className="bg-white border border-gray-200 rounded-lg p-2 shadow-sm hover:shadow-md transition-shadow duration-200 flex-1 flex min-h-0">
+            <div className="flex items-center justify-between w-full h-full min-h-0">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <FaUsers className="text-purple-600 text-2xl" />
+                </div>
+                <div>
+                  <p className="text-gray-600 text-lg font-medium">Contactos</p>
+                  <p className="text-gray-500 text-base">Contactos creados</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-4xl font-bold text-purple-600">{estadisticas.total_contactos}</p>
+              </div>
+            </div>
+          </div>
+
           {/* Tarjeta Campañas */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 flex-1">
-            <div className="flex items-center justify-between h-full">
+          <div className="bg-white border border-gray-200 rounded-lg p-2 shadow-sm hover:shadow-md transition-shadow duration-200 flex-1 flex min-h-0">
+            <div className="flex items-center justify-between w-full h-full min-h-0">
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-green-50 rounded-lg">
                   <FaBullhorn className="text-green-600 text-2xl" />
