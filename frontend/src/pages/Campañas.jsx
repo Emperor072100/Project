@@ -174,7 +174,27 @@ const Campañas = () => {
       setClientesCorporativos(clientesCorporativosRes.data);
       setContactos(contactosRes.data);
       setUsuarios(usuariosRes.data);
-      setEstadisticas(estadisticasRes.data);
+      // Si es admin, mostrar estadísticas globales. Si es usuario, calcular solo de sus campañas.
+      if ((usuario.rol || '').toLowerCase() === 'admin') {
+        setEstadisticas(estadisticasRes.data);
+      } else {
+        // Calcular estadísticas solo de campañas filtradas
+        const campañasUsuario = campañasConDatos.filter(c => c.lider_de_campaña === usuario.nombre || c.ejecutivo === usuario.nombre);
+        const total_campañas = campañasUsuario.length;
+        const total_clientes_corporativos = [...new Set(campañasUsuario.map(c => c.cliente_corporativo_id))].length;
+        const total_contactos = [...new Set(campañasUsuario.map(c => c.contacto_id))].length;
+        const por_servicio = { SAC: 0, TMC: 0, TVT: 0, CBZ: 0 };
+        campañasUsuario.forEach(c => {
+          const tipo = (c.tipo || '').toUpperCase().replace(/\s/g, '');
+          if (por_servicio.hasOwnProperty(tipo)) por_servicio[tipo]++;
+        });
+        setEstadisticas({
+          total_clientes_corporativos,
+          total_contactos,
+          total_campañas,
+          por_servicio
+        });
+      }
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast.error('Error al cargar los datos');
