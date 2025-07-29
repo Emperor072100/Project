@@ -28,6 +28,7 @@ const Campañas = () => {
   const [modalHistorial, setModalHistorial] = useState(false);
   const [historial, setHistorial] = useState([]);
   const [campañaSeleccionada, setCampañaSeleccionada] = useState(null);
+  const [filtroHistorial, setFiltroHistorial] = useState('');
   
   // Nuevos modales independientes
   const [modalProductos, setModalProductos] = useState(false);
@@ -573,6 +574,66 @@ const Campañas = () => {
               <p className="text-sm text-gray-500">Historial completo de actividad</p>
             </div>
           </div>
+
+          {/* Filtro de búsqueda */}
+          <div className="mb-6">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Buscar por producto, acción (agregar, eliminar, actualizar) o usuario..."
+                value={filtroHistorial}
+                onChange={(e) => setFiltroHistorial(e.target.value)}
+              />
+              {filtroHistorial && (
+                <button
+                  onClick={() => setFiltroHistorial('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                onClick={() => setFiltroHistorial('actualizada')}
+                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
+              >
+                📝 Actualizaciones
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('agregó')}
+                className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors"
+              >
+                ➕ Agregados
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('eliminó')}
+                className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+              >
+                🗑️ Eliminados
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('producto')}
+                className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors"
+              >
+                📦 Productos
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('facturación')}
+                className="px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded-full hover:bg-orange-200 transition-colors"
+              >
+                💰 Facturación
+              </button>
+            </div>
+          </div>
           
           {historial.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
@@ -585,74 +646,134 @@ const Campañas = () => {
               <p className="text-gray-400 text-sm">Los cambios aparecerán aquí cuando se modifique la campaña</p>
             </div>
           ) : (
-            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-              {historial.map((h, idx) => {
-                const fecha = new Date(new Date(h.fecha).getTime() - (5 * 60 * 60 * 1000));
-                const fechaTexto = fecha.toLocaleString('es-CO', {
-                  day: '2-digit',
-                  month: '2-digit', 
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false
-                });
+            (() => {
+              // Filtrar historial
+              const historialFiltrado = historial.filter(h => {
+                if (!filtroHistorial) return true;
+                const busqueda = filtroHistorial.toLowerCase();
+                const observaciones = h.observaciones?.toLowerCase() || '';
+                const accion = h.accion?.toLowerCase() || '';
                 
+                return observaciones.includes(busqueda) || accion.includes(busqueda);
+              });
+
+              if (historialFiltrado.length === 0) {
                 return (
-                  <div key={idx} className="relative">
-                    {/* Línea vertical del timeline */}
-                    {idx !== historial.length - 1 && (
-                      <div className="absolute left-6 top-12 w-0.5 h-full bg-gradient-to-b from-blue-200 to-transparent"></div>
-                    )}
-                    
-                    {/* Contenido del evento */}
-                    <div className="flex gap-4">
-                      {/* Indicador circular */}
-                      <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </div>
-                      
-                      {/* Tarjeta de contenido */}
-                      <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
-                        <div className="p-4">
-                          {/* Header con fecha */}
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <div className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                                {idx === 0 ? 'Más reciente' : `Hace ${idx === 1 ? '1 cambio' : `${idx} cambios`}`}
-                              </div>
-                            </div>
-                            <div className="text-sm text-gray-500 font-mono">
-                              {fechaTexto}
-                            </div>
-                          </div>
-                          
-                          {/* Contenido del cambio */}
-                          <div className="text-gray-700">
-                            {h.observaciones ? (
-                              <p className="leading-relaxed">{h.observaciones}</p>
-                            ) : (
-                              <div className="space-y-1">
-                                {Object.entries(h.cambios || {}).map(([k, v]) => (
-                                  <div key={k} className="flex items-start gap-2">
-                                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                                    <span><span className="font-semibold text-gray-800">{k}:</span> {String(v)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Footer con gradiente sutil */}
-                        <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-b-xl"></div>
-                      </div>
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
                     </div>
+                    <p className="text-gray-500 text-lg font-medium">No se encontraron resultados</p>
+                    <p className="text-gray-400 text-sm">Intenta con otros términos de búsqueda</p>
                   </div>
                 );
-              })}
-            </div>
+              }
+
+              return (
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                  {historialFiltrado.map((h, idx) => {
+                    const fecha = new Date(new Date(h.fecha).getTime() - (5 * 60 * 60 * 1000));
+                    const fechaTexto = fecha.toLocaleString('es-CO', {
+                      day: '2-digit',
+                      month: '2-digit', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    });
+
+                    // Determinar el tipo de acción para el icono y color
+                    const accion = h.accion || '';
+                    const observaciones = h.observaciones || '';
+                    let tipoAccion = 'actualizado';
+                    let colorIcono = 'from-blue-500 to-indigo-600';
+                    let icono = 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
+
+                    if (observaciones.includes('agregó') || accion.includes('agregado')) {
+                      tipoAccion = 'agregado';
+                      colorIcono = 'from-green-500 to-emerald-600';
+                      icono = 'M12 4v16m8-8H4';
+                    } else if (observaciones.includes('eliminó') || accion.includes('eliminado')) {
+                      tipoAccion = 'eliminado';
+                      colorIcono = 'from-red-500 to-rose-600';
+                      icono = 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16';
+                    }
+                    
+                    return (
+                      <div key={idx} className="relative">
+                        {/* Línea vertical del timeline */}
+                        {idx !== historialFiltrado.length - 1 && (
+                          <div className="absolute left-6 top-12 w-0.5 h-full bg-gradient-to-b from-blue-200 to-transparent"></div>
+                        )}
+                        
+                        {/* Contenido del evento */}
+                        <div className="flex gap-4">
+                          {/* Indicador circular */}
+                          <div className={`flex-shrink-0 w-12 h-12 bg-gradient-to-r ${colorIcono} rounded-full flex items-center justify-center shadow-lg`}>
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icono} />
+                            </svg>
+                          </div>
+                          
+                          {/* Tarjeta de contenido */}
+                          <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
+                            <div className="p-4">
+                              {/* Header con fecha */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    tipoAccion === 'agregado' ? 'bg-green-50 text-green-700' :
+                                    tipoAccion === 'eliminado' ? 'bg-red-50 text-red-700' :
+                                    'bg-blue-50 text-blue-700'
+                                  }`}>
+                                    {tipoAccion === 'agregado' ? '➕ Agregado' :
+                                     tipoAccion === 'eliminado' ? '🗑️ Eliminado' :
+                                     '📝 Actualizado'}
+                                  </div>
+                                  {idx === 0 && (
+                                    <div className="px-2 py-1 bg-yellow-50 text-yellow-700 text-xs font-medium rounded-full">
+                                      Más reciente
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-sm text-gray-500 font-mono">
+                                  {fechaTexto}
+                                </div>
+                              </div>
+                              
+                              {/* Contenido del cambio */}
+                              <div className="text-gray-700">
+                                {h.observaciones ? (
+                                  <p className="leading-relaxed">{h.observaciones}</p>
+                                ) : (
+                                  <div className="space-y-1">
+                                    {Object.entries(h.cambios || {}).map(([k, v]) => (
+                                      <div key={k} className="flex items-start gap-2">
+                                        <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                                        <span><span className="font-semibold text-gray-800">{k}:</span> {String(v)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Footer con gradiente sutil */}
+                            <div className={`h-1 rounded-b-xl ${
+                              tipoAccion === 'agregado' ? 'bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500' :
+                              tipoAccion === 'eliminado' ? 'bg-gradient-to-r from-red-500 via-rose-500 to-pink-500' :
+                              'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500'
+                            }`}></div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()
           )}
         </div>
       </Modal>
