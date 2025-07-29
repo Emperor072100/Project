@@ -3,7 +3,6 @@ import toast from 'react-hot-toast';
 import Modal from './Modal';
 import AlertDialog from './AlertDialog';
 import axiosInstance from '../services/axiosConfig';
-import NuevaTarea from './NuevaTarea';
 
 interface Usuario {
   id: number;
@@ -742,26 +741,6 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
                     rows={2}
                     className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
                   ></textarea>
-                </div>
-
-                {/* Gestión de Tareas - Información */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <h4 className="font-medium text-blue-800">Gestión de Tareas</h4>
-                  </div>
-                  <p className="text-blue-700 text-sm mb-3">
-                    Una vez creado el proyecto, podrás agregar y gestionar tareas específicas desde la tabla de proyectos usando el botón "Tareas".
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <NuevaTarea 
-                      onCreada={() => {}} 
-                      mostrarSelectorProyecto={true}
-                    />
-                    <span className="text-blue-600 text-sm">← Crear tarea para cualquier proyecto</span>
-                  </div>
                 </div>
               </div>
             </div>
