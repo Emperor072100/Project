@@ -27,6 +27,35 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
   const [editandoTarea, setEditandoTarea] = useState<number | null>(null);
   const [tareaEditada, setTareaEditada] = useState<string>('');
 
+  // Clave para localStorage específica del proyecto
+  const getStorageKey = (proyectoId: number) => `tareas_completadas_${proyectoId}`;
+
+  // Cargar estado de completado desde localStorage
+  const cargarEstadoCompletado = (proyectoId: number): { [key: number]: boolean } => {
+    try {
+      const stored = localStorage.getItem(getStorageKey(proyectoId));
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.error('Error al cargar estado desde localStorage:', error);
+      return {};
+    }
+  };
+
+  // Guardar estado de completado en localStorage
+  const guardarEstadoCompletado = (proyectoId: number, tareaId: number, completado: boolean) => {
+    try {
+      const estadosActuales = cargarEstadoCompletado(proyectoId);
+      if (completado) {
+        estadosActuales[tareaId] = true;
+      } else {
+        delete estadosActuales[tareaId];
+      }
+      localStorage.setItem(getStorageKey(proyectoId), JSON.stringify(estadosActuales));
+    } catch (error) {
+      console.error('Error al guardar estado en localStorage:', error);
+    }
+  };
+
   useEffect(() => {
     if (isOpen && proyecto.id) {
       cargarTareas();
@@ -36,17 +65,63 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
   const cargarTareas = async () => {
     try {
       setLoading(true);
+      console.log('📋 Cargando tareas para el proyecto:', proyecto.id);
+      
       const response = await axiosInstance.get(`/tareas/?proyecto_id=${proyecto.id}`);
+      console.log('📋 Respuesta del servidor al cargar tareas:', response.data);
+      
       const tareasData = Array.isArray(response.data) ? response.data : [];
-      setTareas(tareasData);
-    } catch (error) {
-      console.error('Error al cargar tareas:', error);
+      
+      // Aplicar estado de completado desde localStorage
+      const estadosCompletados = cargarEstadoCompletado(proyecto.id);
+      const tareasConEstado = tareasData.map(tarea => ({
+        ...tarea,
+        completado: estadosCompletados[tarea.id] || false
+      }));
+      
+      console.log('📋 Tareas con estado aplicado:', tareasConEstado.map(t => ({
+        id: t.id,
+        descripcion: t.descripcion,
+        completado: t.completado,
+        proyecto_id: t.proyecto_id
+      })));
+      
+      setTareas(tareasConEstado);
+    } catch (error: any) {
+      console.error('❌ Error al cargar tareas:', error);
+      console.error('❌ Detalles del error:', error.response?.data);
+      
+      let errorMessage = 'No se pudieron cargar las tareas';
+      if (error.response?.data?.detail) {
+        errorMessage = `Error del servidor: ${error.response.data.detail}`;
+      } else if (error.message) {
+        errorMessage = `Error de conexión: ${error.message}`;
+      }
+      
       Swal.fire({
-        title: '¡Error!',
-        text: 'No se pudieron cargar las tareas',
+        title: '¡Error al cargar tareas!',
+        html: `
+          <div class="text-center">
+            <p class="mb-3">Hubo un problema al cargar las tareas del proyecto.</p>
+            <div class="bg-red-50 p-3 rounded-lg border border-red-200">
+              <p class="text-sm text-red-700"><strong>Detalle:</strong> ${errorMessage}</p>
+            </div>
+            <p class="mt-3 text-sm text-gray-600">
+              Verifica tu conexión a internet e inténtalo de nuevo.
+            </p>
+          </div>
+        `,
         icon: 'error',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#ef4444'
+        confirmButtonText: 'Reintentar',
+        confirmButtonColor: '#ef4444',
+        customClass: {
+          popup: 'animate__animated animate__shakeX'
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Retry loading tasks
+          cargarTareas();
+        }
       });
     } finally {
       setLoading(false);
@@ -55,56 +130,58 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
 
   const toggleCompletado = async (tareaId: number, completado: boolean) => {
     try {
-      // Find the current task to get its description
-      const tareaActual = tareas.find(t => t.id === tareaId);
-      if (!tareaActual) {
-        Swal.fire({
-          title: '¡Error!',
-          text: 'No se encontró la tarea',
-          icon: 'error',
-          confirmButtonText: 'Entendido',
-          confirmButtonColor: '#ef4444'
-        });
-        return;
-      }
-
-      // Send complete task data with updated completed status
-      const datosActualizados = {
-        descripcion: tareaActual.descripcion,
-        completado: !completado,
-        proyecto_id: tareaActual.proyecto_id
-      };
-
-      console.log('🔄 Actualizando tarea:', { tareaId, datosActualizados });
+      // Actualizar estado local inmediatamente
+      const nuevoEstado = !completado;
       
-      const response = await axiosInstance.put(`/tareas/${tareaId}`, datosActualizados);
-      console.log('✅ Respuesta del servidor:', response.data);
-      
-      // Update local state immediately for better UX
       setTareas(prevTareas => 
         prevTareas.map(tarea => 
           tarea.id === tareaId 
-            ? { ...tarea, completado: !completado }
+            ? { ...tarea, completado: nuevoEstado }
             : tarea
         )
       );
       
-      toast.success(!completado ? 'Tarea marcada como completada ✅' : 'Tarea marcada como pendiente 📝');
+      // Guardar en localStorage
+      guardarEstadoCompletado(proyecto.id, tareaId, nuevoEstado);
+      
+      // Mostrar mensaje de éxito
+      const mensaje = nuevoEstado ? 'Tarea marcada como completada ✅' : 'Tarea marcada como pendiente 📝';
+      toast.success(mensaje);
+      
+      console.log('✅ Estado actualizado:', { tareaId, completado: nuevoEstado, guardadoEnLocalStorage: true });
+      
     } catch (error: any) {
       console.error('❌ Error al actualizar tarea:', error);
-      console.error('Detalles del error:', error.response?.data);
       
-      const errorMessage = error.response?.data?.detail || 'Error al actualizar la tarea';
+      // Revertir cambio en caso de error
+      setTareas(prevTareas => 
+        prevTareas.map(tarea => 
+          tarea.id === tareaId 
+            ? { ...tarea, completado }
+            : tarea
+        )
+      );
+      
       Swal.fire({
         title: '¡Error!',
-        text: errorMessage,
+        text: 'No se pudo actualizar el estado de la tarea',
         icon: 'error',
         confirmButtonText: 'Entendido',
-        confirmButtonColor: '#ef4444'
+        confirmButtonColor: '#ef4444',
+        customClass: {
+          popup: 'animate__animated animate__shakeX'
+        }
       });
-      
-      // Reload tasks to ensure consistency
-      cargarTareas();
+    }
+  };
+
+  // Función para limpiar localStorage de un proyecto específico (opcional)
+  const limpiarEstadoProyecto = (proyectoId: number) => {
+    try {
+      localStorage.removeItem(getStorageKey(proyectoId));
+      console.log('🧹 Estado de localStorage limpiado para el proyecto:', proyectoId);
+    } catch (error) {
+      console.error('Error al limpiar localStorage:', error);
     }
   };
 
