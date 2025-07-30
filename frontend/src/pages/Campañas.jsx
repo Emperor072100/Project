@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { FaPlus, FaEdit, FaHistory, FaUsers, FaBullhorn, FaChartBar, FaBoxOpen, FaFileInvoiceDollar } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaHistory, FaUsers, FaBullhorn, FaChartBar, FaBoxOpen, FaFileInvoiceDollar, FaSearch } from 'react-icons/fa';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
@@ -108,6 +108,18 @@ const Campañas = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  // Estado para la barra de búsqueda
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Campañas filtradas por búsqueda
+  const filteredCampañas = campañas.filter(campaña => {
+    const term = searchTerm.toLowerCase();
+    return (
+      campaña.nombre?.toLowerCase().includes(term) ||
+      campaña.cliente_nombre?.toLowerCase().includes(term) ||
+      campaña.contacto_nombre?.toLowerCase().includes(term)
+    );
+  });
 
   // Cargar datos al montar el componente
   // Ejecutar cargarDatos solo cuando el usuario esté listo
@@ -1484,26 +1496,43 @@ const Campañas = () => {
         </div>
       </div>
 
-      {/* Botones de acción */}
-      <div className="flex gap-3 mb-4">
-        <button
-          onClick={() => setModalClienteCorporativo(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
-        >
-          <FaPlus /> Agregar Cliente Corporativo
-        </button>
-        <button
-          onClick={() => setModalContacto(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
-        >
-          <FaPlus /> Agregar Contacto
-        </button>
-        <button
-          onClick={() => setModalCampaña(true)}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
-        >
-          <FaPlus /> Agregar Campaña
-        </button>
+      {/* Botones de acción y barra de búsqueda */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
+        <div className="flex gap-3">
+          <button
+            onClick={() => setModalClienteCorporativo(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <FaPlus /> Agregar Cliente Corporativo
+          </button>
+          <button
+            onClick={() => setModalContacto(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <FaPlus /> Agregar Contacto
+          </button>
+          <button
+            onClick={() => setModalCampaña(true)}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <FaPlus /> Agregar Campaña
+          </button>
+        </div>
+        <div className="flex-1 flex justify-end">
+          <div className="relative w-full md:w-72 min-w-[180px]">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
+              <FaSearch className="text-lg" />
+            </span>
+            <input
+              type="text"
+              placeholder="Buscar campañas..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              style={{ minWidth: '180px' }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Tabla de campañas */}
@@ -1547,7 +1576,7 @@ const Campañas = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {campañas.map((campaña, index) => (
+                {filteredCampañas.map((campaña, index) => (
                   <tr 
                     key={campaña.id} 
                     className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-25 transition-all duration-200 ${
