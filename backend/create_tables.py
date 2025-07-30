@@ -9,10 +9,10 @@ from app.models import Cliente, ClienteCorporativo, Campaña, HistorialCampaña,
 def create_tables():
     """Crea todas las tablas definidas en los modelos"""
     print("Creando tablas en la base de datos...")
-    
+
     # Esto crear todas las tablas definidas en los modelos
     Base.metadata.create_all(bind=engine)
-    
+
     print(" Tablas creadas exitosamente!")
     print("\nTablas que deberan estar creadas:")
     print("- project_usuarios")
@@ -32,6 +32,6 @@ def create_tables():
     print("- productos_campanas")  # Nueva tabla de productos por campaña
     print("- facturacion_campanas")  # Nueva tabla de facturación por campaña
 
+
 if __name__ == "__main__":
     create_tables()
-
