@@ -423,12 +423,73 @@ const KanbanView = () => {
     return <div className="flex justify-center items-center h-64">Cargando...</div>;
   }
 
+  // Subcategory (estado) counts for each column
+  const estadosPorColumnaResumen = {
+    pendientes: ['Conceptual', 'Análisis', 'Sin Empezar'],
+    enProceso: ['En diseño', 'En desarrollo', 'En curso', 'Etapa pruebas'],
+    terminados: ['Cancelado', 'Pausado', 'En producción', 'Desarollado', 'Listo'],
+  };
+
+  const getSubcategoryCounts = (columnId) => {
+    const projects = getProjectsByColumn(columnId);
+    const estados = estadosPorColumnaResumen[columnId];
+    if (!estados) return [];
+    return estados.map((estado) => {
+      const count = projects.filter(p => p.estado === estado).length;
+      return { estado, count };
+    }).filter(e => e.count > 0);
+  };
+
+  const summary = [
+    {
+      label: 'Pendientes',
+      count: getProjectsByColumn('pendientes').length,
+      color: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      subcats: getSubcategoryCounts('pendientes'),
+    },
+    {
+      label: 'En Proceso',
+      count: getProjectsByColumn('enProceso').length,
+      color: 'bg-blue-100 text-blue-800 border-blue-300',
+      subcats: getSubcategoryCounts('enProceso'),
+    },
+    {
+      label: 'Terminados',
+      count: getProjectsByColumn('terminados').length,
+      color: 'bg-green-100 text-green-800 border-green-300',
+      subcats: getSubcategoryCounts('terminados'),
+    },
+  ];
+
   return (
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-2">Vista Kanban</h2>
       <p className="text-gray-600 mb-4">
         Gestión ágil de proyectos. Arrastra las tarjetas para cambiar su estado.
       </p>
+
+      {/* Barra informativa con mejor manejo de espacios y layout responsive */}
+      <div className="w-full flex flex-row flex-wrap justify-center items-stretch gap-6 mb-8">
+        {summary.map((item) => (
+          <div
+            key={item.label}
+            className={`flex-1 min-w-[240px] max-w-[350px] flex flex-col items-center px-6 py-3 rounded-xl border font-semibold shadow ${item.color} mx-2`}
+            style={{ minHeight: '120px', boxSizing: 'border-box' }}
+          >
+            <span className="text-base mb-1 tracking-wide uppercase w-full text-center whitespace-nowrap">{item.label}</span>
+            <span className="text-2xl font-extrabold mb-2 w-full text-center text-gray-900">{item.count}</span>
+            {/* Subcategorías con badges y mejor separación */}
+            <div className="w-full grid grid-cols-1 gap-1 text-xs font-normal">
+              {item.subcats.map(sub => (
+                <div key={sub.estado} className="flex justify-between items-center bg-white rounded px-2 py-0.5 border border-gray-200">
+                  <span className="truncate text-gray-700 font-medium">{sub.estado}</span>
+                  <span className="font-bold text-gray-800 bg-gray-100 rounded px-2 py-0.5 ml-2">{sub.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
 
       <DndContext
         sensors={sensors}
