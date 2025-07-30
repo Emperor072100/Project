@@ -32,6 +32,7 @@ class Campaña(Base):
         ForeignKey("campanas_contacto.id"),
         nullable=False
     )
+    contacto_id_secundario = Column(Integer, ForeignKey('campanas_contacto.id'), nullable=True)
     lider_de_campaña = Column(String, nullable=False)
     ejecutivo = Column(String, nullable=False)
     fecha_de_produccion = Column(Date, nullable=False)  # Solo fecha, sin hora
@@ -46,7 +47,8 @@ class Campaña(Base):
         "ClienteCorporativo",
         back_populates="campanas"
     )
-    contacto = relationship("Cliente", back_populates="campanas")
+    contacto = relationship("Cliente", foreign_keys=[contacto_id], back_populates="campanas_principal")
+    contacto_secundario = relationship("Cliente", foreign_keys=[contacto_id_secundario], back_populates="campanas_secundarias")
     historial = relationship("HistorialCampaña", back_populates="campaña")
     productos = relationship("ProductoCampaña", back_populates="campaña")
     facturacion = relationship("FacturacionCampaña", back_populates="campaña")

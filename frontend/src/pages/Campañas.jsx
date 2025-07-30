@@ -74,6 +74,7 @@ const Campañas = () => {
     lider: '',
     cliente_id: '',
     contacto_id: '',
+    contacto_id_secundario: '',
     fecha_inicio: '',
     fecha_fin: '',
     estado: '',
@@ -319,6 +320,7 @@ const Campañas = () => {
       lider: campaña.lider_de_campaña || '', // Usar el campo correcto
       cliente_id: campaña.cliente_corporativo_id ? campaña.cliente_corporativo_id.toString() : '', // Convertir a string para el select
       contacto_id: campaña.contacto_id ? campaña.contacto_id.toString() : '', // Convertir a string para el select
+      contacto_id_secundario: campaña.contacto_id_secundario ? campaña.contacto_id_secundario.toString() : '',
       fecha_inicio: campaña.fecha_de_produccion ? campaña.fecha_de_produccion : '',
       fecha_fin: campaña.fecha_fin ? campaña.fecha_fin.slice(0, 16) : '',
       estado: campaña.estado || 'activo',
@@ -343,22 +345,20 @@ const Campañas = () => {
         tipo: formEditar.tipo,
         cliente_corporativo_id: parseInt(formEditar.cliente_id),
         contacto_id: parseInt(formEditar.contacto_id),
+        contacto_id_secundario: formEditar.contacto_id_secundario ? parseInt(formEditar.contacto_id_secundario) : null,
         lider_de_campaña: formEditar.lider,
         ejecutivo: formEditar.cje,
         fecha_de_produccion: formEditar.fecha_inicio || null,
         estado: formEditar.estado
       };
-      
       await axios.put(encodeURI(`http://localhost:8000/campanas/${campañaSeleccionada.id}`), payload, config);
       setCampañaSeleccionada((prev) => ({ ...prev, ...payload }));
-      
       // Actualizar la lista de campañas
       setCampañas((prev) => 
         prev.map((c) => 
           c.id === campañaSeleccionada.id ? { ...c, ...payload } : c
         )
       );
-      
       // Actualizar el historial (el backend ya registra el cambio automáticamente)
       await actualizarHistorial();
       Swal.fire({
@@ -877,20 +877,46 @@ const Campañas = () => {
                         <span className="text-base text-gray-800">{campañaSeleccionada.nombre || <span className='italic text-gray-400'>Sin nombre</span>}</span>
                       </div>
                       <div>
-                        <span className="block text-xs font-semibold text-gray-500">Contacto Asociado</span>
+                        <span className="block text-xs font-semibold text-gray-500">Contacto Principal</span>
                         <span className="text-base text-gray-800">{campañaSeleccionada.contacto_nombre || <span className='italic text-gray-400'>Sin contacto</span>}</span>
                       </div>
-                     <div>
-                       <span className="block text-xs font-semibold text-gray-500">Correo del Contacto</span>
-                       <span className="text-base text-gray-800">{(() => {
-                         const contacto = contactos.find(c => c.id === campañaSeleccionada.contacto_id);
-                         return contacto?.correo || <span className='italic text-gray-400'>Sin correo</span>;
-                       })()}</span>
-                     </div>
                       <div>
-                        <span className="block text-xs font-semibold text-gray-500">Número de Contacto</span>
+                        <span className="block text-xs font-semibold text-gray-500">Correo del Contacto Principal</span>
+                        <span className="text-base text-gray-800">{(() => {
+                          const contacto = contactos.find(c => c.id === campañaSeleccionada.contacto_id);
+                          return contacto?.correo || <span className='italic text-gray-400'>Sin correo</span>;
+                        })()}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs font-semibold text-gray-500">Número de Contacto Principal</span>
                         <span className="text-base text-gray-800">{campañaSeleccionada.contacto_telefono || <span className='italic text-gray-400'>Sin número</span>}</span>
                       </div>
+                      {/* Contacto Secundario si existe */}
+                      {campañaSeleccionada.contacto_id_secundario && (
+                        <>
+                          <div>
+                            <span className="block text-xs font-semibold text-gray-500">Contacto Secundario</span>
+                            <span className="text-base text-gray-800">{(() => {
+                              const contactoSec = contactos.find(c => c.id === campañaSeleccionada.contacto_id_secundario || c.id === Number(campañaSeleccionada.contacto_id_secundario));
+                              return contactoSec?.nombre || <span className='italic text-gray-400'>Sin contacto</span>;
+                            })()}</span>
+                          </div>
+                          <div>
+                            <span className="block text-xs font-semibold text-gray-500">Correo del Contacto Secundario</span>
+                            <span className="text-base text-gray-800">{(() => {
+                              const contactoSec = contactos.find(c => c.id === campañaSeleccionada.contacto_id_secundario || c.id === Number(campañaSeleccionada.contacto_id_secundario));
+                              return contactoSec?.correo || <span className='italic text-gray-400'>Sin correo</span>;
+                            })()}</span>
+                          </div>
+                          <div>
+                            <span className="block text-xs font-semibold text-gray-500">Número de Contacto Secundario</span>
+                            <span className="text-base text-gray-800">{(() => {
+                              const contactoSec = contactos.find(c => c.id === campañaSeleccionada.contacto_id_secundario || c.id === Number(campañaSeleccionada.contacto_id_secundario));
+                              return contactoSec?.telefono || <span className='italic text-gray-400'>Sin número</span>;
+                            })()}</span>
+                          </div>
+                        </>
+                      )}
                       <div>
                         <span className="block text-xs font-semibold text-gray-500">Líder de Campaña</span>
                         <span className="text-base text-gray-800">{campañaSeleccionada.lider_de_campaña || <span className='italic text-gray-400'>Sin asignar</span>}</span>
@@ -1041,10 +1067,10 @@ const Campañas = () => {
                         </select>
                       </div>
 
-                      {/* Contacto */}
+                      {/* Contacto Principal */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">
-                          Contacto *
+                          Contacto Principal *
                         </label>
                         <select
                           required
@@ -1062,13 +1088,42 @@ const Campañas = () => {
                             </option>
                           ))}
                         </select>
-                       {/* Mostrar correo del contacto seleccionado */}
-                       <div className="mt-1 text-xs text-gray-600">
-                         Correo: {(() => {
-                           const contactoSel = contactos.find(c => c.id === formEditar.contacto_id);
-                           return contactoSel?.correo || <span className='italic text-gray-400'>Sin correo</span>;
-                         })()}
-                       </div>
+                        {/* Mostrar correo del contacto seleccionado */}
+                        <div className="mt-1 text-xs text-gray-600">
+                          Correo: {(() => {
+                            const contactoSel = contactos.find(c => c.id === formEditar.contacto_id);
+                            return contactoSel?.correo || <span className='italic text-gray-400'>Sin correo</span>;
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* Contacto Secundario */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Contacto Secundario
+                        </label>
+                        <select
+                          value={formEditar.contacto_id_secundario}
+                          onChange={(e) => setFormEditar({...formEditar, contacto_id_secundario: e.target.value})}
+                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 bg-white"
+                        >
+                          <option value="">Seleccionar contacto secundario</option>
+                          {contactos.filter(contacto => 
+                            !formEditar.cliente_id || 
+                            contacto.cliente_corporativo_id.toString() === formEditar.cliente_id
+                          ).map(contacto => (
+                            <option key={contacto.id} value={contacto.id}>
+                              {contacto.nombre}
+                            </option>
+                          ))}
+                        </select>
+                        {/* Mostrar correo del contacto secundario seleccionado */}
+                        <div className="mt-1 text-xs text-gray-600">
+                          Correo: {(() => {
+                            const contactoSec = contactos.find(c => c.id === formEditar.contacto_id_secundario);
+                            return contactoSec?.correo || <span className='italic text-gray-400'>Sin correo</span>;
+                          })()}
+                        </div>
                       </div>
 
                       {/* Líder de Campaña */}
