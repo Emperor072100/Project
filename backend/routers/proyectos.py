@@ -455,9 +455,16 @@ def eliminar_proyecto(
     proyecto = db.query(modelo.Proyecto).filter_by(id=proyecto_id).first()
     if not proyecto or (usuario.rol != "admin" and proyecto.responsable_id != usuario.id):
         raise HTTPException(status_code=403, detail="No autorizado")
-    db.delete(proyecto)
-    db.commit()
-    return {"ok": True}
+    try:
+        # Eliminar tareas asociadas primero
+        from app.models.tarea import Tarea
+        db.query(Tarea).filter_by(proyecto_id=proyecto_id).delete()
+        db.delete(proyecto)
+        db.commit()
+        return {"ok": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar: {str(e)}")
 
 
 @router.get("/{proyecto_id}", response_model=ProyectoOut)
