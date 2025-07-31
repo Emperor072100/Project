@@ -135,9 +135,9 @@ const getPrioridadColors = (prioridad: string) => {
   switch (prioridad) {
     case 'Alta': 
       return {
-        bg: '#f0fdf4',
-        text: '#16a34a',
-        border: '#bbf7d0'
+        bg: '#fef2f2', // antes era el de baja
+        text: '#dc2626', // antes era el de baja
+        border: '#fecaca' // antes era el de baja
       };
     case 'Media': 
       return {
@@ -147,9 +147,9 @@ const getPrioridadColors = (prioridad: string) => {
       };
     case 'Baja': 
       return {
-        bg: '#fef2f2',
-        text: '#dc2626',
-        border: '#fecaca'
+        bg: '#f0fdf4', // antes era el de alta
+        text: '#16a34a', // antes era el de alta
+        border: '#bbf7d0' // antes era el de alta
       };
     default: 
       return {
@@ -992,20 +992,38 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
       case 'enlace':
         return (
           <div className="flex flex-col items-center justify-center">
-            {proyecto.enlace ? (
-              <a
-                href={proyecto.enlace}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-xs hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-                Ver enlace
-              </a>
+            {editando.id === proyecto.id && editando.campo === 'enlace' ? (
+              <EnlaceEditor
+                proyecto={proyecto}
+                handleSave={handleSave}
+              />
             ) : (
-              <span className="text-gray-400 text-sm italic">Sin enlace</span>
+              <div className="flex flex-col items-center gap-2">
+                {proyecto.enlace ? (
+                  <a
+                    href={proyecto.enlace}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-xs hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Ver enlace
+                  </a>
+                ) : null}
+                <span
+                  onClick={() => handleEdit(proyecto.id, 'enlace')}
+                  className={`block max-w-xs text-center cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${proyecto.enlace ? 'bg-gray-50 hover:bg-blue-50 hover:text-blue-700 text-xs' : 'bg-blue-50 text-blue-700 border border-blue-300 hover:bg-blue-100 hover:text-blue-900'}`}
+                  title={proyecto.enlace || 'Haz clic para agregar enlace'}
+                >
+                  {proyecto.enlace ? (
+                    <span className="italic">✏️ Editar enlace</span>
+                  ) : (
+                    <span className="italic font-semibold">+ Agregar enlace</span>
+                  )}
+                </span>
+              </div>
             )}
           </div>
         );
@@ -1145,6 +1163,84 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
     );
   };
 
+  const EnlaceEditor: React.FC<{ proyecto: any; handleSave: (id: number, campo: keyof Proyecto, valor: any) => void }> = ({ proyecto, handleSave }) => {
+    const [valor, setValor] = React.useState(proyecto.enlace || '');
+
+    React.useEffect(() => {
+      setValor(proyecto.enlace || '');
+    }, [proyecto.id]);
+
+    const handleBlur = () => {
+      if (valor !== proyecto.enlace) {
+        handleSave(proyecto.id, 'enlace', valor);
+      }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSave(proyecto.id, 'enlace', valor);
+        (e.target as HTMLInputElement).blur();
+      }
+    };
+
+    const isValidUrl = (url: string) => {
+      if (!url) return true; // Permitir vacío
+      try {
+        new URL(url.startsWith('http') ? url : `https://${url}`);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          type="text"
+          value={valor}
+          onChange={e => setValor(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className={`border-2 p-2 rounded-xl w-full max-w-xs focus:outline-none focus:ring-2 shadow-lg ${
+            isValidUrl(valor) 
+              ? 'border-blue-300 focus:ring-blue-500 focus:border-transparent' 
+              : 'border-red-300 focus:ring-red-500 focus:border-red-500'
+          }`}
+          placeholder="https://ejemplo.com"
+          autoFocus
+        />
+        {!isValidUrl(valor) && valor && (
+          <span className="text-red-500 text-xs text-center">URL no válida</span>
+        )}
+      </div>
+    );
+  };
+
+  // Contar proyectos por categoría de estado (similar a KPIs)
+  const contarProyectosPorCategoria = () => {
+    const proyectosFiltrados = filtrarProyectos();
+    const estadosPendientes = ['conceptual', 'análisis', 'analisis', 'sin empezar', 'pendiente'];
+    const estadosEnCurso = ['diseño', 'desarrollo', 'curso', 'pruebas', 'proceso'];
+    const estadosCompletados = ['cancelado', 'pausado', 'producción', 'produccion', 'desarrollado', 'listo', 'completado', 'terminado'];
+
+    const pendientes = proyectosFiltrados.filter(p => 
+      estadosPendientes.some(keyword => p.estado?.toLowerCase().includes(keyword))
+    ).length;
+
+    const enCurso = proyectosFiltrados.filter(p => 
+      estadosEnCurso.some(keyword => p.estado?.toLowerCase().includes(keyword))
+    ).length;
+
+    const completados = proyectosFiltrados.filter(p => 
+      estadosCompletados.some(keyword => p.estado?.toLowerCase().includes(keyword))
+    ).length;
+
+    return { pendientes, enCurso, completados };
+  };
+
+  const { pendientes, enCurso, completados } = contarProyectosPorCategoria();
+
   return (
     <>
       {/* Header con botón de nuevo proyecto - Mejorado */}
@@ -1163,6 +1259,24 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
               <p className="text-xs text-gray-600 font-medium">
                 {filtrarProyectos().length} proyecto{filtrarProyectos().length !== 1 ? 's' : ''} encontrado{filtrarProyectos().length !== 1 ? 's' : ''}
               </p>
+              {/* Resumen de proyectos por estado */}
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                  <span className="text-yellow-700 font-semibold text-xs">{pendientes}</span>
+                  <span className="text-yellow-600 text-xs">Pendiente</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-blue-700 font-semibold text-xs">{enCurso}</span>
+                  <span className="text-blue-600 text-xs">En Curso</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-green-700 font-semibold text-xs">{completados}</span>
+                  <span className="text-green-600 text-xs">Completado</span>
+                </div>
+              </div>
             </div>
           </div>
           
