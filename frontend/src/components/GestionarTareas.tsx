@@ -518,6 +518,8 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
                         onClick={() => eliminarTarea(tarea.id)}
                         className="p-2 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all duration-200 group"
                         title="Eliminar tarea"
+                        disabled={tarea.completado}
+                        style={tarea.completado ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                       >
                         <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
