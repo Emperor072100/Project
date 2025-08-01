@@ -118,9 +118,9 @@ export const ProyectosProvider = ({ children }) => {
       'Sin Empezar': 0,
       
       // Estados en proceso (30-80%)
-      'En diseño': 30,
-      'En desarrollo': 50,
-      'En curso': 65,
+      'En diseño': 60,
+      'En desarrollo': 60,
+      'En curso': 60,
       'Etapa pruebas': 80,
       
       // Estados terminados (85-100% o casos especiales)
