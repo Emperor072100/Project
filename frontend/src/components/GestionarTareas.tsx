@@ -408,7 +408,9 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
                           ? 'bg-gradient-to-br from-green-400 to-green-600 border-green-500 text-white shadow-lg shadow-green-500/30'
                           : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50 hover:shadow-md'
                       }`}
-                      title={tarea.completado ? 'Marcar como pendiente' : 'Marcar como completada'}
+                      title={tarea.completado ? 'Ya realizada' : 'Marcar como completada'}
+                      disabled={tarea.completado}
+                      style={tarea.completado ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
                     >
                       {tarea.completado && (
                         <svg 
@@ -505,6 +507,8 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
                         onClick={() => iniciarEdicion(tarea)}
                         className="p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 group"
                         title="Editar tarea"
+                        disabled={tarea.completado}
+                        style={tarea.completado ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                       >
                         <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -514,6 +518,8 @@ const GestionarTareas: React.FC<Props> = ({ proyecto, isOpen, onClose }) => {
                         onClick={() => eliminarTarea(tarea.id)}
                         className="p-2 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all duration-200 group"
                         title="Eliminar tarea"
+                        disabled={tarea.completado}
+                        style={tarea.completado ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                       >
                         <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

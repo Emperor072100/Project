@@ -120,9 +120,9 @@ export const Dashboard: React.FC = () => {
 
   const getColorPrioridad = (prioridad: string) => {
     switch (prioridad) {
-      case 'Alta': return 'bg-green-100 text-green-800';  // Alta prioridad = Verde
+      case 'Alta': return 'bg-red-100 text-red-800';  // Alta prioridad = Rojo
       case 'Media': return 'bg-yellow-100 text-yellow-800';
-      case 'Baja': return 'bg-red-100 text-red-800';     // Baja prioridad = Rojo
+      case 'Baja': return 'bg-green-100 text-green-800';     // Baja prioridad = Verde
       default: return 'bg-gray-100 text-gray-800';
     }
   };
