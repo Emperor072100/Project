@@ -59,6 +59,8 @@ const Implementaciones = () => {
       requisitosGrabacion: { seguimiento: '', estado: '', responsable: '', notas: '' }
     }
   });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [estadoFiltro, setEstadoFiltro] = useState("");
 
   // Cargar implementaciones
   const cargarImplementaciones = async () => {
@@ -90,18 +92,19 @@ const Implementaciones = () => {
     }
   }, []);
 
+  const implementacionesFiltradas = implementaciones.filter(imp => {
+    const matchSearch =
+      imp.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      imp.proceso.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchEstado = estadoFiltro ? (imp.estado === estadoFiltro || imp.estado?.toLowerCase() === estadoFiltro.toLowerCase()) : true;
+    return matchSearch && matchEstado;
+  });
+
   return (
     <div className="container mx-auto px-4">
       {/* Encabezado */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Gestión de Implementaciones</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-150"
-        >
-          <FaPlus size={14} />
-          Nueva Implementación
-        </button>
       </div>
 
       {/* Modal de Nueva Implementación */}
@@ -702,6 +705,42 @@ const Implementaciones = () => {
         </div>
       </div>
 
+      {/* Botón Nueva Implementación y barra de búsqueda en la misma fila */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-150"
+          >
+            <FaPlus size={14} />
+            Nueva Implementación
+          </button>
+          <select
+            value={estadoFiltro}
+            onChange={e => setEstadoFiltro(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white text-gray-700"
+          >
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="ok">OK</option>
+            <option value="cancelado">Cancelado</option>
+            <option value="Finalizado">Finalizado</option>
+          </select>
+        </div>
+        <div className="w-full max-w-xs ml-4 relative">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 pr-10"
+            placeholder="Buscar por cliente o proceso..."
+          />
+          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
+            <FaSearch size={18} />
+          </span>
+        </div>
+      </div>
+
       {/* Tabla de implementaciones */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
@@ -727,8 +766,8 @@ const Implementaciones = () => {
               </tr>
             </thead>
             <tbody className="bg-white">
-              {implementaciones.length > 0 ? (
-                implementaciones.map((implementacion) => (
+              {implementacionesFiltradas.length > 0 ? (
+                implementacionesFiltradas.map((implementacion) => (
                   <tr key={implementacion.id} className="border-b border-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="text-sm font-medium text-blue-600">{implementacion.cliente}</div>
