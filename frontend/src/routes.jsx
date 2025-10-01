@@ -8,6 +8,7 @@ import Tareas from "./pages/Tareas.jsx";
 import Perfil from "./pages/Perfil.jsx";
 import Usuarios from "./pages/Usuarios.jsx"; // Importar el componente de usuarios
 import Campañas from "./pages/Campañas.jsx";
+import Implementaciones from "./pages/Implementaciones.jsx";
 import Login from "./pages/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
@@ -99,6 +100,26 @@ export const routes = [
       <ProtectedRoute>
         <Layout>
           <Campañas />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/implementaciones",
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Implementaciones />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/implementaciones",
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Implementaciones />
         </Layout>
       </ProtectedRoute>
     ),
