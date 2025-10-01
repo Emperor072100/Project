@@ -1,9 +1,12 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// Determinar la URL base según el entorno
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 // Crear una instancia de axios
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000'
+  baseURL: API_URL
 });
 
 // Interceptor de solicitud que añade automáticamente el token

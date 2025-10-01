@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import NuevoProyecto from '../components/NuevoProyecto';
 import EditarProyecto from '../components/EditarProyecto';
-// ...other imports
+import axiosInstance from '../services/axiosConfig';
 
 const Proyectos = () => {
   const [proyectos, setProyectos] = useState([]);
@@ -15,7 +15,20 @@ const Proyectos = () => {
 
   // Cargar proyectos
   const fetchProyectos = async () => {
-    // ...your existing fetchProyectos code
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Usar axiosInstance configurado para manejar correctamente la URL de la API
+      const response = await axiosInstance.get('/proyectos');
+      
+      setProyectos(response.data);
+    } catch (err: any) {
+      console.error('Error al cargar proyectos:', err);
+      setError(err.response?.data?.detail || 'Error al cargar los proyectos');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
