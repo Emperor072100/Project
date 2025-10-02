@@ -1,0 +1,31 @@
+from sqlalchemy import Column, Integer, String, ForeignKey
+from core.database import Base
+
+class ProjectImplementacionTecnologia(Base):
+    __tablename__ = "project_implementacion_tecnologia"
+    id = Column(Integer, primary_key=True, index=True)
+    cliente_implementacion_id = Column(Integer, ForeignKey("project_implementaciones_clienteimple.id"), nullable=False)
+    creacion_modulo_seguimiento = Column(String)
+    creacion_modulo_estado = Column(String)
+    creacion_modulo_responsable = Column(String)
+    creacion_modulo_notas = Column(String)
+    tipificacion_interacciones_seguimiento = Column(String)
+    tipificacion_interacciones_estado = Column(String)
+    tipificacion_interacciones_responsable = Column(String)
+    tipificacion_interacciones_notas = Column(String)
+    aplicativos_proceso_seguimiento = Column(String)
+    aplicativos_proceso_estado = Column(String)
+    aplicativos_proceso_responsable = Column(String)
+    aplicativos_proceso_notas = Column(String)
+    whatsapp_seguimiento = Column(String)
+    whatsapp_estado = Column(String)
+    whatsapp_responsable = Column(String)
+    whatsapp_notas = Column(String)
+    correos_electronicos_seguimiento = Column(String)
+    correos_electronicos_estado = Column(String)
+    correos_electronicos_responsable = Column(String)
+    correos_electronicos_notas = Column(String)
+    requisitos_grabacion_seguimiento = Column(String)
+    requisitos_grabacion_estado = Column(String)
+    requisitos_grabacion_responsable = Column(String)
+    requisitos_grabacion_notas = Column(String)

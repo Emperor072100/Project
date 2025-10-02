@@ -4,7 +4,7 @@ from core.database import Base
 
 
 class Cliente(Base):
-    __tablename__ = "campanas_contacto"
+    __tablename__ = "project_campanas_contacto"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
@@ -12,7 +12,7 @@ class Cliente(Base):
     correo = Column(String, nullable=False)
     cliente_corporativo_id = Column(
         Integer,
-        ForeignKey("campanas_clientes_corporativos.id"),
+        ForeignKey("project_campanas_clientes_corporativos.id"),
         nullable=False
     )
     
@@ -21,5 +21,5 @@ class Cliente(Base):
         "ClienteCorporativo",
         back_populates="contactos"
     )
-    campanas_principal = relationship("Campaña", foreign_keys="Campaña.contacto_id", back_populates="contacto")
-    campanas_secundarias = relationship("Campaña", foreign_keys="Campaña.contacto_id_secundario", back_populates="contacto_secundario")
+    campanas_principal = relationship("Campaña", foreign_keys="project_campanas_campanas.contacto_id", back_populates="contacto")
+    campanas_secundarias = relationship("Campaña", foreign_keys="project_campanas_campanas.contacto_id_secundario", back_populates="contacto_secundario")

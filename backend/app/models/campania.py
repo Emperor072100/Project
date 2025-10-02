@@ -11,7 +11,7 @@ class TipoCampañaEnum(str, enum.Enum):
     CBZ = "CBZ"
 
 class Campaña(Base):
-    __tablename__ = "campañas"
+    __tablename__ = "project_campanias"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)

@@ -4,10 +4,10 @@ from core.database import Base
 
 
 class FacturacionCampaña(Base):
-    __tablename__ = "facturacion_campanas"
+    __tablename__ = "project_facturacion_campanas"
 
     id = Column(Integer, primary_key=True, index=True)
-    campaña_id = Column(Integer, ForeignKey("campanas_campanas.id"), nullable=False)
+    campaña_id = Column(Integer, ForeignKey("project_campanas_campanas.id"), nullable=False)
     unidad = Column(String, nullable=False)
     cantidad = Column(Integer, nullable=False, default=1)
     valor = Column(Float, nullable=False)

@@ -17,22 +17,22 @@ class EstadoCampaña(str, enum.Enum):
 
 
 class Campaña(Base):
-    __tablename__ = "campanas_campanas"
+    __tablename__ = "project_campanas_campanas"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
     tipo = Column(Enum(TipoCampaña), nullable=False, default=TipoCampaña.SAC)
     cliente_corporativo_id = Column(
         Integer,
-        ForeignKey("campanas_clientes_corporativos.id"),
+        ForeignKey("project_campanas_clientes_corporativos.id"),
         nullable=False
     )
     contacto_id = Column(
         Integer,
-        ForeignKey("campanas_contacto.id"),
+        ForeignKey("project_campanas_contacto.id"),
         nullable=False
     )
-    contacto_id_secundario = Column(Integer, ForeignKey('campanas_contacto.id'), nullable=True)
+    contacto_id_secundario = Column(Integer, ForeignKey('project_campanas_contacto.id'), nullable=True)
     lider_de_campaña = Column(String, nullable=False)
     ejecutivo = Column(String, nullable=False)
     fecha_de_produccion = Column(Date, nullable=False)  # Solo fecha, sin hora

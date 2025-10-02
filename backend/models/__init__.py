@@ -1,0 +1,6 @@
+from .project_implementaciones_clienteimple import ProjectImplementacionesClienteImple
+from .project_implementacion_contractual import ProjectImplementacionContractual
+from .project_implementacion_talentoHumano import ProjectImplementacionTalentoHumano
+from .project_implementacion_procesos import ProjectImplementacionProcesos
+from .project_implementacion_tecnologia import ProjectImplementacionTecnologia
+# Agrega aquí los imports de otros modelos si los creas en el futuro
