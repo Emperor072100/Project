@@ -8,6 +8,8 @@ import {
   FaCogs, 
   FaLaptop, 
   FaFileContract,
+  FaTrash,
+  FaFileExcel,
   FaChevronRight,
   FaChevronDown 
 } from 'react-icons/fa';
@@ -821,18 +823,25 @@ const Implementaciones = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex justify-center gap-2">
                         <button
-                          onClick={() => console.log('Administrar', implementacion.id)}
+                          onClick={() => console.log('Editar', implementacion.id)}
                           className="inline-flex items-center px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
                         >
                           <FaEdit className="mr-1" size={12} />
-                          Administrar
+                          Editar
                         </button>
                         <button
-                          onClick={() => console.log('Historial', implementacion.id)}
+                          onClick={() => console.log('Eliminar', implementacion.id)}
+                          className="inline-flex items-center px-3 py-1 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100 transition-colors"
+                        >
+                          <FaTrash className="mr-1" size={12} />
+                          Eliminar
+                        </button>
+                        <button
+                          onClick={() => console.log('Descargar Excel', implementacion.id)}
                           className="inline-flex items-center px-3 py-1 text-xs font-medium text-green-600 bg-green-50 rounded hover:bg-green-100 transition-colors"
                         >
-                          <FaSearch className="mr-1" size={12} />
-                          Historial
+                          <FaFileExcel className="mr-1" size={12} />
+                          Excel
                         </button>
                       </div>
                     </td>
