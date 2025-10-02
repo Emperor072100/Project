@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from backend.crud.clienteimple import create_clienteimple
+from crud.clienteimple import create_clienteimple
 
 router = APIRouter()
 

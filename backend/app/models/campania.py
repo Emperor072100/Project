@@ -16,7 +16,9 @@ class Campaña(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
     tipo = Column(Enum(TipoCampañaEnum), nullable=False)
-    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
+    contacto_id = Column(Integer, ForeignKey("project_campanas_contacto.id"), nullable=True)
+    contacto_id_secundario = Column(Integer, ForeignKey("project_campanas_contacto.id"), nullable=True)
+    cliente_id = Column(Integer, ForeignKey("project_campanas_contacto.id"), nullable=False)
     lider = Column(String, nullable=False)
     cje = Column(String, nullable=False)
     fecha_inicio = Column(DateTime, nullable=True)
@@ -28,4 +30,6 @@ class Campaña(Base):
     fecha_creacion = Column(DateTime, default=datetime.utcnow)
 
     cliente = relationship("Cliente", back_populates="campañas")
+    contacto = relationship("Cliente", foreign_keys=[contacto_id], back_populates="campanas_principal")
+    contacto_secundario = relationship("Cliente", foreign_keys=[contacto_id_secundario], back_populates="campanas_secundarias")
     # ...otros campos y relaciones...

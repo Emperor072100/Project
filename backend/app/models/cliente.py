@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from core.database import Base
+from app.models.campana import Campaña
 
 
 class Cliente(Base):
@@ -21,5 +22,5 @@ class Cliente(Base):
         "ClienteCorporativo",
         back_populates="contactos"
     )
-    campanas_principal = relationship("Campaña", foreign_keys="project_campanas_campanas.contacto_id", back_populates="contacto")
-    campanas_secundarias = relationship("Campaña", foreign_keys="project_campanas_campanas.contacto_id_secundario", back_populates="contacto_secundario")
+    campanas_principal = relationship("Campaña", foreign_keys=[Campaña.contacto_id], back_populates="contacto")
+    campanas_secundarias = relationship("Campaña", foreign_keys=[Campaña.contacto_id_secundario], back_populates="contacto_secundario")

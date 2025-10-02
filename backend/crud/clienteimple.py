@@ -1,5 +1,5 @@
-from backend.models.project_implementaciones_clienteimple import ProjectImplementacionesClienteImple
-from backend.core.database import SessionLocal
+from models.project_implementaciones_clienteimple import ProjectImplementacionesClienteImple
+from core.database import SessionLocal
 
 def create_clienteimple(cliente, proceso):
     db = SessionLocal()

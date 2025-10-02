@@ -22,6 +22,7 @@ const Implementaciones = () => {
   const [formData, setFormData] = useState({
     cliente: '',
     proceso: '',
+    estado: '',
     contractual: {
       modeloContrato: { seguimiento: '', estado: '', responsable: '', notas: '' },
       modeloConfidencialidad: { seguimiento: '', estado: '', responsable: '', notas: '' },
@@ -100,6 +101,26 @@ const Implementaciones = () => {
     return matchSearch && matchEstado;
   });
 
+  const guardarImplementacion = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      // Adaptar nombres de campos para el backend
+      const formDataBackend = {
+        ...formData,
+        talento_humano: formData.talentoHumano,
+        talentoHumano: undefined // opcional, para no enviar duplicado
+      };
+      await axios.post('http://localhost:8000/implementaciones', formDataBackend, config);
+      toast.success('Implementación guardada');
+      setShowModal(false);
+      cargarImplementaciones();
+    } catch (error) {
+      toast.error('Error al guardar implementación');
+      console.error(error);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4">
       {/* Encabezado */}
@@ -133,6 +154,21 @@ const Implementaciones = () => {
                   className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
                   placeholder="Nombre del cliente"
                 />
+              </div>
+              <div className="relative">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Estado *</label>
+                <select
+                  required
+                  value={formData.estado}
+                  onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                  className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+                >
+                  <option value="">Seleccione una opción</option>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="En Proceso">En Proceso</option>
+                  <option value="Finalizado">Finalizado</option>
+                  <option value="Cancelado">Cancelado</option>
+                </select>
               </div>
               <div className="relative">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Proceso *</label>
@@ -598,10 +634,7 @@ const Implementaciones = () => {
             </button>
             <button
               type="button"
-              onClick={() => {
-                console.log(formData);
-                setShowModal(false);
-              }}
+              onClick={guardarImplementacion}
               className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               Guardar Implementación
