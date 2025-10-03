@@ -98,6 +98,12 @@ const Implementaciones = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingImplementacion, setEditingImplementacion] = useState(null);
   const [expandedDetailSection, setExpandedDetailSection] = useState(null);
+  
+  // Estados para eliminación con doble seguridad
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [implementacionToDelete, setImplementacionToDelete] = useState(null);
+  const [deletingInProgress, setDeletingInProgress] = useState(false);
 
   // Efecto para cerrar el dropdown al hacer clic fuera
   useEffect(() => {
@@ -400,6 +406,50 @@ const Implementaciones = () => {
     }
     
     setShowModal(true);
+  };
+
+  // Funciones para eliminación con doble seguridad
+  const abrirModalEliminacion = (implementacion) => {
+    setImplementacionToDelete(implementacion);
+    setDeleteConfirmText('');
+    setShowDeleteModal(true);
+  };
+
+  const cerrarModalEliminacion = () => {
+    setShowDeleteModal(false);
+    setImplementacionToDelete(null);
+    setDeleteConfirmText('');
+    setDeletingInProgress(false);
+  };
+
+  const eliminarImplementacion = async () => {
+    if (deleteConfirmText.toLowerCase() !== 'eliminar') {
+      toast.error('Debes escribir "eliminar" para confirmar la eliminación');
+      return;
+    }
+
+    setDeletingInProgress(true);
+    
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      await axios.delete(`http://localhost:8000/implementaciones/${implementacionToDelete.id}`, config);
+      
+      toast.success(`Implementación "${implementacionToDelete.cliente}" eliminada exitosamente`);
+      
+      // Recargar la lista de implementaciones
+      await cargarImplementaciones();
+      
+      // Cerrar modal
+      cerrarModalEliminacion();
+      
+    } catch (error) {
+      console.error('Error al eliminar implementación:', error);
+      const errorMessage = error.response?.data?.detail || 'Error al eliminar la implementación';
+      toast.error(errorMessage);
+      setDeletingInProgress(false);
+    }
   };
 
   // Función para resetear el formulario
@@ -1445,6 +1495,89 @@ const Implementaciones = () => {
         </div>
       </Modal>
 
+      {/* Modal de Confirmación de Eliminación */}
+      <Modal 
+        isOpen={showDeleteModal} 
+        onClose={cerrarModalEliminacion} 
+        title="Confirmar Eliminación"
+        size="medium"
+      >
+        <div className="p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 bg-red-100 rounded-full">
+              <FaTrash className="text-red-600 text-xl" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                ¿Estás seguro de eliminar esta implementación?
+              </h3>
+              <p className="text-gray-600 mt-1">
+                Esta acción no se puede deshacer.
+              </p>
+            </div>
+          </div>
+
+          {implementacionToDelete && (
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <FaUsers className="text-gray-500" />
+                <div>
+                  <p className="font-medium text-gray-900">{implementacionToDelete.cliente}</p>
+                  <p className="text-sm text-gray-600">
+                    Estado: <span className="font-medium">{implementacionToDelete.estado}</span>
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Proceso: <span className="font-medium">{implementacionToDelete.proceso}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Para confirmar la eliminación, escribe <span className="font-bold text-red-600">"eliminar"</span>:
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="Escribe 'eliminar' para confirmar"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+              disabled={deletingInProgress}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={cerrarModalEliminacion}
+              className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+              disabled={deletingInProgress}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={eliminarImplementacion}
+              disabled={deletingInProgress || deleteConfirmText.toLowerCase() !== 'eliminar'}
+              className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                deletingInProgress || deleteConfirmText.toLowerCase() !== 'eliminar'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-red-600 hover:bg-red-700'
+              }`}
+            >
+              {deletingInProgress ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Eliminando...
+                </div>
+              ) : (
+                'Eliminar Definitivamente'
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Resumen estilo campañas */}
       <div className="flex flex-col lg:flex-row gap-4 mb-8">
         {/* Tarjetas estadísticas en 2 columnas */}
@@ -1791,7 +1924,7 @@ const Implementaciones = () => {
                           Editar
                         </button>
                         <button
-                          onClick={() => console.log('Eliminar', implementacion.id)}
+                          onClick={() => abrirModalEliminacion(implementacion)}
                           className="inline-flex items-center px-3 py-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           title="Eliminar implementación"
                         >

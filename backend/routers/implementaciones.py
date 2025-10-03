@@ -735,12 +735,51 @@ def actualizar_implementacion(id: int, data: ImplementacionCreate, db: Session =
 
 @router.delete("/{id}")
 def eliminar_implementacion(id: int, db: Session = Depends(get_db)):
-    imp = db.query(ProjectImplementacionesClienteImple).filter_by(id=id).first()
-    if not imp:
-        raise HTTPException(status_code=404, detail="Implementación no encontrada")
-    db.delete(imp)
-    db.commit()
-    return {"message": "Implementación eliminada"}
+    try:
+        # Verificar que la implementación existe
+        imp = db.query(ProjectImplementacionesClienteImple).filter_by(id=id).first()
+        if not imp:
+            raise HTTPException(status_code=404, detail="Implementación no encontrada")
+        
+        print(f"🗑️ Iniciando eliminación de implementación ID: {id}, Cliente: {imp.cliente}")
+        
+        # Eliminar registros relacionados primero
+        contractual_record = db.query(ProjectImplementacionContractual).filter_by(cliente_implementacion_id=id).first()
+        if contractual_record:
+            db.delete(contractual_record)
+            print(f"✅ Eliminado registro contractual")
+        
+        talento_record = db.query(ProjectImplementacionTalentoHumano).filter_by(cliente_implementacion_id=id).first()
+        if talento_record:
+            db.delete(talento_record)
+            print(f"✅ Eliminado registro talento humano")
+        
+        procesos_record = db.query(ProjectImplementacionProcesos).filter_by(cliente_implementacion_id=id).first()
+        if procesos_record:
+            db.delete(procesos_record)
+            print(f"✅ Eliminado registro procesos")
+        
+        tecnologia_record = db.query(ProjectImplementacionTecnologia).filter_by(cliente_implementacion_id=id).first()
+        if tecnologia_record:
+            db.delete(tecnologia_record)
+            print(f"✅ Eliminado registro tecnología")
+        
+        # Finalmente eliminar el registro principal
+        db.delete(imp)
+        
+        # Commit de todas las eliminaciones
+        db.commit()
+        
+        print(f"🎉 Implementación {id} eliminada completamente")
+        return {"message": f"Implementación '{imp.cliente}' eliminada exitosamente"}
+        
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error al eliminar implementación {id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 @router.get("/descargar_excel")
 def descargar_excel(db: Session = Depends(get_db)):
