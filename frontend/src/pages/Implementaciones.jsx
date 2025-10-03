@@ -164,6 +164,91 @@ const Implementaciones = () => {
     }
   }, []);
 
+  // Función para obtener el peso de un estado
+  const obtenerPesoEstado = (estado) => {
+    const pesos = {
+      'ok': 100,
+      'cancelado': 100,
+      'en proceso': 50,
+      'No definido': 0
+    };
+    return pesos[estado] || 0;
+  };
+
+  // Función para calcular el progreso de una sección
+  const calcularProgresoSeccion = (seccionData, subsesiones) => {
+    if (!seccionData || !subsesiones || subsesiones.length === 0) return 0;
+    
+    const totalPeso = subsesiones.reduce((suma, subsesion) => {
+      const estado = seccionData[subsesion.key]?.estado;
+      return suma + obtenerPesoEstado(estado);
+    }, 0);
+    
+    const maxPosible = subsesiones.length * 100;
+    return Math.round((totalPeso / maxPosible) * 100);
+  };
+
+  // Componente de rueda de progreso
+  const RuedaProgreso = ({ porcentaje, size = 60, strokeWidth = 6 }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (porcentaje / 100) * circumference;
+    
+    // Determinar color basado en el porcentaje
+    const getProgressColor = () => {
+      if (porcentaje >= 80) return "#10B981"; // Verde
+      if (porcentaje >= 50) return "#F59E0B"; // Amarillo/Naranja
+      if (porcentaje >= 25) return "#EF4444"; // Rojo
+      return "#6B7280"; // Gris
+    };
+    
+    const progressColor = getProgressColor();
+    
+    return (
+      <div className="relative inline-flex items-center justify-center">
+        <svg
+          width={size}
+          height={size}
+          className="transform -rotate-90"
+        >
+          {/* Círculo de fondo */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="#E5E7EB"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+          />
+          {/* Círculo de progreso */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={progressColor}
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            className="transition-all duration-700 ease-in-out"
+          />
+        </svg>
+        {/* Texto del porcentaje */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={`text-xs font-bold transition-colors duration-300 ${
+            porcentaje >= 80 ? 'text-green-700' :
+            porcentaje >= 50 ? 'text-orange-700' :
+            porcentaje >= 25 ? 'text-red-700' :
+            'text-gray-600'
+          }`}>
+            {porcentaje}%
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   // Componente para mostrar estado editable de subsesión
   const EstadoEditable = ({ seccion, campo, estado }) => {
     const isEditing = editingSubsession === `${seccion}.${campo}`;
@@ -852,7 +937,7 @@ const Implementaciones = () => {
                   <option value="">Seleccione una opción</option>
                   <option value="SAC">SAC - Servicio al Cliente</option>
                   <option value="TVT">TVT - Televentas</option>
-                  <option value="TMC">TMC - Telemercadeo</option>
+                  <option value="TMk">TMk - Telemarketing</option>
                   <option value="CBZ">CBZ - Cobranza</option>
                 </select>
               </div>
@@ -1398,18 +1483,32 @@ const Implementaciones = () => {
                     <div className="p-3 bg-purple-600 rounded-lg">
                       <FaFileContract className="text-white text-2xl" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-bold text-purple-800 text-lg">Contractual</h4>
                       <p className="text-sm text-purple-600">Documentos contractuales</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">
-                          4 elementos
-                        </span>
-                        {expandedDetailSection === 'contractual' ? (
-                          <FaChevronDown className="text-purple-600" />
-                        ) : (
-                          <FaChevronRight className="text-purple-600" />
-                        )}
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">
+                            4 elementos
+                          </span>
+                          {expandedDetailSection === 'contractual' ? (
+                            <FaChevronDown className="text-purple-600" />
+                          ) : (
+                            <FaChevronRight className="text-purple-600" />
+                          )}
+                        </div>
+                        <RuedaProgreso 
+                          porcentaje={calcularProgresoSeccion(
+                            implementacionDetail.contractual,
+                            [
+                              { key: 'modeloContrato' },
+                              { key: 'modeloConfidencialidad' },
+                              { key: 'alcance' },
+                              { key: 'fechaInicio' }
+                            ]
+                          )}
+                          size={50}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1426,18 +1525,34 @@ const Implementaciones = () => {
                     <div className="p-3 bg-green-600 rounded-lg">
                       <FaUsers className="text-white text-2xl" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-bold text-green-800 text-lg">Talento Humano</h4>
                       <p className="text-sm text-green-600">Personal y capacitación</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
-                          6 elementos
-                        </span>
-                        {expandedDetailSection === 'talentoHumano' ? (
-                          <FaChevronDown className="text-green-600" />
-                        ) : (
-                          <FaChevronRight className="text-green-600" />
-                        )}
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
+                            6 elementos
+                          </span>
+                          {expandedDetailSection === 'talentoHumano' ? (
+                            <FaChevronDown className="text-green-600" />
+                          ) : (
+                            <FaChevronRight className="text-green-600" />
+                          )}
+                        </div>
+                        <RuedaProgreso 
+                          porcentaje={calcularProgresoSeccion(
+                            implementacionDetail.talento_humano,
+                            [
+                              { key: 'perfilPersonal' },
+                              { key: 'cantidadAsesores' },
+                              { key: 'horarios' },
+                              { key: 'formador' },
+                              { key: 'capacitacionesAndes' },
+                              { key: 'capacitacionesCliente' }
+                            ]
+                          )}
+                          size={50}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1454,18 +1569,38 @@ const Implementaciones = () => {
                     <div className="p-3 bg-amber-600 rounded-lg">
                       <FaCogs className="text-white text-2xl" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-bold text-amber-800 text-lg">Procesos</h4>
                       <p className="text-sm text-amber-600">Configuración de procesos</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs bg-amber-200 text-amber-800 px-2 py-1 rounded-full">
-                          10 elementos
-                        </span>
-                        {expandedDetailSection === 'procesos' ? (
-                          <FaChevronDown className="text-amber-600" />
-                        ) : (
-                          <FaChevronRight className="text-amber-600" />
-                        )}
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-amber-200 text-amber-800 px-2 py-1 rounded-full">
+                            10 elementos
+                          </span>
+                          {expandedDetailSection === 'procesos' ? (
+                            <FaChevronDown className="text-amber-600" />
+                          ) : (
+                            <FaChevronRight className="text-amber-600" />
+                          )}
+                        </div>
+                        <RuedaProgreso 
+                          porcentaje={calcularProgresoSeccion(
+                            implementacionDetail.procesos,
+                            [
+                              { key: 'responsableCliente' },
+                              { key: 'responsableAndes' },
+                              { key: 'responsablesOperacion' },
+                              { key: 'listadoReportes' },
+                              { key: 'protocoloComunicaciones' },
+                              { key: 'guionesProtocolos' },
+                              { key: 'procesoMonitoreo' },
+                              { key: 'cronogramaTecnologia' },
+                              { key: 'cronogramaCapacitaciones' },
+                              { key: 'realizacionPruebas' }
+                            ]
+                          )}
+                          size={50}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1482,18 +1617,34 @@ const Implementaciones = () => {
                     <div className="p-3 bg-blue-600 rounded-lg">
                       <FaLaptop className="text-white text-2xl" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-bold text-blue-800 text-lg">Tecnología</h4>
                       <p className="text-sm text-blue-600">Sistemas y configuración</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
-                          6 elementos
-                        </span>
-                        {expandedDetailSection === 'tecnologia' ? (
-                          <FaChevronDown className="text-blue-600" />
-                        ) : (
-                          <FaChevronRight className="text-blue-600" />
-                        )}
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
+                            6 elementos
+                          </span>
+                          {expandedDetailSection === 'tecnologia' ? (
+                            <FaChevronDown className="text-blue-600" />
+                          ) : (
+                            <FaChevronRight className="text-blue-600" />
+                          )}
+                        </div>
+                        <RuedaProgreso 
+                          porcentaje={calcularProgresoSeccion(
+                            implementacionDetail.tecnologia,
+                            [
+                              { key: 'creacionModulo' },
+                              { key: 'tipificacionInteracciones' },
+                              { key: 'aplicativosProceso' },
+                              { key: 'whatsapp' },
+                              { key: 'correosElectronicos' },
+                              { key: 'requisitosGrabacion' }
+                            ]
+                          )}
+                          size={50}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1886,11 +2037,11 @@ const Implementaciones = () => {
                 </div>
                 <span className="text-purple-700 text-2xl font-bold">{implementaciones.filter(imp => imp.proceso === 'TVT').length}</span>
               </div>
-              {/* TMC */}
+              {/* TMk */}
               <div className="rounded-lg p-4 bg-gradient-to-r from-green-50 to-green-100 flex items-center justify-between border-2 border-green-400">
                 <div>
-                  <span className="text-green-700 font-bold text-lg">TMC</span>
-                  <p className="text-gray-500 text-sm">Telemercadeo</p>
+                  <span className="text-green-700 font-bold text-lg">TMk</span>
+                  <p className="text-gray-500 text-sm">Telemarketing</p>
                 </div>
                 <span className="text-green-700 text-2xl font-bold">{implementaciones.filter(imp => imp.proceso === 'TMC').length}</span>
               </div>
@@ -2066,7 +2217,7 @@ const Implementaciones = () => {
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                           implementacion.proceso === 'SAC' ? 'bg-blue-100 text-blue-800' :
                           implementacion.proceso === 'TVT' ? 'bg-purple-100 text-purple-800' :
-                          implementacion.proceso === 'TMC' ? 'bg-green-100 text-green-800' :
+                          implementacion.proceso === 'TMk' ? 'bg-green-100 text-green-800' :
                           implementacion.proceso === 'CBZ' ? 'bg-orange-100 text-orange-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>

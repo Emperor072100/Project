@@ -29,7 +29,7 @@ const Campañas = () => {
     total_clientes_corporativos: 0,
     total_contactos: 0,
     total_campañas: 0,
-    por_servicio: { SAC: 0, TMC: 0, TVT: 0, CBZ: 0 }
+    por_servicio: { SAC: 0, TMk: 0, TVT: 0, CBZ: 0 }
   });
 
   // Estados para modales
@@ -196,7 +196,7 @@ const Campañas = () => {
         const total_campañas = campañasUsuario.length;
         const total_clientes_corporativos = [...new Set(campañasUsuario.map(c => c.cliente_corporativo_id))].length;
         const total_contactos = [...new Set(campañasUsuario.map(c => c.contacto_id))].length;
-        const por_servicio = { SAC: 0, TMC: 0, TVT: 0, CBZ: 0 };
+        const por_servicio = { SAC: 0, TMk: 0, TVT: 0, CBZ: 0 };
         campañasUsuario.forEach(c => {
           const tipo = (c.tipo || '').toUpperCase().replace(/\s/g, '');
           if (por_servicio.hasOwnProperty(tipo)) por_servicio[tipo]++;
@@ -1052,7 +1052,7 @@ const Campañas = () => {
                         >
                           <option value="">Seleccionar tipo</option>
                           <option value="SAC">SAC - Atención al Cliente</option>
-                          <option value="TMC">TMC - Telemarketing</option>
+                          <option value="TMk">TMk - Telemarketing</option>
                           <option value="TVT">TVT - Televentas</option>
                           <option value="CBZ">CBZ - Cobranza</option>
                         </select>
@@ -1453,15 +1453,15 @@ const Campañas = () => {
                 </div>
               </div>
 
-              {/* Mini tarjeta TMC */}
+              {/* Mini tarjeta TMk */}
               <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-2 hover:shadow-sm transition-shadow duration-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-green-600 text-base font-semibold">TMC</p>
+                    <p className="text-green-600 text-base font-semibold">TMk</p>
                     <p className="text-green-800 text-base mt-1">Telemarketing</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-2xl font-bold text-green-800">{estadisticas.por_servicio.TMC}</span>
+                    <span className="text-2xl font-bold text-green-800">{estadisticas.por_servicio.TMk}</span>
                   </div>
                 </div>
               </div>
@@ -1596,7 +1596,7 @@ const Campañas = () => {
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-lg border ${
                         campaña.tipo === 'SAC' ? 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 border-blue-200' :
-                        campaña.tipo === 'TMC' ? 'bg-gradient-to-br from-green-50 to-green-100 text-green-800 border-green-200' :
+                        campaña.tipo === 'TMk' ? 'bg-gradient-to-br from-green-50 to-green-100 text-green-800 border-green-200' :
                         campaña.tipo === 'TVT' ? 'bg-gradient-to-br from-purple-50 to-purple-100 text-purple-800 border-purple-200' :
                         campaña.tipo === 'CBZ' ? 'bg-gradient-to-br from-orange-50 to-orange-100 text-orange-800 border-orange-200' :
                         'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 border-gray-200'
@@ -1887,7 +1887,7 @@ const Campañas = () => {
                 className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 bg-white"
               >
                 <option value="SAC">SAC - Atención al Cliente</option>
-                <option value="TMC">TMC - Telemarketing</option>
+                <option value="TMk">TMk - Telemarketing</option>
                 <option value="TVT">TVT - Televentas</option>
                 <option value="CBZ">CBZ - Cobranza</option>
               </select>
