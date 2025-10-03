@@ -18,6 +18,7 @@ import Modal from '../components/Modal';
 
 const Implementaciones = () => {
   const [implementaciones, setImplementaciones] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [usuario, setUsuario] = useState({ nombre: '', rol: 'usuario' });
   const [showModal, setShowModal] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
@@ -67,14 +68,19 @@ const Implementaciones = () => {
 
   // Cargar implementaciones
   const cargarImplementaciones = async () => {
+    setLoading(true);
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.get('http://localhost:8000/implementaciones', config);
+      // Cambiar la URL para usar solo los datos básicos
+      const response = await axios.get('http://localhost:8000/implementaciones/basic');
       setImplementaciones(response.data);
+      console.log('Implementaciones cargadas:', response.data);
     } catch (error) {
+      console.error('Error completo:', error);
       toast.error('Error al cargar implementaciones');
-      console.error('Error:', error);
+      // Si falla, intentar con datos mock para desarrollo
+      setImplementaciones([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -97,8 +103,8 @@ const Implementaciones = () => {
 
   const implementacionesFiltradas = implementaciones.filter(imp => {
     const matchSearch =
-      imp.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      imp.proceso.toLowerCase().includes(searchTerm.toLowerCase());
+      (imp.cliente && imp.cliente.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (imp.proceso && imp.proceso.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchEstado = estadoFiltro ? (imp.estado === estadoFiltro || imp.estado?.toLowerCase() === estadoFiltro.toLowerCase()) : true;
     return matchSearch && matchEstado;
   });
@@ -850,7 +856,9 @@ const Implementaciones = () => {
               ) : (
                 <tr>
                   <td colSpan={4} className="px-6 py-8 text-center">
-                    <p className="text-gray-500 text-sm">No hay implementaciones registradas</p>
+                    <p className="text-gray-500 text-sm">
+                      {loading ? 'Cargando implementaciones...' : 'No hay implementaciones que coincidan con los filtros'}
+                    </p>
                   </td>
                 </tr>
               )}

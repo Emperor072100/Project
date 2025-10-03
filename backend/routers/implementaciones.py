@@ -29,8 +29,19 @@ class ImplementacionOut(BaseModel):
     talento_humano: Optional[Dict[str, Any]]
     procesos: Optional[Dict[str, Any]]
     tecnologia: Optional[Dict[str, Any]]
+    
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+
+class ImplementacionBasic(BaseModel):
+    id: int
+    cliente: str
+    proceso: str
+    estado: Optional[str]
+    
+    class Config:
+        from_attributes = True
 
 router = APIRouter(prefix="/implementaciones", tags=["Implementaciones"])
 
@@ -175,6 +186,11 @@ def crear_implementacion(data: ImplementacionCreate, db: Session = Depends(get_d
         "procesos": data.procesos,
         "tecnologia": data.tecnologia
     }
+
+@router.get("/basic", response_model=List[ImplementacionBasic])
+def listar_implementaciones_basico(db: Session = Depends(get_db)):
+    """Endpoint básico que devuelve solo los datos esenciales de implementaciones"""
+    return db.query(ProjectImplementacionesClienteImple).all()
 
 @router.get("/", response_model=List[ImplementacionOut])
 def listar_implementaciones(db: Session = Depends(get_db)):
