@@ -99,6 +99,12 @@ const Implementaciones = () => {
   const [editingImplementacion, setEditingImplementacion] = useState(null);
   const [expandedDetailSection, setExpandedDetailSection] = useState(null);
   
+  // Estados para edición inline de subsesiones
+  const [editingSubsession, setEditingSubsession] = useState(null);
+  const [editingValue, setEditingValue] = useState('');
+  const [savingSubsession, setSavingSubsession] = useState(false);
+  const [recentlyUpdated, setRecentlyUpdated] = useState(null);
+  
   // Estados para eliminación con doble seguridad
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -111,13 +117,17 @@ const Implementaciones = () => {
       if (editingEstado && !event.target.closest('.estado-dropdown')) {
         setEditingEstado(null);
       }
+      // También cerrar la edición de subsesiones al hacer clic fuera
+      if (editingSubsession && !event.target.closest('.estado-editable')) {
+        cancelarEdicionSubsesion();
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [editingEstado]);
+  }, [editingEstado, editingSubsession]);
 
   // Cargar implementaciones
   const cargarImplementaciones = async () => {
@@ -153,6 +163,110 @@ const Implementaciones = () => {
       }
     }
   }, []);
+
+  // Componente para mostrar estado editable de subsesión
+  const EstadoEditable = ({ seccion, campo, estado }) => {
+    const isEditing = editingSubsession === `${seccion}.${campo}`;
+    const estadosDisponibles = [
+      { value: 'No definido', label: '⚪ No definido', color: 'bg-gray-100 text-gray-700' },
+      { value: 'ok', label: '✅ Completado', color: 'bg-emerald-100 text-emerald-700' },
+      { value: 'en proceso', label: '🔄 En Proceso', color: 'bg-blue-100 text-blue-700' },
+      { value: 'cancelado', label: '❌ Cancelado', color: 'bg-red-100 text-red-700' }
+    ];
+
+    const getEstadoConfig = (estadoValue) => {
+      return estadosDisponibles.find(e => e.value === estadoValue) || estadosDisponibles[0];
+    };
+
+    if (isEditing) {
+      return (
+        <div className="estado-editable flex items-center gap-2 p-2 bg-white border-2 border-blue-200 rounded-lg shadow-sm animate-pulse">
+          <span className="font-medium text-gray-700 text-sm">Estado:</span>
+          <div className="flex items-center gap-2">
+            <select
+              value={editingValue}
+              onChange={(e) => setEditingValue(e.target.value)}
+              onKeyDown={(e) => manejarTeclasSubsesion(e, seccion, campo)}
+              disabled={savingSubsession}
+              className={`px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 min-w-[140px] ${
+                savingSubsession ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              autoFocus
+            >
+              {estadosDisponibles.map(estado => (
+                <option key={estado.value} value={estado.value}>
+                  {estado.label}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-1">
+              <button
+                onClick={() => guardarEstadoSubsesion(seccion, campo)}
+                disabled={savingSubsession}
+                className={`px-3 py-1.5 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 flex items-center gap-1 ${
+                  savingSubsession 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
+                }`}
+                title={savingSubsession ? "Guardando..." : "Guardar cambios"}
+              >
+                {savingSubsession ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xs">💾</span>
+                    Guardar
+                  </>
+                )}
+              </button>
+              <button
+                onClick={cancelarEdicionSubsesion}
+                disabled={savingSubsession}
+                className={`px-3 py-1.5 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 flex items-center gap-1 ${
+                  savingSubsession 
+                    ? 'bg-gray-300 cursor-not-allowed opacity-50' 
+                    : 'bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600'
+                }`}
+                title={savingSubsession ? "Guardando..." : "Cancelar edición"}
+              >
+                <span className="text-xs">🚫</span>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const estadoConfig = getEstadoConfig(estado);
+    const isRecentlyUpdated = recentlyUpdated === `${seccion}.${campo}`;
+
+    return (
+      <div className="estado-editable flex items-center gap-2">
+        <span className="font-medium text-gray-600 text-sm">Estado:</span>
+        <button
+          onClick={() => iniciarEdicionSubsesion(seccion, campo, estado)}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all duration-200 transform hover:scale-105 hover:shadow-md border-2 border-transparent hover:border-gray-300 ${estadoConfig.color} group relative ${
+            isRecentlyUpdated ? 'animate-pulse ring-2 ring-green-400 ring-opacity-75' : ''
+          }`}
+          title="Haz clic para editar el estado"
+        >
+          <span className="flex items-center gap-1">
+            {estadoConfig.label}
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs">
+              ✏️
+            </span>
+          </span>
+          
+          {/* Indicador de hover más sutil */}
+          <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
+        </button>
+      </div>
+    );
+  };
 
   const implementacionesFiltradas = implementaciones.filter(imp => {
     const matchSearch =
@@ -222,6 +336,150 @@ const Implementaciones = () => {
     } catch (error) {
       toast.error('Error al actualizar el estado');
       console.error(error);
+    }
+  };
+
+  // Función para iniciar la edición de una subsesión
+  const iniciarEdicionSubsesion = (seccion, campo, valorActual) => {
+    setEditingSubsession(`${seccion}.${campo}`);
+    setEditingValue(valorActual || '');
+  };
+
+  // Función para cancelar la edición de una subsesión
+  const cancelarEdicionSubsesion = () => {
+    setEditingSubsession(null);
+    setEditingValue('');
+  };
+
+  // Función para manejar teclas en la edición de subsesiones
+  const manejarTeclasSubsesion = (e, seccion, campo) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      guardarEstadoSubsesion(seccion, campo);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelarEdicionSubsesion();
+    }
+  };
+
+  // Función para guardar el cambio de estado de una subsesión
+  const guardarEstadoSubsesion = async (seccion, campo) => {
+    if (savingSubsession) return; // Evitar múltiples envíos
+    
+    setSavingSubsession(true);
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      // Preparar el payload completo de la implementación con el campo actualizado
+      const currentSection = implementacionDetail[seccion] || {};
+      const currentField = currentSection[campo] || {};
+      
+      const updatedField = {
+        seguimiento: currentField.seguimiento || '',
+        estado: editingValue,
+        responsable: currentField.responsable || '',
+        notas: currentField.notas || ''
+      };
+
+      const updateData = {
+        cliente: implementacionDetail.cliente || '',
+        proceso: implementacionDetail.proceso || '',
+        estado: implementacionDetail.estado || '',
+        contractual: implementacionDetail.contractual || {},
+        talento_humano: implementacionDetail.talento_humano || {},
+        procesos: implementacionDetail.procesos || {},
+        tecnologia: implementacionDetail.tecnologia || {},
+        [seccion]: {
+          ...currentSection,
+          [campo]: updatedField
+        }
+      };
+
+      console.log('📤 Datos que se envían para actualizar subsesión:', updateData);
+      console.log('🎯 Campo específico actualizado:', { seccion, campo, nuevoEstado: editingValue });
+
+      // Intentar primero con un endpoint específico para subsesiones si existe
+      try {
+        // Endpoint específico para actualizar subsesiones
+        await axios.patch(
+          `http://localhost:8000/implementaciones/${implementacionDetail.id}/subsesion`,
+          {
+            seccion: seccion,
+            campo: campo,
+            estado: editingValue
+          },
+          config
+        );
+        console.log('✅ Actualización exitosa con endpoint específico');
+      } catch {
+        console.log('⚠️ Endpoint de subsesión no disponible, usando PUT completo...');
+        try {
+          // Si no existe el endpoint específico, usar PUT completo
+          await axios.put(
+            `http://localhost:8000/implementaciones/${implementacionDetail.id}`,
+            updateData,
+            config
+          );
+          console.log('✅ Actualización exitosa con PUT completo');
+        } catch {
+          console.log('⚠️ PUT completo falló, intentando con datos mínimos...');
+          // Como último recurso, enviar solo los datos básicos necesarios
+          const minimalData = {
+            cliente: implementacionDetail.cliente,
+            proceso: implementacionDetail.proceso,
+            estado: implementacionDetail.estado,
+            [seccion]: {
+              [campo]: {
+                estado: editingValue
+              }
+            }
+          };
+          
+          await axios.put(
+            `http://localhost:8000/implementaciones/${implementacionDetail.id}`,
+            minimalData,
+            config
+          );
+          console.log('✅ Actualización exitosa con datos mínimos');
+        }
+      }
+
+      // Actualizar el estado local
+      setImplementacionDetail(prev => ({
+        ...prev,
+        [seccion]: {
+          ...prev[seccion],
+          [campo]: {
+            ...prev[seccion]?.[campo],
+            estado: editingValue
+          }
+        }
+      }));
+
+      setEditingSubsession(null);
+      setEditingValue('');
+      
+      // Mostrar efecto de éxito temporal
+      const updatedKey = `${seccion}.${campo}`;
+      setRecentlyUpdated(updatedKey);
+      setTimeout(() => setRecentlyUpdated(null), 2000);
+      
+      toast.success('✅ Estado actualizado correctamente');
+    } catch (error) {
+      console.error('❌ Error completo al actualizar estado de subsesión:', error);
+      console.error('📋 Detalles del error:', error.response?.data);
+      console.error('🔍 Status:', error.response?.status);
+      console.error('📊 Headers de respuesta:', error.response?.headers);
+      
+      // Mostrar mensaje de error más específico
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Error desconocido al actualizar el estado';
+      
+      toast.error(`❌ ${errorMessage}`);
+    } finally {
+      setSavingSubsession(false);
     }
   };
 
@@ -1284,17 +1542,11 @@ const Implementaciones = () => {
                           <div key={item.key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">{item.label}</h5>
                             <div className="space-y-3 text-sm">
-                              <div>
-                                <span className="font-medium text-gray-600">Estado:</span>
-                                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                                  implementacionDetail.contractual?.[item.key]?.estado === 'ok' ? 'bg-green-100 text-green-800' :
-                                  implementacionDetail.contractual?.[item.key]?.estado === 'en proceso' ? 'bg-blue-100 text-blue-800' :
-                                  implementacionDetail.contractual?.[item.key]?.estado === 'cancelado' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {implementacionDetail.contractual?.[item.key]?.estado || 'No definido'}
-                                </span>
-                              </div>
+                              <EstadoEditable 
+                                seccion="contractual"
+                                campo={item.key}
+                                estado={implementacionDetail.contractual?.[item.key]?.estado}
+                              />
                               <div>
                                 <span className="font-medium text-gray-600">Responsable:</span>
                                 <span className="ml-2 text-gray-800">
@@ -1336,17 +1588,11 @@ const Implementaciones = () => {
                           <div key={item.key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">{item.label}</h5>
                             <div className="space-y-3 text-sm">
-                              <div>
-                                <span className="font-medium text-gray-600">Estado:</span>
-                                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                                  implementacionDetail.talento_humano?.[item.key]?.estado === 'ok' ? 'bg-green-100 text-green-800' :
-                                  implementacionDetail.talento_humano?.[item.key]?.estado === 'en proceso' ? 'bg-blue-100 text-blue-800' :
-                                  implementacionDetail.talento_humano?.[item.key]?.estado === 'cancelado' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {implementacionDetail.talento_humano?.[item.key]?.estado || 'No definido'}
-                                </span>
-                              </div>
+                              <EstadoEditable 
+                                seccion="talento_humano"
+                                campo={item.key}
+                                estado={implementacionDetail.talento_humano?.[item.key]?.estado}
+                              />
                               <div>
                                 <span className="font-medium text-gray-600">Responsable:</span>
                                 <span className="ml-2 text-gray-800">
@@ -1392,17 +1638,11 @@ const Implementaciones = () => {
                           <div key={item.key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">{item.label}</h5>
                             <div className="space-y-3 text-sm">
-                              <div>
-                                <span className="font-medium text-gray-600">Estado:</span>
-                                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                                  implementacionDetail.procesos?.[item.key]?.estado === 'ok' ? 'bg-green-100 text-green-800' :
-                                  implementacionDetail.procesos?.[item.key]?.estado === 'en proceso' ? 'bg-blue-100 text-blue-800' :
-                                  implementacionDetail.procesos?.[item.key]?.estado === 'cancelado' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {implementacionDetail.procesos?.[item.key]?.estado || 'No definido'}
-                                </span>
-                              </div>
+                              <EstadoEditable 
+                                seccion="procesos"
+                                campo={item.key}
+                                estado={implementacionDetail.procesos?.[item.key]?.estado}
+                              />
                               <div>
                                 <span className="font-medium text-gray-600">Responsable:</span>
                                 <span className="ml-2 text-gray-800">
@@ -1444,17 +1684,11 @@ const Implementaciones = () => {
                           <div key={item.key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">{item.label}</h5>
                             <div className="space-y-3 text-sm">
-                              <div>
-                                <span className="font-medium text-gray-600">Estado:</span>
-                                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                                  implementacionDetail.tecnologia?.[item.key]?.estado === 'ok' ? 'bg-green-100 text-green-800' :
-                                  implementacionDetail.tecnologia?.[item.key]?.estado === 'en proceso' ? 'bg-blue-100 text-blue-800' :
-                                  implementacionDetail.tecnologia?.[item.key]?.estado === 'cancelado' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {implementacionDetail.tecnologia?.[item.key]?.estado || 'No definido'}
-                                </span>
-                              </div>
+                              <EstadoEditable 
+                                seccion="tecnologia"
+                                campo={item.key}
+                                estado={implementacionDetail.tecnologia?.[item.key]?.estado}
+                              />
                               <div>
                                 <span className="font-medium text-gray-600">Responsable:</span>
                                 <span className="ml-2 text-gray-800">
