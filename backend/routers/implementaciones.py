@@ -421,16 +421,317 @@ def obtener_implementacion(id: int, db: Session = Depends(get_db)):
 def listar_implementaciones(db: Session = Depends(get_db)):
     return db.query(ProjectImplementacionesClienteImple).all()
 
-@router.put("/{id}", response_model=ImplementacionOut)
+@router.put("/{id}")
 def actualizar_implementacion(id: int, data: ImplementacionCreate, db: Session = Depends(get_db)):
+    # Buscar la implementación existente
     imp = db.query(ProjectImplementacionesClienteImple).filter_by(id=id).first()
     if not imp:
         raise HTTPException(status_code=404, detail="Implementación no encontrada")
-    for k, v in data.dict().items():
-        setattr(imp, k, v)
-    db.commit()
-    db.refresh(imp)
-    return imp
+    
+    # Log para debug
+    print(f"\n=== ACTUALIZANDO IMPLEMENTACIÓN ID: {id} ===")
+    print(f"Cliente: {data.cliente}")
+    print(f"Estado: {data.estado}")
+    print(f"Proceso: {data.proceso}")
+    print(f"Contractual keys: {list(data.contractual.keys()) if data.contractual else 'None'}")
+    print(f"Talento Humano keys: {list(data.talento_humano.keys()) if data.talento_humano else 'None'}")
+    
+    try:
+        # Actualizar campos básicos de la implementación
+        imp.cliente = data.cliente
+        imp.proceso = data.proceso
+        imp.estado = data.estado
+        
+        # También actualizar los campos JSON como respaldo
+        imp.contractual = data.contractual
+        imp.talento_humano = data.talento_humano
+        imp.procesos = data.procesos
+        imp.tecnologia = data.tecnologia
+        
+        print("Campos básicos actualizados en la tabla principal")
+        
+        # Actualizar o crear registro contractual
+        contractual_record = db.query(ProjectImplementacionContractual).filter_by(cliente_implementacion_id=id).first()
+        if not contractual_record:
+            contractual_record = ProjectImplementacionContractual(cliente_implementacion_id=id)
+            db.add(contractual_record)
+            print("Creado nuevo registro contractual")
+        else:
+            print("Actualizando registro contractual existente")
+        
+        # Actualizar campos contractuales (TODOS)
+        contractual_data = data.contractual
+        if contractual_data:
+            if 'modeloContrato' in contractual_data:
+                modelo_contrato = contractual_data['modeloContrato']
+                contractual_record.modelo_contrato_seguimiento = modelo_contrato.get('seguimiento', '')
+                contractual_record.modelo_contrato_estado = modelo_contrato.get('estado', '')
+                contractual_record.modelo_contrato_responsable = modelo_contrato.get('responsable', '')
+                contractual_record.modelo_contrato_notas = modelo_contrato.get('notas', '')
+                print(f"Actualizado modelo contrato: seguimiento='{modelo_contrato.get('seguimiento', '')}'")
+            
+            if 'modeloConfidencialidad' in contractual_data:
+                modelo_conf = contractual_data['modeloConfidencialidad']
+                contractual_record.modelo_confidencialidad_seguimiento = modelo_conf.get('seguimiento', '')
+                contractual_record.modelo_confidencialidad_estado = modelo_conf.get('estado', '')
+                contractual_record.modelo_confidencialidad_responsable = modelo_conf.get('responsable', '')
+                contractual_record.modelo_confidencialidad_notas = modelo_conf.get('notas', '')
+                print(f"Actualizado modelo confidencialidad: seguimiento='{modelo_conf.get('seguimiento', '')}'")
+            
+            if 'alcance' in contractual_data:
+                alcance = contractual_data['alcance']
+                contractual_record.alcance_seguimiento = alcance.get('seguimiento', '')
+                contractual_record.alcance_estado = alcance.get('estado', '')
+                contractual_record.alcance_responsable = alcance.get('responsable', '')
+                contractual_record.alcance_notas = alcance.get('notas', '')
+                print(f"Actualizado alcance: seguimiento='{alcance.get('seguimiento', '')}'")
+            
+            if 'fechaInicio' in contractual_data:
+                fecha_inicio = contractual_data['fechaInicio']
+                contractual_record.fecha_inicio_seguimiento = fecha_inicio.get('seguimiento', '')
+                contractual_record.fecha_inicio_estado = fecha_inicio.get('estado', '')
+                contractual_record.fecha_inicio_responsable = fecha_inicio.get('responsable', '')
+                contractual_record.fecha_inicio_notas = fecha_inicio.get('notas', '')
+                print(f"Actualizado fecha inicio: seguimiento='{fecha_inicio.get('seguimiento', '')}'")
+        
+        # Actualizar o crear registro talento humano
+        talento_record = db.query(ProjectImplementacionTalentoHumano).filter_by(cliente_implementacion_id=id).first()
+        if not talento_record:
+            talento_record = ProjectImplementacionTalentoHumano(cliente_implementacion_id=id)
+            db.add(talento_record)
+            print("Creado nuevo registro talento humano")
+        else:
+            print("Actualizando registro talento humano existente")
+        
+        # Actualizar campos talento humano (TODOS)
+        talento_data = data.talento_humano
+        if talento_data:
+            if 'perfilPersonal' in talento_data:
+                perfil = talento_data['perfilPersonal']
+                talento_record.perfil_personal_seguimiento = perfil.get('seguimiento', '')
+                talento_record.perfil_personal_estado = perfil.get('estado', '')
+                talento_record.perfil_personal_responsable = perfil.get('responsable', '')
+                talento_record.perfil_personal_notas = perfil.get('notas', '')
+                print(f"Actualizado perfil personal: seguimiento='{perfil.get('seguimiento', '')}'")
+            
+            if 'cantidadAsesores' in talento_data:
+                cantidad = talento_data['cantidadAsesores']
+                talento_record.cantidad_asesores_seguimiento = cantidad.get('seguimiento', '')
+                talento_record.cantidad_asesores_estado = cantidad.get('estado', '')
+                talento_record.cantidad_asesores_responsable = cantidad.get('responsable', '')
+                talento_record.cantidad_asesores_notas = cantidad.get('notas', '')
+                print(f"Actualizado cantidad asesores: seguimiento='{cantidad.get('seguimiento', '')}'")
+            
+            if 'horarios' in talento_data:
+                horarios = talento_data['horarios']
+                talento_record.horarios_seguimiento = horarios.get('seguimiento', '')
+                talento_record.horarios_estado = horarios.get('estado', '')
+                talento_record.horarios_responsable = horarios.get('responsable', '')
+                talento_record.horarios_notas = horarios.get('notas', '')
+                print(f"Actualizado horarios: seguimiento='{horarios.get('seguimiento', '')}'")
+            
+            if 'formador' in talento_data:
+                formador = talento_data['formador']
+                talento_record.formador_seguimiento = formador.get('seguimiento', '')
+                talento_record.formador_estado = formador.get('estado', '')
+                talento_record.formador_responsable = formador.get('responsable', '')
+                talento_record.formador_notas = formador.get('notas', '')
+                print(f"Actualizado formador: seguimiento='{formador.get('seguimiento', '')}'")
+            
+            if 'capacitacionesAndes' in talento_data:
+                cap_andes = talento_data['capacitacionesAndes']
+                talento_record.capacitaciones_andes_seguimiento = cap_andes.get('seguimiento', '')
+                talento_record.capacitaciones_andes_estado = cap_andes.get('estado', '')
+                talento_record.capacitaciones_andes_responsable = cap_andes.get('responsable', '')
+                talento_record.capacitaciones_andes_notas = cap_andes.get('notas', '')
+                print(f"Actualizado capacitaciones andes: seguimiento='{cap_andes.get('seguimiento', '')}'")
+            
+            if 'capacitacionesCliente' in talento_data:
+                cap_cliente = talento_data['capacitacionesCliente']
+                talento_record.capacitaciones_cliente_seguimiento = cap_cliente.get('seguimiento', '')
+                talento_record.capacitaciones_cliente_estado = cap_cliente.get('estado', '')
+                talento_record.capacitaciones_cliente_responsable = cap_cliente.get('responsable', '')
+                talento_record.capacitaciones_cliente_notas = cap_cliente.get('notas', '')
+                print(f"Actualizado capacitaciones cliente: seguimiento='{cap_cliente.get('seguimiento', '')}'")
+        
+        # Actualizar o crear registro procesos
+        procesos_record = db.query(ProjectImplementacionProcesos).filter_by(cliente_implementacion_id=id).first()
+        if not procesos_record:
+            procesos_record = ProjectImplementacionProcesos(cliente_implementacion_id=id)
+            db.add(procesos_record)
+            print("Creado nuevo registro procesos")
+        else:
+            print("Actualizando registro procesos existente")
+        
+        # Actualizar campos procesos (TODOS)
+        procesos_data = data.procesos
+        if procesos_data:
+            if 'responsableCliente' in procesos_data:
+                resp_cliente = procesos_data['responsableCliente']
+                procesos_record.responsable_cliente_seguimiento = resp_cliente.get('seguimiento', '')
+                procesos_record.responsable_cliente_estado = resp_cliente.get('estado', '')
+                procesos_record.responsable_cliente_responsable = resp_cliente.get('responsable', '')
+                procesos_record.responsable_cliente_notas = resp_cliente.get('notas', '')
+                print(f"Actualizado responsable cliente: seguimiento='{resp_cliente.get('seguimiento', '')}'")
+            
+            if 'responsableAndes' in procesos_data:
+                resp_andes = procesos_data['responsableAndes']
+                procesos_record.responsable_andes_seguimiento = resp_andes.get('seguimiento', '')
+                procesos_record.responsable_andes_estado = resp_andes.get('estado', '')
+                procesos_record.responsable_andes_responsable = resp_andes.get('responsable', '')
+                procesos_record.responsable_andes_notas = resp_andes.get('notas', '')
+                print(f"Actualizado responsable andes: seguimiento='{resp_andes.get('seguimiento', '')}'")
+            
+            if 'horarioTrabajo' in procesos_data:
+                horario = procesos_data['horarioTrabajo']
+                procesos_record.horario_trabajo_seguimiento = horario.get('seguimiento', '')
+                procesos_record.horario_trabajo_estado = horario.get('estado', '')
+                procesos_record.horario_trabajo_responsable = horario.get('responsable', '')
+                procesos_record.horario_trabajo_notas = horario.get('notas', '')
+                print(f"Actualizado horario trabajo: seguimiento='{horario.get('seguimiento', '')}'")
+            
+            if 'capacitacionOperativa' in procesos_data:
+                cap_operativa = procesos_data['capacitacionOperativa']
+                procesos_record.capacitacion_operativa_seguimiento = cap_operativa.get('seguimiento', '')
+                procesos_record.capacitacion_operativa_estado = cap_operativa.get('estado', '')
+                procesos_record.capacitacion_operativa_responsable = cap_operativa.get('responsable', '')
+                procesos_record.capacitacion_operativa_notas = cap_operativa.get('notas', '')
+                print(f"Actualizado capacitacion operativa: seguimiento='{cap_operativa.get('seguimiento', '')}'")
+            
+            if 'procedimientos' in procesos_data:
+                procedimientos = procesos_data['procedimientos']
+                procesos_record.procedimientos_seguimiento = procedimientos.get('seguimiento', '')
+                procesos_record.procedimientos_estado = procedimientos.get('estado', '')
+                procesos_record.procedimientos_responsable = procedimientos.get('responsable', '')
+                procesos_record.procedimientos_notas = procedimientos.get('notas', '')
+                print(f"Actualizado procedimientos: seguimiento='{procedimientos.get('seguimiento', '')}'")
+            
+            if 'registrosControl' in procesos_data:
+                registros = procesos_data['registrosControl']
+                procesos_record.registros_control_seguimiento = registros.get('seguimiento', '')
+                procesos_record.registros_control_estado = registros.get('estado', '')
+                procesos_record.registros_control_responsable = registros.get('responsable', '')
+                procesos_record.registros_control_notas = registros.get('notas', '')
+                print(f"Actualizado registros control: seguimiento='{registros.get('seguimiento', '')}'")
+            
+            if 'calendarioTrabajo' in procesos_data:
+                calendario = procesos_data['calendarioTrabajo']
+                procesos_record.calendario_trabajo_seguimiento = calendario.get('seguimiento', '')
+                procesos_record.calendario_trabajo_estado = calendario.get('estado', '')
+                procesos_record.calendario_trabajo_responsable = calendario.get('responsable', '')
+                procesos_record.calendario_trabajo_notas = calendario.get('notas', '')
+                print(f"Actualizado calendario trabajo: seguimiento='{calendario.get('seguimiento', '')}'")
+            
+            if 'actualizacionBases' in procesos_data:
+                bases = procesos_data['actualizacionBases']
+                procesos_record.actualizacion_bases_seguimiento = bases.get('seguimiento', '')
+                procesos_record.actualizacion_bases_estado = bases.get('estado', '')
+                procesos_record.actualizacion_bases_responsable = bases.get('responsable', '')
+                procesos_record.actualizacion_bases_notas = bases.get('notas', '')
+                print(f"Actualizado actualizacion bases: seguimiento='{bases.get('seguimiento', '')}'")
+            
+            if 'backupBasesRestore' in procesos_data:
+                backup = procesos_data['backupBasesRestore']
+                procesos_record.backup_bases_restore_seguimiento = backup.get('seguimiento', '')
+                procesos_record.backup_bases_restore_estado = backup.get('estado', '')
+                procesos_record.backup_bases_restore_responsable = backup.get('responsable', '')
+                procesos_record.backup_bases_restore_notas = backup.get('notas', '')
+                print(f"Actualizado backup bases restore: seguimiento='{backup.get('seguimiento', '')}'")
+            
+            if 'atencionObjeciones' in procesos_data:
+                objeciones = procesos_data['atencionObjeciones']
+                procesos_record.atencion_objeciones_seguimiento = objeciones.get('seguimiento', '')
+                procesos_record.atencion_objeciones_estado = objeciones.get('estado', '')
+                procesos_record.atencion_objeciones_responsable = objeciones.get('responsable', '')
+                procesos_record.atencion_objeciones_notas = objeciones.get('notas', '')
+                print(f"Actualizado atencion objeciones: seguimiento='{objeciones.get('seguimiento', '')}'")
+        else:
+            print("⚠️ No hay datos de procesos para actualizar")
+        
+        # Actualizar o crear registro tecnología
+        tecnologia_record = db.query(ProjectImplementacionTecnologia).filter_by(cliente_implementacion_id=id).first()
+        if not tecnologia_record:
+            tecnologia_record = ProjectImplementacionTecnologia(cliente_implementacion_id=id)
+            db.add(tecnologia_record)
+            print("Creado nuevo registro tecnología")
+        else:
+            print("Actualizando registro tecnología existente")
+        
+        # Actualizar campos tecnología
+        tecnologia_data = data.tecnologia
+        print(f"Datos tecnología recibidos: {list(tecnologia_data.keys()) if tecnologia_data else 'None'}")
+        
+        if tecnologia_data:
+            if 'requisitosGrabacion' in tecnologia_data:
+                requisitos = tecnologia_data['requisitosGrabacion']
+                tecnologia_record.requisitos_grabacion_seguimiento = requisitos.get('seguimiento', '')
+                tecnologia_record.requisitos_grabacion_estado = requisitos.get('estado', '')
+                tecnologia_record.requisitos_grabacion_responsable = requisitos.get('responsable', '')
+                tecnologia_record.requisitos_grabacion_notas = requisitos.get('notas', '')
+                print(f"🎯 ACTUALIZADO requisitos grabacion: seguimiento='{requisitos.get('seguimiento', '')}' estado='{requisitos.get('estado', '')}' responsable='{requisitos.get('responsable', '')}'")
+            
+            if 'creacionModulo' in tecnologia_data:
+                creacion = tecnologia_data['creacionModulo']
+                tecnologia_record.creacion_modulo_seguimiento = creacion.get('seguimiento', '')
+                tecnologia_record.creacion_modulo_estado = creacion.get('estado', '')
+                tecnologia_record.creacion_modulo_responsable = creacion.get('responsable', '')
+                tecnologia_record.creacion_modulo_notas = creacion.get('notas', '')
+                print(f"Actualizado creacion modulo: seguimiento='{creacion.get('seguimiento', '')}'")
+            
+            if 'tipificacionInteracciones' in tecnologia_data:
+                tipificacion = tecnologia_data['tipificacionInteracciones']
+                tecnologia_record.tipificacion_interacciones_seguimiento = tipificacion.get('seguimiento', '')
+                tecnologia_record.tipificacion_interacciones_estado = tipificacion.get('estado', '')
+                tecnologia_record.tipificacion_interacciones_responsable = tipificacion.get('responsable', '')
+                tecnologia_record.tipificacion_interacciones_notas = tipificacion.get('notas', '')
+                print(f"Actualizado tipificacion interacciones: seguimiento='{tipificacion.get('seguimiento', '')}'")
+            
+            if 'aplicativosProceso' in tecnologia_data:
+                aplicativos = tecnologia_data['aplicativosProceso']
+                tecnologia_record.aplicativos_proceso_seguimiento = aplicativos.get('seguimiento', '')
+                tecnologia_record.aplicativos_proceso_estado = aplicativos.get('estado', '')
+                tecnologia_record.aplicativos_proceso_responsable = aplicativos.get('responsable', '')
+                tecnologia_record.aplicativos_proceso_notas = aplicativos.get('notas', '')
+                print(f"Actualizado aplicativos proceso: seguimiento='{aplicativos.get('seguimiento', '')}'")
+            
+            if 'whatsapp' in tecnologia_data:
+                whatsapp = tecnologia_data['whatsapp']
+                tecnologia_record.whatsapp_seguimiento = whatsapp.get('seguimiento', '')
+                tecnologia_record.whatsapp_estado = whatsapp.get('estado', '')
+                tecnologia_record.whatsapp_responsable = whatsapp.get('responsable', '')
+                tecnologia_record.whatsapp_notas = whatsapp.get('notas', '')
+                print(f"Actualizado whatsapp: seguimiento='{whatsapp.get('seguimiento', '')}'")
+            
+            if 'correosElectronicos' in tecnologia_data:
+                correos = tecnologia_data['correosElectronicos']
+                tecnologia_record.correos_electronicos_seguimiento = correos.get('seguimiento', '')
+                tecnologia_record.correos_electronicos_estado = correos.get('estado', '')
+                tecnologia_record.correos_electronicos_responsable = correos.get('responsable', '')
+                tecnologia_record.correos_electronicos_notas = correos.get('notas', '')
+                print(f"Actualizado correos electronicos: seguimiento='{correos.get('seguimiento', '')}'")
+        else:
+            print("⚠️ No hay datos de tecnología para actualizar")
+        
+        # Commit de la transacción
+        db.commit()
+        db.refresh(imp)
+        print(f"✅ Implementación actualizada exitosamente: {imp.id}")
+        
+        # Devolver respuesta simple
+        return {
+            "message": "Implementación actualizada exitosamente",
+            "id": imp.id,
+            "cliente": imp.cliente,
+            "estado": imp.estado,
+            "proceso": imp.proceso
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error al actualizar implementación: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar implementación: {str(e)}")
 
 @router.delete("/{id}")
 def eliminar_implementacion(id: int, db: Session = Depends(get_db)):

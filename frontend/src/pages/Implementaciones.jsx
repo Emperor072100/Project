@@ -93,6 +93,10 @@ const Implementaciones = () => {
   const [selectedImplementacion, setSelectedImplementacion] = useState(null);
   const [implementacionDetail, setImplementacionDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  
+  // Estados para modo edición
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingImplementacion, setEditingImplementacion] = useState(null);
   const [expandedDetailSection, setExpandedDetailSection] = useState(null);
 
   // Efecto para cerrar el dropdown al hacer clic fuera
@@ -219,20 +223,229 @@ const Implementaciones = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      // Adaptar nombres de campos para el backend
+      
+      // Preparar datos para el backend
       const formDataBackend = {
         ...formData,
         talento_humano: formData.talentoHumano,
         talentoHumano: undefined // opcional, para no enviar duplicado
       };
-      await axios.post('http://localhost:8000/implementaciones', formDataBackend, config);
-      toast.success('Implementación guardada');
+      
+      // Limpiar campos undefined
+      delete formDataBackend.talentoHumano;
+      
+      console.log('Datos que se enviarán al backend:', formDataBackend);
+      console.log('Modo edición:', isEditMode);
+      console.log('Implementación a editar:', editingImplementacion);
+      
+      if (isEditMode && editingImplementacion) {
+        // Modo edición - actualizar implementación existente
+        console.log(`🔄 Actualizando implementación ID: ${editingImplementacion.id}`);
+        console.log('📤 URL de actualización:', `http://localhost:8000/implementaciones/${editingImplementacion.id}`);
+        console.log('📊 Datos contractuales que se envían:', formDataBackend.contractual);
+        console.log('👥 Datos talento humano que se envían:', formDataBackend.talento_humano);
+        
+        const response = await axios.put(`http://localhost:8000/implementaciones/${editingImplementacion.id}`, formDataBackend, config);
+        console.log('✅ Respuesta del servidor (actualización):', response.data);
+        console.log('📍 Status code:', response.status);
+        
+        toast.success('Implementación actualizada exitosamente');
+      } else {
+        // Modo creación - crear nueva implementación
+        console.log('Creando nueva implementación');
+        const response = await axios.post('http://localhost:8000/implementaciones', formDataBackend, config);
+        console.log('Respuesta del servidor (creación):', response.data);
+        toast.success('Implementación guardada exitosamente');
+      }
+      
       setShowModal(false);
+      resetFormulario();
       cargarImplementaciones();
     } catch (error) {
-      toast.error('Error al guardar implementación');
-      console.error(error);
+      console.error('Error completo al guardar/actualizar:', error);
+      console.error('Detalles del error:', error.response?.data);
+      toast.error(isEditMode ? 'Error al actualizar implementación' : 'Error al guardar implementación');
     }
+  };
+
+  // Función para abrir modal en modo edición
+  const abrirModalEdicion = async (implementacion) => {
+    setIsEditMode(true);
+    setEditingImplementacion(implementacion);
+    
+    // Cargar los detalles completos para la edición
+    setLoadingDetail(true);
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const response = await axios.get(`http://localhost:8000/implementaciones/${implementacion.id}`, config);
+      
+      // Mapear los datos del backend al formato del formulario
+      const detalles = response.data;
+      console.log('Datos recibidos del backend para edición:', detalles);
+      
+      // Función auxiliar para mapear correctamente los objetos anidados
+      const mapearSeccion = (seccionData, defaultStructure) => {
+        if (!seccionData || typeof seccionData !== 'object') {
+          return defaultStructure;
+        }
+        
+        const mapped = {};
+        Object.keys(defaultStructure).forEach(key => {
+          mapped[key] = {
+            seguimiento: seccionData[key]?.seguimiento || '',
+            estado: seccionData[key]?.estado || '',
+            responsable: seccionData[key]?.responsable || '',
+            notas: seccionData[key]?.notas || ''
+          };
+        });
+        return mapped;
+      };
+      
+      const defaultContractual = {
+        modeloContrato: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        modeloConfidencialidad: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        alcance: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        fechaInicio: { seguimiento: '', estado: '', responsable: '', notas: '' }
+      };
+      
+      const defaultTalentoHumano = {
+        perfilPersonal: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        cantidadAsesores: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        horarios: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        formador: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        capacitacionesAndes: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        capacitacionesCliente: { seguimiento: '', estado: '', responsable: '', notas: '' }
+      };
+      
+      const defaultProcesos = {
+        responsableCliente: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        responsableAndes: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        responsablesOperacion: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        listadoReportes: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        protocoloComunicaciones: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        guionesProtocolos: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        procesoMonitoreo: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        cronogramaTecnologia: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        cronogramaCapacitaciones: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        realizacionPruebas: { seguimiento: '', estado: '', responsable: '', notas: '' }
+      };
+      
+      const defaultTecnologia = {
+        creacionModulo: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        tipificacionInteracciones: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        aplicativosProceso: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        whatsapp: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        correosElectronicos: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        requisitosGrabacion: { seguimiento: '', estado: '', responsable: '', notas: '' }
+      };
+      
+      const mappedFormData = {
+        cliente: detalles.cliente || '',
+        estado: detalles.estado || '',
+        proceso: detalles.proceso || '',
+        contractual: mapearSeccion(detalles.contractual, defaultContractual),
+        talentoHumano: mapearSeccion(detalles.talento_humano, defaultTalentoHumano),
+        procesos: mapearSeccion(detalles.procesos, defaultProcesos),
+        tecnologia: mapearSeccion(detalles.tecnologia, defaultTecnologia)
+      };
+      
+      console.log('Datos mapeados para el formulario:', mappedFormData);
+      setFormData(mappedFormData);
+    } catch (error) {
+      console.error('Error al cargar detalles para edición:', error);
+      toast.error('Error al cargar los datos para edición');
+      // Si falla, usar datos básicos y estructura vacía
+      setFormData({
+        cliente: implementacion.cliente || '',
+        estado: implementacion.estado || '',
+        proceso: implementacion.proceso || '',
+        contractual: {
+          modeloContrato: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          modeloConfidencialidad: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          alcance: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          fechaInicio: { seguimiento: '', estado: '', responsable: '', notas: '' }
+        },
+        talentoHumano: {
+          perfilPersonal: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          cantidadAsesores: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          horarios: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          formador: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          capacitacionesAndes: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          capacitacionesCliente: { seguimiento: '', estado: '', responsable: '', notas: '' }
+        },
+        procesos: {
+          responsableCliente: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          responsableAndes: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          responsablesOperacion: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          listadoReportes: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          protocoloComunicaciones: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          guionesProtocolos: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          procesoMonitoreo: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          cronogramaTecnologia: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          cronogramaCapacitaciones: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          realizacionPruebas: { seguimiento: '', estado: '', responsable: '', notas: '' }
+        },
+        tecnologia: {
+          creacionModulo: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          tipificacionInteracciones: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          aplicativosProceso: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          whatsapp: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          correosElectronicos: { seguimiento: '', estado: '', responsable: '', notas: '' },
+          requisitosGrabacion: { seguimiento: '', estado: '', responsable: '', notas: '' }
+        }
+      });
+    } finally {
+      setLoadingDetail(false);
+    }
+    
+    setShowModal(true);
+  };
+
+  // Función para resetear el formulario
+  const resetFormulario = () => {
+    setIsEditMode(false);
+    setEditingImplementacion(null);
+    setExpandedSections({});
+    setFormData({
+      cliente: '',
+      estado: '',
+      proceso: '',
+      contractual: {
+        modeloContrato: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        modeloConfidencialidad: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        alcance: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        fechaInicio: { seguimiento: '', estado: '', responsable: '', notas: '' }
+      },
+      talentoHumano: {
+        perfilPersonal: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        cantidadAsesores: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        horarios: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        formador: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        capacitacionesAndes: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        capacitacionesCliente: { seguimiento: '', estado: '', responsable: '', notas: '' }
+      },
+      procesos: {
+        responsableCliente: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        responsableAndes: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        responsablesOperacion: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        listadoReportes: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        protocoloComunicaciones: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        guionesProtocolos: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        procesoMonitoreo: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        cronogramaTecnologia: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        cronogramaCapacitaciones: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        realizacionPruebas: { seguimiento: '', estado: '', responsable: '', notas: '' }
+      },
+      tecnologia: {
+        creacionModulo: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        tipificacionInteracciones: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        aplicativosProceso: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        whatsapp: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        correosElectronicos: { seguimiento: '', estado: '', responsable: '', notas: '' },
+        requisitosGrabacion: { seguimiento: '', estado: '', responsable: '', notas: '' }
+      }
+    });
   };
 
   return (
@@ -242,19 +455,55 @@ const Implementaciones = () => {
         <h1 className="text-3xl font-bold text-gray-800">Gestión de Implementaciones</h1>
       </div>
 
-      {/* Modal de Nueva Implementación */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Nueva Implementación">
+      {/* Modal de Nueva/Editar Implementación */}
+      <Modal 
+        isOpen={showModal} 
+        onClose={() => {
+          setShowModal(false);
+          resetFormulario();
+        }} 
+        title={isEditMode ? `Editar Implementación: ${editingImplementacion?.cliente || ''}` : "Nueva Implementación"}
+      >
         <div className="max-h-[80vh] overflow-y-auto">
           {/* Sección inicial */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 mb-6">
+          <div className={`rounded-lg p-6 mb-6 ${
+            isEditMode 
+              ? 'bg-gradient-to-br from-green-50 to-green-100' 
+              : 'bg-gradient-to-br from-blue-50 to-blue-100'
+          }`}>
             <div className="flex items-center space-x-4 mb-6">
-              <div className="p-3 bg-blue-600 rounded-lg">
-                <FaPlus className="text-white text-xl" />
+              <div className={`p-3 rounded-lg ${
+                isEditMode ? 'bg-green-600' : 'bg-blue-600'
+              }`}>
+                {isEditMode ? (
+                  <FaEdit className="text-white text-xl" />
+                ) : (
+                  <FaPlus className="text-white text-xl" />
+                )}
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-blue-800">Información Principal</h3>
-                <p className="text-blue-600">Complete los datos básicos de la implementación</p>
+                <h3 className={`text-lg font-semibold ${
+                  isEditMode ? 'text-green-800' : 'text-blue-800'
+                }`}>
+                  {isEditMode ? 'Editando Implementación' : 'Información Principal'}
+                </h3>
+                <p className={`${
+                  isEditMode ? 'text-green-600' : 'text-blue-600'
+                }`}>
+                  {isEditMode 
+                    ? 'Modifique los datos de la implementación existente'
+                    : 'Complete los datos básicos de la implementación'
+                  }
+                </p>
               </div>
+              {isEditMode && (
+                <div className="ml-auto">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Modo Edición
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -739,7 +988,10 @@ const Implementaciones = () => {
           <div className="mt-8 flex justify-end gap-4 border-t pt-6">
             <button
               type="button"
-              onClick={() => setShowModal(false)}
+              onClick={() => {
+                setShowModal(false);
+                resetFormulario();
+              }}
               className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
             >
               Cancelar
@@ -747,9 +999,23 @@ const Implementaciones = () => {
             <button
               type="button"
               onClick={guardarImplementacion}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+              disabled={loadingDetail}
+              className={`flex-1 py-3 px-6 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl ${
+                loadingDetail 
+                  ? 'bg-gray-400 text-white cursor-not-allowed' 
+                  : isEditMode 
+                    ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white'
+                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white'
+              }`}
             >
-              Guardar Implementación
+              {loadingDetail ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Cargando...
+                </div>
+              ) : (
+                isEditMode ? 'Actualizar Implementación' : 'Guardar Implementación'
+              )}
             </button>
           </div>
         </div>
@@ -1279,7 +1545,10 @@ const Implementaciones = () => {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => {
+                resetFormulario();
+                setShowModal(true);
+              }}
               className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
             >
               <FaPlus size={16} />
@@ -1514,7 +1783,7 @@ const Implementaciones = () => {
                     <td className="px-6 py-5 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-center gap-2">
                         <button
-                          onClick={() => console.log('Editar', implementacion.id)}
+                          onClick={() => abrirModalEdicion(implementacion)}
                           className="inline-flex items-center px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           title="Editar implementación"
                         >
