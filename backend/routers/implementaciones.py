@@ -43,6 +43,9 @@ class ImplementacionBasic(BaseModel):
     class Config:
         from_attributes = True
 
+class EstadoUpdate(BaseModel):
+    estado: str
+
 router = APIRouter(prefix="/implementaciones", tags=["Implementaciones"])
 
 @router.post("/", response_model=ImplementacionOut)
@@ -191,6 +194,228 @@ def crear_implementacion(data: ImplementacionCreate, db: Session = Depends(get_d
 def listar_implementaciones_basico(db: Session = Depends(get_db)):
     """Endpoint básico que devuelve solo los datos esenciales de implementaciones"""
     return db.query(ProjectImplementacionesClienteImple).all()
+
+@router.put("/{id}/estado", response_model=ImplementacionBasic)
+def actualizar_estado_implementacion(id: int, data: EstadoUpdate, db: Session = Depends(get_db)):
+    """Endpoint para actualizar solo el estado de una implementación"""
+    imp = db.query(ProjectImplementacionesClienteImple).filter_by(id=id).first()
+    if not imp:
+        raise HTTPException(status_code=404, detail="Implementación no encontrada")
+    
+    imp.estado = data.estado
+    db.commit()
+    db.refresh(imp)
+    
+    return ImplementacionBasic(
+        id=imp.id,
+        cliente=imp.cliente,
+        proceso=imp.proceso,
+        estado=imp.estado
+    )
+
+@router.get("/{id}", response_model=ImplementacionOut)
+def obtener_implementacion(id: int, db: Session = Depends(get_db)):
+    """Endpoint para obtener una implementación específica con todos sus detalles"""
+    imp = db.query(ProjectImplementacionesClienteImple).filter_by(id=id).first()
+    if not imp:
+        raise HTTPException(status_code=404, detail="Implementación no encontrada")
+    
+    # Obtener datos de tablas relacionadas
+    contractual_data = db.query(ProjectImplementacionContractual).filter_by(cliente_implementacion_id=id).first()
+    talento_data = db.query(ProjectImplementacionTalentoHumano).filter_by(cliente_implementacion_id=id).first()
+    procesos_data = db.query(ProjectImplementacionProcesos).filter_by(cliente_implementacion_id=id).first()
+    tecnologia_data = db.query(ProjectImplementacionTecnologia).filter_by(cliente_implementacion_id=id).first()
+    
+    # Construir objeto contractual
+    contractual = {}
+    if contractual_data:
+        contractual = {
+            'modeloContrato': {
+                'seguimiento': contractual_data.modelo_contrato_seguimiento or '',
+                'estado': contractual_data.modelo_contrato_estado or '',
+                'responsable': contractual_data.modelo_contrato_responsable or '',
+                'notas': contractual_data.modelo_contrato_notas or ''
+            },
+            'modeloConfidencialidad': {
+                'seguimiento': contractual_data.modelo_confidencialidad_seguimiento or '',
+                'estado': contractual_data.modelo_confidencialidad_estado or '',
+                'responsable': contractual_data.modelo_confidencialidad_responsable or '',
+                'notas': contractual_data.modelo_confidencialidad_notas or ''
+            },
+            'alcance': {
+                'seguimiento': contractual_data.alcance_seguimiento or '',
+                'estado': contractual_data.alcance_estado or '',
+                'responsable': contractual_data.alcance_responsable or '',
+                'notas': contractual_data.alcance_notas or ''
+            },
+            'fechaInicio': {
+                'seguimiento': contractual_data.fecha_inicio_seguimiento or '',
+                'estado': contractual_data.fecha_inicio_estado or '',
+                'responsable': contractual_data.fecha_inicio_responsable or '',
+                'notas': contractual_data.fecha_inicio_notas or ''
+            }
+        }
+    
+    # Construir objeto talento_humano
+    talento_humano = {}
+    if talento_data:
+        talento_humano = {
+            'perfilPersonal': {
+                'seguimiento': talento_data.perfil_personal_seguimiento or '',
+                'estado': talento_data.perfil_personal_estado or '',
+                'responsable': talento_data.perfil_personal_responsable or '',
+                'notas': talento_data.perfil_personal_notas or ''
+            },
+            'cantidadAsesores': {
+                'seguimiento': talento_data.cantidad_asesores_seguimiento or '',
+                'estado': talento_data.cantidad_asesores_estado or '',
+                'responsable': talento_data.cantidad_asesores_responsable or '',
+                'notas': talento_data.cantidad_asesores_notas or ''
+            },
+            'horarios': {
+                'seguimiento': talento_data.horarios_seguimiento or '',
+                'estado': talento_data.horarios_estado or '',
+                'responsable': talento_data.horarios_responsable or '',
+                'notas': talento_data.horarios_notas or ''
+            },
+            'formador': {
+                'seguimiento': talento_data.formador_seguimiento or '',
+                'estado': talento_data.formador_estado or '',
+                'responsable': talento_data.formador_responsable or '',
+                'notas': talento_data.formador_notas or ''
+            },
+            'capacitacionesAndes': {
+                'seguimiento': talento_data.capacitaciones_andes_seguimiento or '',
+                'estado': talento_data.capacitaciones_andes_estado or '',
+                'responsable': talento_data.capacitaciones_andes_responsable or '',
+                'notas': talento_data.capacitaciones_andes_notas or ''
+            },
+            'capacitacionesCliente': {
+                'seguimiento': talento_data.capacitaciones_cliente_seguimiento or '',
+                'estado': talento_data.capacitaciones_cliente_estado or '',
+                'responsable': talento_data.capacitaciones_cliente_responsable or '',
+                'notas': talento_data.capacitaciones_cliente_notas or ''
+            }
+        }
+    
+    # Construir objeto procesos
+    procesos = {}
+    if procesos_data:
+        procesos = {
+            'responsableCliente': {
+                'seguimiento': procesos_data.responsable_cliente_seguimiento or '',
+                'estado': procesos_data.responsable_cliente_estado or '',
+                'responsable': procesos_data.responsable_cliente_responsable or '',
+                'notas': procesos_data.responsable_cliente_notas or ''
+            },
+            'responsableAndes': {
+                'seguimiento': procesos_data.responsable_andes_seguimiento or '',
+                'estado': procesos_data.responsable_andes_estado or '',
+                'responsable': procesos_data.responsable_andes_responsable or '',
+                'notas': procesos_data.responsable_andes_notas or ''
+            },
+            'responsablesOperacion': {
+                'seguimiento': procesos_data.responsables_operacion_seguimiento or '',
+                'estado': procesos_data.responsables_operacion_estado or '',
+                'responsable': procesos_data.responsables_operacion_responsable or '',
+                'notas': procesos_data.responsables_operacion_notas or ''
+            },
+            'listadoReportes': {
+                'seguimiento': procesos_data.listado_reportes_seguimiento or '',
+                'estado': procesos_data.listado_reportes_estado or '',
+                'responsable': procesos_data.listado_reportes_responsable or '',
+                'notas': procesos_data.listado_reportes_notas or ''
+            },
+            'protocoloComunicaciones': {
+                'seguimiento': procesos_data.protocolo_comunicaciones_seguimiento or '',
+                'estado': procesos_data.protocolo_comunicaciones_estado or '',
+                'responsable': procesos_data.protocolo_comunicaciones_responsable or '',
+                'notas': procesos_data.protocolo_comunicaciones_notas or ''
+            },
+            'guionesProtocolos': {
+                'seguimiento': procesos_data.guiones_protocolos_seguimiento or '',
+                'estado': procesos_data.guiones_protocolos_estado or '',
+                'responsable': procesos_data.guiones_protocolos_responsable or '',
+                'notas': procesos_data.guiones_protocolos_notas or ''
+            },
+            'procesoMonitoreo': {
+                'seguimiento': procesos_data.proceso_monitoreo_seguimiento or '',
+                'estado': procesos_data.proceso_monitoreo_estado or '',
+                'responsable': procesos_data.proceso_monitoreo_responsable or '',
+                'notas': procesos_data.proceso_monitoreo_notas or ''
+            },
+            'cronogramaTecnologia': {
+                'seguimiento': procesos_data.cronograma_tecnologia_seguimiento or '',
+                'estado': procesos_data.cronograma_tecnologia_estado or '',
+                'responsable': procesos_data.cronograma_tecnologia_responsable or '',
+                'notas': procesos_data.cronograma_tecnologia_notas or ''
+            },
+            'cronogramaCapacitaciones': {
+                'seguimiento': procesos_data.cronograma_capacitaciones_seguimiento or '',
+                'estado': procesos_data.cronograma_capacitaciones_estado or '',
+                'responsable': procesos_data.cronograma_capacitaciones_responsable or '',
+                'notas': procesos_data.cronograma_capacitaciones_notas or ''
+            },
+            'realizacionPruebas': {
+                'seguimiento': procesos_data.realizacion_pruebas_seguimiento or '',
+                'estado': procesos_data.realizacion_pruebas_estado or '',
+                'responsable': procesos_data.realizacion_pruebas_responsable or '',
+                'notas': procesos_data.realizacion_pruebas_notas or ''
+            }
+        }
+    
+    # Construir objeto tecnologia
+    tecnologia = {}
+    if tecnologia_data:
+        tecnologia = {
+            'creacionModulo': {
+                'seguimiento': tecnologia_data.creacion_modulo_seguimiento or '',
+                'estado': tecnologia_data.creacion_modulo_estado or '',
+                'responsable': tecnologia_data.creacion_modulo_responsable or '',
+                'notas': tecnologia_data.creacion_modulo_notas or ''
+            },
+            'tipificacionInteracciones': {
+                'seguimiento': tecnologia_data.tipificacion_interacciones_seguimiento or '',
+                'estado': tecnologia_data.tipificacion_interacciones_estado or '',
+                'responsable': tecnologia_data.tipificacion_interacciones_responsable or '',
+                'notas': tecnologia_data.tipificacion_interacciones_notas or ''
+            },
+            'aplicativosProceso': {
+                'seguimiento': tecnologia_data.aplicativos_proceso_seguimiento or '',
+                'estado': tecnologia_data.aplicativos_proceso_estado or '',
+                'responsable': tecnologia_data.aplicativos_proceso_responsable or '',
+                'notas': tecnologia_data.aplicativos_proceso_notas or ''
+            },
+            'whatsapp': {
+                'seguimiento': tecnologia_data.whatsapp_seguimiento or '',
+                'estado': tecnologia_data.whatsapp_estado or '',
+                'responsable': tecnologia_data.whatsapp_responsable or '',
+                'notas': tecnologia_data.whatsapp_notas or ''
+            },
+            'correosElectronicos': {
+                'seguimiento': tecnologia_data.correos_electronicos_seguimiento or '',
+                'estado': tecnologia_data.correos_electronicos_estado or '',
+                'responsable': tecnologia_data.correos_electronicos_responsable or '',
+                'notas': tecnologia_data.correos_electronicos_notas or ''
+            },
+            'requisitosGrabacion': {
+                'seguimiento': tecnologia_data.requisitos_grabacion_seguimiento or '',
+                'estado': tecnologia_data.requisitos_grabacion_estado or '',
+                'responsable': tecnologia_data.requisitos_grabacion_responsable or '',
+                'notas': tecnologia_data.requisitos_grabacion_notas or ''
+            }
+        }
+    
+    return ImplementacionOut(
+        id=imp.id,
+        cliente=imp.cliente,
+        proceso=imp.proceso,
+        estado=imp.estado,
+        contractual=contractual,
+        talento_humano=talento_humano,
+        procesos=procesos,
+        tecnologia=tecnologia
+    )
 
 @router.get("/", response_model=List[ImplementacionOut])
 def listar_implementaciones(db: Session = Depends(get_db)):

@@ -7,3 +7,8 @@ class ProjectImplementacionesClienteImple(Base):
     cliente = Column(String, nullable=False)
     proceso = Column(String, nullable=False)
     estado = Column(String, nullable=True)
+    # Columnas JSON que se pueden eliminar ya que no se usan
+    contractual = Column(JSON, nullable=True)
+    talento_humano = Column(JSON, nullable=True)
+    procesos = Column(JSON, nullable=True)
+    tecnologia = Column(JSON, nullable=True)
