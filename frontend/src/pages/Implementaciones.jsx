@@ -11,7 +11,9 @@ import {
   FaTrash,
   FaFileExcel,
   FaChevronRight,
-  FaChevronDown 
+  FaChevronDown,
+  FaChartPie,
+  FaHashtag
 } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
@@ -185,6 +187,77 @@ const Implementaciones = () => {
     }, 0);
     
     const maxPosible = subsesiones.length * 100;
+    return Math.round((totalPeso / maxPosible) * 100);
+  };
+
+  // Función para calcular el progreso total de toda la implementación
+  const calcularProgresoTotal = () => {
+    if (!implementacionDetail) return 0;
+
+    const secciones = [
+      {
+        data: implementacionDetail.contractual,
+        subsesiones: [
+          { key: 'modeloContrato' },
+          { key: 'modeloConfidencialidad' },
+          { key: 'alcance' },
+          { key: 'fechaInicio' }
+        ]
+      },
+      {
+        data: implementacionDetail.talento_humano,
+        subsesiones: [
+          { key: 'perfilPersonal' },
+          { key: 'cantidadAsesores' },
+          { key: 'horarios' },
+          { key: 'formador' },
+          { key: 'capacitacionesAndes' },
+          { key: 'capacitacionesCliente' }
+        ]
+      },
+      {
+        data: implementacionDetail.procesos,
+        subsesiones: [
+          { key: 'responsableCliente' },
+          { key: 'responsableAndes' },
+          { key: 'responsablesOperacion' },
+          { key: 'listadoReportes' },
+          { key: 'protocoloComunicaciones' },
+          { key: 'guionesProtocolos' },
+          { key: 'procesoMonitoreo' },
+          { key: 'cronogramaTecnologia' },
+          { key: 'cronogramaCapacitaciones' },
+          { key: 'realizacionPruebas' }
+        ]
+      },
+      {
+        data: implementacionDetail.tecnologia,
+        subsesiones: [
+          { key: 'creacionModulo' },
+          { key: 'tipificacionInteracciones' },
+          { key: 'aplicativosProceso' },
+          { key: 'whatsapp' },
+          { key: 'correosElectronicos' },
+          { key: 'requisitosGrabacion' }
+        ]
+      }
+    ];
+
+    let totalPeso = 0;
+    let totalSubsesiones = 0;
+
+    secciones.forEach(seccion => {
+      if (seccion.data && seccion.subsesiones) {
+        seccion.subsesiones.forEach(subsesion => {
+          const estado = seccion.data[subsesion.key]?.estado;
+          totalPeso += obtenerPesoEstado(estado);
+          totalSubsesiones += 1;
+        });
+      }
+    });
+
+    if (totalSubsesiones === 0) return 0;
+    const maxPosible = totalSubsesiones * 100;
     return Math.round((totalPeso / maxPosible) * 100);
   };
 
@@ -1436,36 +1509,95 @@ const Implementaciones = () => {
           ) : implementacionDetail ? (
             <>
               {/* Información General */}
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-6 mb-6">
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="p-3 bg-slate-600 rounded-lg">
-                    <FaUsers className="text-white text-xl" />
+              <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-8 mb-8 border border-indigo-100 shadow-lg animate-slideDown">
+                <div className="flex items-center space-x-6 mb-8">
+                  <div className="p-4 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-lg">
+                    <FaUsers className="text-white text-2xl" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-slate-800">{implementacionDetail.cliente}</h3>
-                    <p className="text-slate-600">Información General de la Implementación</p>
+                    <h3 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                      {implementacionDetail.cliente}
+                    </h3>
+                    <p className="text-lg text-slate-600 font-medium">Información General de la Implementación</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white p-4 rounded-lg shadow-sm">
-                    <p className="text-sm font-medium text-gray-500">Proceso</p>
-                    <p className="text-lg font-semibold text-gray-900">{implementacionDetail.proceso}</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Tarjeta Proceso */}
+                  <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg shadow-md">
+                        <FaCogs className="text-white text-xl" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Proceso</p>
+                        <p className="text-xl font-bold text-gray-900">{implementacionDetail.proceso}</p>
+                      </div>
+                    </div>
+                    <div className="h-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></div>
                   </div>
-                  <div className="bg-white p-4 rounded-lg shadow-sm">
-                    <p className="text-sm font-medium text-gray-500">Estado</p>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${
-                      implementacionDetail.estado === 'Activo' ? 'bg-emerald-100 text-emerald-800' :
-                      implementacionDetail.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800' :
-                      implementacionDetail.estado === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
-                      implementacionDetail.estado === 'Finalizado' ? 'bg-indigo-100 text-indigo-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {implementacionDetail.estado || 'Sin estado'}
-                    </span>
+
+                  {/* Tarjeta Estado General */}
+                  <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg shadow-md">
+                          <FaChartPie className="text-white text-xl" />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Estado General</p>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold shadow-sm ${
+                            implementacionDetail.estado === 'Activo' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                            implementacionDetail.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                            implementacionDetail.estado === 'En Proceso' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                            implementacionDetail.estado === 'Finalizado' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
+                            'bg-gray-100 text-gray-800 border border-gray-200'
+                          }`}>
+                            {implementacionDetail.estado || 'Sin estado'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-full blur animate-pulse"></div>
+                        <RuedaProgreso 
+                          porcentaje={calcularProgresoTotal()}
+                          size={55}
+                          strokeWidth={6}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-3 rounded-lg">
+                      <div className="text-sm font-medium text-gray-700">
+                        Progreso: <span className="font-bold text-emerald-600">{calcularProgresoTotal()}%</span> completado
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                        <span className="w-2 h-2 bg-indigo-400 rounded-full"></span>
+                        26 subsesiones totales
+                      </div>
+                    </div>
+                    
+                    <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full mt-4"></div>
                   </div>
-                  <div className="bg-white p-4 rounded-lg shadow-sm">
-                    <p className="text-sm font-medium text-gray-500">ID</p>
-                    <p className="text-lg font-semibold text-gray-900">#{implementacionDetail.id}</p>
+
+                  {/* Tarjeta ID */}
+                  <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg shadow-md">
+                        <FaHashtag className="text-white text-xl" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">ID de Implementación</p>
+                        <p className="text-xl font-bold text-gray-900">#{implementacionDetail.id}</p>
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-3 rounded-lg">
+                      <div className="text-xs text-gray-600 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                        Identificador único del proyecto
+                      </div>
+                    </div>
+                    <div className="h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mt-4"></div>
                   </div>
                 </div>
               </div>
