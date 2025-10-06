@@ -198,9 +198,27 @@ const Campañas = () => {
         const total_contactos = [...new Set(campañasUsuario.map(c => c.contacto_id))].length;
         const por_servicio = { SAC: 0, TMk: 0, TVT: 0, CBZ: 0 };
         campañasUsuario.forEach(c => {
-          const tipo = (c.tipo || '').toUpperCase().replace(/\s/g, '');
-          if (por_servicio.hasOwnProperty(tipo)) por_servicio[tipo]++;
+          const tipo = (c.tipo || '').trim();
+          // Mapear tipos específicos para asegurar consistencia
+          if (tipo === 'SAC' || tipo === 'sac') por_servicio.SAC++;
+          else if (tipo === 'TMk' || tipo === 'tmk' || tipo === 'TMK') por_servicio.TMk++;
+          else if (tipo === 'TVT' || tipo === 'tvt') por_servicio.TVT++;
+          else if (tipo === 'CBZ' || tipo === 'cbz') por_servicio.CBZ++;
         });
+        
+        // Debug específico para TMk
+        const campañasTMk = campañasUsuario.filter(c => {
+          const tipo = (c.tipo || '').trim();
+          return tipo === 'TMk' || tipo === 'tmk' || tipo === 'TMK';
+        });
+        
+        console.log(`🟢 Debug Campañas TMk: Encontradas ${campañasTMk.length} campañas con tipo TMk:`, campañasTMk);
+        console.log(`📊 Estadísticas por servicio calculadas:`, por_servicio);
+        
+        // Mostrar todos los tipos únicos para verificar
+        const tiposUnicos = [...new Set(campañasUsuario.map(c => c.tipo))];
+        console.log(`📊 Tipos únicos de campañas encontrados:`, tiposUnicos);
+        
         setEstadisticas({
           total_clientes_corporativos,
           total_contactos,

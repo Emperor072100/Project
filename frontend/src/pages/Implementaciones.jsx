@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 import { 
   FaPlus, 
   FaEdit, 
@@ -140,6 +141,21 @@ const Implementaciones = () => {
       const response = await axios.get('http://localhost:8000/implementaciones/basic');
       setImplementaciones(response.data);
       console.log('Implementaciones cargadas:', response.data);
+      
+      // Debug específico para tarjetas KPI
+      const implementacionesTMk = response.data.filter(imp => imp.proceso === 'TMk');
+      const implementacionesFinalizadas = response.data.filter(imp => imp.estado === 'Finalizado');
+      
+      console.log(`🟢 Debug TMk: Encontradas ${implementacionesTMk.length} implementaciones con proceso 'TMk':`, implementacionesTMk);
+      console.log(`🟣 Debug Finalizadas: Encontradas ${implementacionesFinalizadas.length} implementaciones con estado 'Finalizado':`, implementacionesFinalizadas);
+      
+      // Mostrar todos los procesos únicos para verificar
+      const procesosUnicos = [...new Set(response.data.map(imp => imp.proceso))];
+      const estadosUnicos = [...new Set(response.data.map(imp => imp.estado))];
+      
+      console.log(`📊 Procesos únicos encontrados:`, procesosUnicos);
+      console.log(`📊 Estados únicos encontrados:`, estadosUnicos);
+      
     } catch (error) {
       console.error('Error completo:', error);
       toast.error('Error al cargar implementaciones');
@@ -1202,6 +1218,246 @@ const Implementaciones = () => {
       const errorMessage = error.response?.data?.detail || 'Error al eliminar la implementación';
       toast.error(errorMessage);
       setDeletingInProgress(false);
+    }
+  };
+
+  // Función para exportar a Excel con plantilla específica
+  const exportarImplementacionExcel = async (implementacion) => {
+    try {
+      toast.loading('Preparando exportación a Excel...', { id: 'excel-export' });
+      
+      // Cargar el detalle completo de la implementación
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      const response = await axios.get(`http://localhost:8000/implementaciones/${implementacion.id}`, config);
+      const detalleCompleto = response.data;
+      
+      // Crear un nuevo libro de trabajo
+      const wb = XLSX.utils.book_new();
+      
+      // Hoja 1: Resumen General
+      const resumenData = [
+        ['REPORTE DE IMPLEMENTACIÓN'],
+        [''],
+        ['Información General'],
+        ['Cliente:', detalleCompleto.cliente || ''],
+        ['Estado General:', detalleCompleto.estado || ''],
+        ['Proceso:', detalleCompleto.proceso || ''],
+        ['Fecha de Generación:', new Date().toLocaleDateString()],
+        [''],
+        ['Progreso por Sección'],
+      ];
+      
+      // Calcular progreso por sección
+      const secciones = ['contractual', 'talentoHumano', 'procesos', 'tecnologia'];
+      let progresoTotal = 0;
+      let contadorSecciones = 0;
+      
+      secciones.forEach(seccion => {
+        if (detalleCompleto[seccion]) {
+          const subsecciones = Object.keys(detalleCompleto[seccion]);
+          let progresoSeccion = 0;
+          let contadorSubsecciones = 0;
+          
+          subsecciones.forEach(subseccion => {
+            const estado = detalleCompleto[seccion][subseccion]?.estado;
+            if (estado) {
+              progresoSeccion += obtenerPesoEstado(estado);
+              contadorSubsecciones++;
+            }
+          });
+          
+          const promedioSeccion = contadorSubsecciones > 0 ? progresoSeccion / contadorSubsecciones : 0;
+          resumenData.push([`${seccion.charAt(0).toUpperCase() + seccion.slice(1)}:`, `${promedioSeccion.toFixed(1)}%`]);
+          
+          progresoTotal += promedioSeccion;
+          contadorSecciones++;
+        }
+      });
+      
+      const progresoGeneralCalculado = contadorSecciones > 0 ? progresoTotal / contadorSecciones : 0;
+      resumenData.push(['']);
+      resumenData.push(['PROGRESO GENERAL:', `${progresoGeneralCalculado.toFixed(1)}%`]);
+      
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+      
+      // Aplicar estilos a la hoja de resumen
+      wsResumen['A1'] = { v: 'REPORTE DE IMPLEMENTACIÓN', t: 's' };
+      wsResumen['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+      
+      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+      
+      // Hoja 2: Detalle Contractual
+      const contractualData = [
+        ['SECCIÓN CONTRACTUAL'],
+        [''],
+        ['Subsección', 'Estado', 'Seguimiento', 'Responsable', 'Notas']
+      ];
+      
+      if (detalleCompleto.contractual) {
+        Object.entries(detalleCompleto.contractual).forEach(([key, value]) => {
+          const nombreSubseccion = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+          contractualData.push([
+            nombreSubseccion.charAt(0).toUpperCase() + nombreSubseccion.slice(1),
+            value.estado || '',
+            value.seguimiento || '',
+            value.responsable || '',
+            value.notas || ''
+          ]);
+        });
+      }
+      
+      const wsContractual = XLSX.utils.aoa_to_sheet(contractualData);
+      XLSX.utils.book_append_sheet(wb, wsContractual, 'Contractual');
+      
+      // Hoja 3: Detalle Talento Humano
+      const talentoData = [
+        ['SECCIÓN TALENTO HUMANO'],
+        [''],
+        ['Subsección', 'Estado', 'Seguimiento', 'Responsable', 'Notas']
+      ];
+      
+      if (detalleCompleto.talentoHumano) {
+        Object.entries(detalleCompleto.talentoHumano).forEach(([key, value]) => {
+          const nombreSubseccion = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+          talentoData.push([
+            nombreSubseccion.charAt(0).toUpperCase() + nombreSubseccion.slice(1),
+            value.estado || '',
+            value.seguimiento || '',
+            value.responsable || '',
+            value.notas || ''
+          ]);
+        });
+      }
+      
+      const wsTalento = XLSX.utils.aoa_to_sheet(talentoData);
+      XLSX.utils.book_append_sheet(wb, wsTalento, 'Talento Humano');
+      
+      // Hoja 4: Detalle Procesos
+      const procesosData = [
+        ['SECCIÓN PROCESOS'],
+        [''],
+        ['Subsección', 'Estado', 'Seguimiento', 'Responsable', 'Notas']
+      ];
+      
+      if (detalleCompleto.procesos) {
+        Object.entries(detalleCompleto.procesos).forEach(([key, value]) => {
+          const nombreSubseccion = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+          procesosData.push([
+            nombreSubseccion.charAt(0).toUpperCase() + nombreSubseccion.slice(1),
+            value.estado || '',
+            value.seguimiento || '',
+            value.responsable || '',
+            value.notas || ''
+          ]);
+        });
+      }
+      
+      const wsProcesos = XLSX.utils.aoa_to_sheet(procesosData);
+      XLSX.utils.book_append_sheet(wb, wsProcesos, 'Procesos');
+      
+      // Hoja 5: Detalle Tecnología
+      const tecnologiaData = [
+        ['SECCIÓN TECNOLOGÍA'],
+        [''],
+        ['Subsección', 'Estado', 'Seguimiento', 'Responsable', 'Notas']
+      ];
+      
+      if (detalleCompleto.tecnologia) {
+        Object.entries(detalleCompleto.tecnologia).forEach(([key, value]) => {
+          const nombreSubseccion = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+          tecnologiaData.push([
+            nombreSubseccion.charAt(0).toUpperCase() + nombreSubseccion.slice(1),
+            value.estado || '',
+            value.seguimiento || '',
+            value.responsable || '',
+            value.notas || ''
+          ]);
+        });
+      }
+      
+      const wsTecnologia = XLSX.utils.aoa_to_sheet(tecnologiaData);
+      XLSX.utils.book_append_sheet(wb, wsTecnologia, 'Tecnología');
+      
+      // Hoja 6: Dashboard Ejecutivo
+      const dashboardData = [
+        ['DASHBOARD EJECUTIVO'],
+        [''],
+        ['Métricas Clave'],
+        ['Total de Subsecciones:', '26'],
+        ['Subsecciones Completadas:', '0'], // Se calculará dinámicamente
+        ['Subsecciones En Progreso:', '0'],
+        ['Subsecciones Pendientes:', '0'],
+        [''],
+        ['Estados por Sección'],
+        ['Sección', 'Completadas', 'En Progreso', 'Pendientes', '% Avance']
+      ];
+      
+      let totalCompletadas = 0;
+      let totalEnProgreso = 0;
+      let totalPendientes = 0;
+      
+      secciones.forEach(seccion => {
+        if (detalleCompleto[seccion]) {
+          let completadas = 0;
+          let enProgreso = 0;
+          let pendientes = 0;
+          
+          Object.values(detalleCompleto[seccion]).forEach(subseccion => {
+            const estado = subseccion.estado;
+            if (estado === '✅ Completado') completadas++;
+            else if (estado === '🔄 En progreso') enProgreso++;
+            else pendientes++;
+          });
+          
+          const totalSubsecciones = Object.keys(detalleCompleto[seccion]).length;
+          const porcentaje = totalSubsecciones > 0 ? (completadas / totalSubsecciones * 100).toFixed(1) : 0;
+          
+          dashboardData.push([
+            seccion.charAt(0).toUpperCase() + seccion.slice(1),
+            completadas,
+            enProgreso,
+            pendientes,
+            `${porcentaje}%`
+          ]);
+          
+          totalCompletadas += completadas;
+          totalEnProgreso += enProgreso;
+          totalPendientes += pendientes;
+        }
+      });
+      
+      // Actualizar los totales
+      dashboardData[4][1] = totalCompletadas;
+      dashboardData[5][1] = totalEnProgreso;
+      dashboardData[6][1] = totalPendientes;
+      
+      const wsDashboard = XLSX.utils.aoa_to_sheet(dashboardData);
+      XLSX.utils.book_append_sheet(wb, wsDashboard, 'Dashboard');
+      
+      // Configurar el ancho de las columnas para todas las hojas
+      const hojas = wb.SheetNames;
+      hojas.forEach(nombreHoja => {
+        const ws = wb.Sheets[nombreHoja];
+        ws['!cols'] = [
+          { width: 25 }, // Columna A
+          { width: 20 }, // Columna B
+          { width: 30 }, // Columna C
+          { width: 20 }, // Columna D
+          { width: 40 }  // Columna E
+        ];
+      });
+      
+      // Generar el archivo Excel
+      const nombreArchivo = `Implementacion_${detalleCompleto.cliente}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, nombreArchivo);
+      
+      toast.success('Excel exportado exitosamente', { id: 'excel-export' });
+      
+    } catch (error) {
+      console.error('Error al exportar a Excel:', error);
+      toast.error('Error al exportar a Excel', { id: 'excel-export' });
     }
   };
 
@@ -2512,7 +2768,7 @@ const Implementaciones = () => {
                   <span className="text-green-700 font-bold text-lg">TMk</span>
                   <p className="text-gray-500 text-sm">Telemarketing</p>
                 </div>
-                <span className="text-green-700 text-2xl font-bold">{implementaciones.filter(imp => imp.proceso === 'TMC').length}</span>
+                <span className="text-green-700 text-2xl font-bold">{implementaciones.filter(imp => imp.proceso === 'TMk').length}</span>
               </div>
               {/* CBZ */}
               <div className="rounded-lg p-4 bg-gradient-to-r from-orange-50 to-orange-100 flex items-center justify-between border-2 border-orange-400">
@@ -2795,7 +3051,7 @@ const Implementaciones = () => {
                           Eliminar
                         </button>
                         <button
-                          onClick={() => console.log('Descargar Excel', implementacion.id)}
+                          onClick={() => exportarImplementacionExcel(implementacion)}
                           className="inline-flex items-center px-3 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 hover:border-green-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           title="Descargar en Excel"
                         >
