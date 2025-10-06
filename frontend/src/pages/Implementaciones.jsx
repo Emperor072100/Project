@@ -1224,236 +1224,416 @@ const Implementaciones = () => {
   // Función para exportar a Excel con plantilla específica
   const exportarImplementacionExcel = async (implementacion) => {
     try {
+      console.log('🟢 Iniciando exportación para implementación:', implementacion);
       toast.loading('Preparando exportación a Excel...', { id: 'excel-export' });
       
       // Cargar el detalle completo de la implementación
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
+      console.log('🟢 Obteniendo datos del backend para ID:', implementacion.id);
       const response = await axios.get(`http://localhost:8000/implementaciones/${implementacion.id}`, config);
+      console.log('🟢 Datos recibidos del backend:', response.data);
       const detalleCompleto = response.data;
       
       // Crear un nuevo libro de trabajo
+      console.log('🟢 Creando libro de Excel nuevo');
       const wb = XLSX.utils.book_new();
       
-      // Hoja 1: Resumen General
-      const resumenData = [
-        ['REPORTE DE IMPLEMENTACIÓN'],
-        [''],
-        ['Información General'],
-        ['Cliente:', detalleCompleto.cliente || ''],
-        ['Estado General:', detalleCompleto.estado || ''],
-        ['Proceso:', detalleCompleto.proceso || ''],
-        ['Fecha de Generación:', new Date().toLocaleDateString()],
-        [''],
-        ['Progreso por Sección'],
-      ];
+      // Crear la hoja principal "Mapa de Implementación Servicios"
+      console.log('🟢 Iniciando creación de hoja de trabajo');
+      const wsData = [];
       
-      // Calcular progreso por sección
-      const secciones = ['contractual', 'talentoHumano', 'procesos', 'tecnologia'];
-      let progresoTotal = 0;
-      let contadorSecciones = 0;
+      // Fila 1 vacía para espacio
+      wsData.push([]);
       
-      secciones.forEach(seccion => {
-        if (detalleCompleto[seccion]) {
-          const subsecciones = Object.keys(detalleCompleto[seccion]);
-          let progresoSeccion = 0;
-          let contadorSubsecciones = 0;
-          
-          subsecciones.forEach(subseccion => {
-            const estado = detalleCompleto[seccion][subseccion]?.estado;
-            if (estado) {
-              progresoSeccion += obtenerPesoEstado(estado);
-              contadorSubsecciones++;
+      // Fila 2: Título con el nombre de la implementación
+      wsData.push(['', 'NOMBRE DE IMPLEMENTACIÓN']);
+      
+      // Fila 3 vacía para espacio
+      wsData.push([]);
+      
+      // Fila 4: Subtítulo
+      wsData.push(['', 'MAPA DE IMPLEMENTACIÓN SERVICIOS']);
+      
+      // Fila 5 vacía para espacio
+      wsData.push([]);
+      
+      // Fila 6: Encabezados de tabla
+      wsData.push(['Fase', 'Proceso', 'Actividades', 'Seguimiento Actividades', 'Estado', 'Responsable']);
+      
+      // Contenido de la tabla
+      
+      // Fase: Inicio - Desarrollar el acta de Inicio
+      wsData.push(['Inicio', 'Desarrollar el acta de Inicio', 'Modelo de contrato', 
+                   detalleCompleto.contractual?.modeloContrato?.seguimiento || '', 
+                   detalleCompleto.contractual?.modeloContrato?.estado || '', 
+                   detalleCompleto.contractual?.modeloContrato?.responsable || '']);
+      
+      wsData.push(['', '', 'Modelo del Acuerdo de Confidencialidad', 
+                   detalleCompleto.contractual?.modeloConfidencialidad?.seguimiento || '', 
+                   detalleCompleto.contractual?.modeloConfidencialidad?.estado || '', 
+                   detalleCompleto.contractual?.modeloConfidencialidad?.responsable || '']);
+      
+      wsData.push(['', '', 'Alcance', 
+                   detalleCompleto.contractual?.alcance?.seguimiento || '', 
+                   detalleCompleto.contractual?.alcance?.estado || '', 
+                   detalleCompleto.contractual?.alcance?.responsable || '']);
+      
+      wsData.push(['', '', 'Fecha de Inicio prestación del Servicio', 
+                   detalleCompleto.contractual?.fechaInicio?.seguimiento || '', 
+                   detalleCompleto.contractual?.fechaInicio?.estado || '', 
+                   detalleCompleto.contractual?.fechaInicio?.responsable || '']);
+      
+      // Fase: Inicio - Talento Humano
+      wsData.push(['', 'Talento Humano', 'Perfil del Personal Requerido', 
+                   detalleCompleto.talento_humano?.perfil_personal?.seguimiento || '', 
+                   detalleCompleto.talento_humano?.perfil_personal?.estado || '', 
+                   detalleCompleto.talento_humano?.perfil_personal?.responsable || '']);
+      
+      wsData.push(['', '', 'Cantidad de Asesores requeridos', 
+                   detalleCompleto.talento_humano?.cantidad_asesores?.seguimiento || '', 
+                   detalleCompleto.talento_humano?.cantidad_asesores?.estado || '', 
+                   detalleCompleto.talento_humano?.cantidad_asesores?.responsable || '']);
+      
+      wsData.push(['', '', 'Horarios', 
+                   detalleCompleto.talento_humano?.horarios?.seguimiento || '', 
+                   detalleCompleto.talento_humano?.horarios?.estado || '', 
+                   detalleCompleto.talento_humano?.horarios?.responsable || '']);
+      
+      wsData.push(['', '', 'Formador', 
+                   detalleCompleto.talento_humano?.formador?.seguimiento || '', 
+                   detalleCompleto.talento_humano?.formador?.estado || '', 
+                   detalleCompleto.talento_humano?.formador?.responsable || '']);
+      
+      wsData.push(['', '', 'Programa de Capacitaciones de Andes BPO', 
+                   detalleCompleto.talento_humano?.capacitaciones_andes?.seguimiento || '', 
+                   detalleCompleto.talento_humano?.capacitaciones_andes?.estado || '', 
+                   detalleCompleto.talento_humano?.capacitaciones_andes?.responsable || '']);
+      
+      wsData.push(['', '', 'Programa de Capacitaciones del cliente', 
+                   detalleCompleto.talento_humano?.capacitaciones_cliente?.seguimiento || '', 
+                   detalleCompleto.talento_humano?.capacitaciones_cliente?.estado || '', 
+                   detalleCompleto.talento_humano?.capacitaciones_cliente?.responsable || '']);
+      
+      // Fase: Inicio - Tecnología
+      wsData.push(['', 'Tecnología', 'Creación Módulo en Wolkvox para cliente nuevo', 
+                   detalleCompleto.tecnologia?.creacionModulo?.seguimiento || '', 
+                   detalleCompleto.tecnologia?.creacionModulo?.estado || '', 
+                   detalleCompleto.tecnologia?.creacionModulo?.responsable || '']);
+      
+      wsData.push(['', '', 'Tipificación de interacciones', 
+                   detalleCompleto.tecnologia?.tipificacionInteracciones?.seguimiento || '', 
+                   detalleCompleto.tecnologia?.tipificacionInteracciones?.estado || '', 
+                   detalleCompleto.tecnologia?.tipificacionInteracciones?.responsable || '']);
+      
+      wsData.push(['', '', 'Aplicativos para el proceso', 
+                   detalleCompleto.tecnologia?.aplicativosProceso?.seguimiento || '', 
+                   detalleCompleto.tecnologia?.aplicativosProceso?.estado || '', 
+                   detalleCompleto.tecnologia?.aplicativosProceso?.responsable || '']);
+      
+      wsData.push(['', '', 'Whatsapp', 
+                   detalleCompleto.tecnologia?.whatsapp?.seguimiento || '', 
+                   detalleCompleto.tecnologia?.whatsapp?.estado || '', 
+                   detalleCompleto.tecnologia?.whatsapp?.responsable || '']);
+      
+      wsData.push(['', '', 'Correos Electrónicos (Condiciones de uso, capacidades)', 
+                   detalleCompleto.tecnologia?.correosElectronicos?.seguimiento || '', 
+                   detalleCompleto.tecnologia?.correosElectronicos?.estado || '', 
+                   detalleCompleto.tecnologia?.correosElectronicos?.responsable || '']);
+      
+      wsData.push(['', '', 'Requisitos Grabación de llamada, entrega y resguardo de las mismas', 
+                   detalleCompleto.tecnologia?.requisitosGrabacion?.seguimiento || '', 
+                   detalleCompleto.tecnologia?.requisitosGrabacion?.estado || '', 
+                   detalleCompleto.tecnologia?.requisitosGrabacion?.responsable || '']);
+      
+      // Fase: Inicio - Procesos
+      wsData.push(['', 'Procesos', 'Nombrar Responsable de Implementar el Proyecto por el cliente', 
+                   detalleCompleto.procesos?.responsableCliente?.seguimiento || '', 
+                   detalleCompleto.procesos?.responsableCliente?.estado || '', 
+                   detalleCompleto.procesos?.responsableCliente?.responsable || '']);
+      
+      wsData.push(['', '', 'Nombrar Responsable de Implementar el Proyecto por parte de Andes BPO', 
+                   detalleCompleto.procesos?.responsableAndes?.seguimiento || '', 
+                   detalleCompleto.procesos?.responsableAndes?.estado || '', 
+                   detalleCompleto.procesos?.responsableAndes?.responsable || '']);
+      
+      wsData.push(['', '', 'Responsables de la operación', 
+                   detalleCompleto.procesos?.responsablesOperacion?.seguimiento || '', 
+                   detalleCompleto.procesos?.responsablesOperacion?.estado || '', 
+                   detalleCompleto.procesos?.responsablesOperacion?.responsable || '']);
+      
+      wsData.push(['', '', 'Listado Reportes de Andes BPO', 
+                   detalleCompleto.procesos?.listadoReportes?.seguimiento || '', 
+                   detalleCompleto.procesos?.listadoReportes?.estado || '', 
+                   detalleCompleto.procesos?.listadoReportes?.responsable || '']);
+      
+      wsData.push(['', '', 'Protocolo de Comunicaciones de ambas empresas\nInformación del día a día\nSeguimiento periódico', 
+                   detalleCompleto.procesos?.protocoloComunicaciones?.seguimiento || '', 
+                   detalleCompleto.procesos?.protocoloComunicaciones?.estado || '', 
+                   detalleCompleto.procesos?.protocoloComunicaciones?.responsable || '']);
+      
+      wsData.push(['', '', 'Guiones y/o Protocolos de la atención', 
+                   detalleCompleto.procesos?.guionesProtocolos?.seguimiento || '', 
+                   detalleCompleto.procesos?.guionesProtocolos?.estado || '', 
+                   detalleCompleto.procesos?.guionesProtocolos?.responsable || '']);
+      
+      wsData.push(['', '', 'Proceso Monitoreo y Calidad Andes BPO', 
+                   detalleCompleto.procesos?.procesoMonitoreo?.seguimiento || '', 
+                   detalleCompleto.procesos?.procesoMonitoreo?.estado || '', 
+                   detalleCompleto.procesos?.procesoMonitoreo?.responsable || '']);
+      
+      wsData.push(['', '', 'Cronograma de Tecnología con Tiempos ajustados', 
+                   detalleCompleto.procesos?.cronogramaTecnologia?.seguimiento || '', 
+                   detalleCompleto.procesos?.cronogramaTecnologia?.estado || '', 
+                   detalleCompleto.procesos?.cronogramaTecnologia?.responsable || '']);
+      
+      wsData.push(['', '', 'Cronograma de Capacitaciones con Duraciones y Fechas', 
+                   detalleCompleto.procesos?.cronogramaCapacitaciones?.seguimiento || '', 
+                   detalleCompleto.procesos?.cronogramaCapacitaciones?.estado || '', 
+                   detalleCompleto.procesos?.cronogramaCapacitaciones?.responsable || '']);
+      
+      wsData.push(['', '', 'Realización de pruebas', 
+                   detalleCompleto.procesos?.realizacionPruebas?.seguimiento || '', 
+                   detalleCompleto.procesos?.realizacionPruebas?.estado || '', 
+                   detalleCompleto.procesos?.realizacionPruebas?.responsable || '']);
+      
+      // Fase: Cierre
+      wsData.push(['Cierre', 'Entrega al Área de Servicios', 'Acta de Cierre', 
+                   detalleCompleto.contractual?.actaCierre?.seguimiento || '', 
+                   detalleCompleto.contractual?.actaCierre?.estado || '', 
+                   detalleCompleto.contractual?.actaCierre?.responsable || '']);
+      
+      // Crear la hoja de trabajo
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      
+      // Definir estilos de los títulos principales y encabezados
+      const titleStyle = {
+        font: { bold: true, color: { rgb: "000000" }, name: "Arial", sz: 16 },
+        alignment: { horizontal: "center", vertical: "center" },
+        fill: { fgColor: { rgb: "FFFFFF" } },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+
+      const subtitleStyle = {
+        font: { bold: true, color: { rgb: "000000" }, name: "Arial", sz: 14 },
+        alignment: { horizontal: "center", vertical: "center" },
+        fill: { fgColor: { rgb: "FFFFFF" } },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+
+      const headerStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" }, name: "Arial", sz: 11 },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        fill: { fgColor: { rgb: "00B050" } },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+
+      const phaseStyle = {
+        font: { bold: true, color: { rgb: "000000" }, name: "Arial", sz: 11 },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        fill: { fgColor: { rgb: "E2EFDA" } },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+
+      const processStyle = {
+        font: { bold: true, color: { rgb: "000000" }, name: "Arial", sz: 11 },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        fill: { fgColor: { rgb: "E2EFDA" } },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+
+      const dataStyle = {
+        font: { color: { rgb: "000000" }, name: "Arial", sz: 11 },
+        alignment: { horizontal: "left", vertical: "center", wrapText: true },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+
+      // Aplicar estilos a los títulos
+      ws['B2'] = { v: 'NOMBRE DE IMPLEMENTACIÓN', t: 's', s: titleStyle };
+      ws['B4'] = { v: 'MAPA DE IMPLEMENTACIÓN SERVICIOS', t: 's', s: subtitleStyle };
+
+      // Combinar celdas para los títulos
+      if (!ws['!merges']) ws['!merges'] = [];
+      ws['!merges'].push(
+        { s: { r: 1, c: 1 }, e: { r: 1, c: 5 } }, // B2:F2
+        { s: { r: 3, c: 1 }, e: { r: 3, c: 5 } }  // B4:F4
+      );
+
+      // Aplicar estilos a los encabezados (fila 6)
+      const headerRowIndex = 5;
+      const headers = ['A', 'B', 'C', 'D', 'E', 'F'];
+      
+      headers.forEach(col => {
+        const cellRef = col + (headerRowIndex + 1);
+        if (ws[cellRef]) {
+          ws[cellRef].s = headerStyle;
+        }
+      });
+
+      // Aplicar estilos a las celdas de datos
+      for (let r = headerRowIndex + 1; r < wsData.length; r++) {
+        for (let c = 0; c < 6; c++) {
+          const col = headers[c];
+          const cellRef = col + (r + 1);
+
+          if (ws[cellRef]) {
+            if (c === 0) { // Columna Fase
+              ws[cellRef].s = phaseStyle;
+            } else if (c === 1) { // Columna Proceso
+              ws[cellRef].s = processStyle;
+            } else { // Columnas de datos
+              ws[cellRef].s = dataStyle;
             }
-          });
-          
-          const promedioSeccion = contadorSubsecciones > 0 ? progresoSeccion / contadorSubsecciones : 0;
-          resumenData.push([`${seccion.charAt(0).toUpperCase() + seccion.slice(1)}:`, `${promedioSeccion.toFixed(1)}%`]);
-          
-          progresoTotal += promedioSeccion;
-          contadorSecciones++;
+          }
         }
-      });
-      
-      const progresoGeneralCalculado = contadorSecciones > 0 ? progresoTotal / contadorSecciones : 0;
-      resumenData.push(['']);
-      resumenData.push(['PROGRESO GENERAL:', `${progresoGeneralCalculado.toFixed(1)}%`]);
-      
-      const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
-      
-      // Aplicar estilos a la hoja de resumen
-      wsResumen['A1'] = { v: 'REPORTE DE IMPLEMENTACIÓN', t: 's' };
-      wsResumen['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
-      
-      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
-      
-      // Hoja 2: Detalle Contractual
-      const contractualData = [
-        ['SECCIÓN CONTRACTUAL'],
-        [''],
-        ['Subsección', 'Estado', 'Seguimiento', 'Responsable', 'Notas']
-      ];
-      
-      if (detalleCompleto.contractual) {
-        Object.entries(detalleCompleto.contractual).forEach(([key, value]) => {
-          const nombreSubseccion = key.replace(/([A-Z])/g, ' $1').toLowerCase();
-          contractualData.push([
-            nombreSubseccion.charAt(0).toUpperCase() + nombreSubseccion.slice(1),
-            value.estado || '',
-            value.seguimiento || '',
-            value.responsable || '',
-            value.notas || ''
-          ]);
-        });
       }
-      
-      const wsContractual = XLSX.utils.aoa_to_sheet(contractualData);
-      XLSX.utils.book_append_sheet(wb, wsContractual, 'Contractual');
-      
-      // Hoja 3: Detalle Talento Humano
-      const talentoData = [
-        ['SECCIÓN TALENTO HUMANO'],
-        [''],
-        ['Subsección', 'Estado', 'Seguimiento', 'Responsable', 'Notas']
-      ];
-      
-      if (detalleCompleto.talentoHumano) {
-        Object.entries(detalleCompleto.talentoHumano).forEach(([key, value]) => {
-          const nombreSubseccion = key.replace(/([A-Z])/g, ' $1').toLowerCase();
-          talentoData.push([
-            nombreSubseccion.charAt(0).toUpperCase() + nombreSubseccion.slice(1),
-            value.estado || '',
-            value.seguimiento || '',
-            value.responsable || '',
-            value.notas || ''
-          ]);
-        });
-      }
-      
-      const wsTalento = XLSX.utils.aoa_to_sheet(talentoData);
-      XLSX.utils.book_append_sheet(wb, wsTalento, 'Talento Humano');
-      
-      // Hoja 4: Detalle Procesos
-      const procesosData = [
-        ['SECCIÓN PROCESOS'],
-        [''],
-        ['Subsección', 'Estado', 'Seguimiento', 'Responsable', 'Notas']
-      ];
-      
-      if (detalleCompleto.procesos) {
-        Object.entries(detalleCompleto.procesos).forEach(([key, value]) => {
-          const nombreSubseccion = key.replace(/([A-Z])/g, ' $1').toLowerCase();
-          procesosData.push([
-            nombreSubseccion.charAt(0).toUpperCase() + nombreSubseccion.slice(1),
-            value.estado || '',
-            value.seguimiento || '',
-            value.responsable || '',
-            value.notas || ''
-          ]);
-        });
-      }
-      
-      const wsProcesos = XLSX.utils.aoa_to_sheet(procesosData);
-      XLSX.utils.book_append_sheet(wb, wsProcesos, 'Procesos');
-      
-      // Hoja 5: Detalle Tecnología
-      const tecnologiaData = [
-        ['SECCIÓN TECNOLOGÍA'],
-        [''],
-        ['Subsección', 'Estado', 'Seguimiento', 'Responsable', 'Notas']
-      ];
-      
-      if (detalleCompleto.tecnologia) {
-        Object.entries(detalleCompleto.tecnologia).forEach(([key, value]) => {
-          const nombreSubseccion = key.replace(/([A-Z])/g, ' $1').toLowerCase();
-          tecnologiaData.push([
-            nombreSubseccion.charAt(0).toUpperCase() + nombreSubseccion.slice(1),
-            value.estado || '',
-            value.seguimiento || '',
-            value.responsable || '',
-            value.notas || ''
-          ]);
-        });
-      }
-      
-      const wsTecnologia = XLSX.utils.aoa_to_sheet(tecnologiaData);
-      XLSX.utils.book_append_sheet(wb, wsTecnologia, 'Tecnología');
-      
-      // Hoja 6: Dashboard Ejecutivo
-      const dashboardData = [
-        ['DASHBOARD EJECUTIVO'],
-        [''],
-        ['Métricas Clave'],
-        ['Total de Subsecciones:', '26'],
-        ['Subsecciones Completadas:', '0'], // Se calculará dinámicamente
-        ['Subsecciones En Progreso:', '0'],
-        ['Subsecciones Pendientes:', '0'],
-        [''],
-        ['Estados por Sección'],
-        ['Sección', 'Completadas', 'En Progreso', 'Pendientes', '% Avance']
-      ];
-      
-      let totalCompletadas = 0;
-      let totalEnProgreso = 0;
-      let totalPendientes = 0;
-      
-      secciones.forEach(seccion => {
-        if (detalleCompleto[seccion]) {
-          let completadas = 0;
-          let enProgreso = 0;
-          let pendientes = 0;
-          
-          Object.values(detalleCompleto[seccion]).forEach(subseccion => {
-            const estado = subseccion.estado;
-            if (estado === '✅ Completado') completadas++;
-            else if (estado === '🔄 En progreso') enProgreso++;
-            else pendientes++;
-          });
-          
-          const totalSubsecciones = Object.keys(detalleCompleto[seccion]).length;
-          const porcentaje = totalSubsecciones > 0 ? (completadas / totalSubsecciones * 100).toFixed(1) : 0;
-          
-          dashboardData.push([
-            seccion.charAt(0).toUpperCase() + seccion.slice(1),
-            completadas,
-            enProgreso,
-            pendientes,
-            `${porcentaje}%`
-          ]);
-          
-          totalCompletadas += completadas;
-          totalEnProgreso += enProgreso;
-          totalPendientes += pendientes;
+
+      // Ajustar altura de filas
+      ws['!rows'] = [];
+      for (let i = 0; i < wsData.length; i++) {
+        if (i === headerRowIndex) { // Fila de encabezados
+          ws['!rows'][i] = { hpt: 25 }; // 25 puntos de altura
+        } else if (i === 1 || i === 3) { // Filas de título y subtítulo
+          ws['!rows'][i] = { hpt: 30 }; // 30 puntos de altura
+        } else {
+          ws['!rows'][i] = { hpt: 20 }; // 20 puntos para el resto
         }
-      });
+      }
+
+      // Ajustar ancho de columnas
+      ws['!cols'] = [
+        { wch: 15 },  // Fase
+        { wch: 25 },  // Proceso
+        { wch: 45 },  // Actividades
+        { wch: 35 },  // Seguimiento Actividades
+        { wch: 20 },  // Estado
+        { wch: 25 }   // Responsable
+      ];
       
-      // Actualizar los totales
-      dashboardData[4][1] = totalCompletadas;
-      dashboardData[5][1] = totalEnProgreso;
-      dashboardData[6][1] = totalPendientes;
+      // Ajustar altura de las filas
+      ws['!rows'] = [];
+      for (let i = 0; i < wsData.length; i++) {
+        if (i === headerRowIndex) {
+          ws['!rows'][i] = { hpt: 25 }; // Altura de 25 puntos para la fila de encabezados
+        } else if (i === 1 || i === 3) {
+          ws['!rows'][i] = { hpt: 30 }; // Altura de 30 puntos para los títulos
+        } else {
+          ws['!rows'][i] = { hpt: 20 }; // Altura estándar para el resto
+        }
+      }
       
-      const wsDashboard = XLSX.utils.aoa_to_sheet(dashboardData);
-      XLSX.utils.book_append_sheet(wb, wsDashboard, 'Dashboard');
+      // Configurar las combinaciones de celdas para la columna "Fase"
+      const merges = [];
       
-      // Configurar el ancho de las columnas para todas las hojas
-      const hojas = wb.SheetNames;
-      hojas.forEach(nombreHoja => {
-        const ws = wb.Sheets[nombreHoja];
-        ws['!cols'] = [
-          { width: 25 }, // Columna A
-          { width: 20 }, // Columna B
-          { width: 30 }, // Columna C
-          { width: 20 }, // Columna D
-          { width: 40 }  // Columna E
-        ];
-      });
+      // Definir las combinaciones para la fase "Inicio" (filas 7-26)
+      merges.push({ s: { r: 6, c: 0 }, e: { r: 25, c: 0 } });
+      
+      // Definir las combinaciones para la fase "Cierre" (fila 27)
+      merges.push({ s: { r: 26, c: 0 }, e: { r: 26, c: 0 } });
+      
+      // Definir las combinaciones para los procesos
+      // "Desarrollar el acta de Inicio" (filas 7-10)
+      merges.push({ s: { r: 6, c: 1 }, e: { r: 9, c: 1 } });
+      
+      // "Talento Humano" (filas 11-16)
+      merges.push({ s: { r: 10, c: 1 }, e: { r: 15, c: 1 } });
+      
+      // "Tecnología" (filas 17-22)
+      merges.push({ s: { r: 16, c: 1 }, e: { r: 21, c: 1 } });
+      
+      // "Procesos" (filas 23-26)
+      merges.push({ s: { r: 22, c: 1 }, e: { r: 25, c: 1 } });
+      
+      // Aplicar las combinaciones de celdas
+      ws['!merges'] = merges;
+      
+      // Configurar el ancho de las columnas
+      ws['!cols'] = [
+        { width: 15 }, // Fase
+        { width: 20 }, // Proceso
+        { width: 40 }, // Actividades
+        { width: 30 }, // Seguimiento Actividades
+        { width: 20 }, // Estado
+        { width: 20 }  // Responsable
+      ];
+      
+      // Configurar altura de filas
+      ws['!rows'] = [];
+      for (let i = 0; i < wsData.length; i++) {
+        if (i === 5) { // Fila de encabezados (índice 5 para fila 6)
+          ws['!rows'][i] = { hpt: 25 }; // Altura en puntos
+        } else {
+          ws['!rows'][i] = { hpt: 20 }; // Altura estándar para el resto
+        }
+      }
+      
+      // Añadir la hoja al libro
+      XLSX.utils.book_append_sheet(wb, ws, 'Mapa Implementación');
       
       // Generar el archivo Excel
-      const nombreArchivo = `Implementacion_${detalleCompleto.cliente}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(wb, nombreArchivo);
+      console.log('🟢 Preparando para escribir el archivo Excel');
+      const nombreArchivo = `Mapa_Implementacion.xlsx`;
       
-      toast.success('Excel exportado exitosamente', { id: 'excel-export' });
+      try {
+        // Convertir el libro a un array buffer
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        
+        // Crear un blob con el array buffer
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        // Crear una URL para el blob
+        const url = URL.createObjectURL(blob);
+        
+        // Crear un enlace temporal y simular un clic
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nombreArchivo;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Limpiar
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 0);
+        
+        console.log('🟢 Archivo Excel generado exitosamente');
+        toast.success('Excel exportado exitosamente', { id: 'excel-export' });
+      } catch (writeError) {
+        console.error('❌ Error al escribir el archivo Excel:', writeError);
+        throw writeError;
+      }
       
     } catch (error) {
       console.error('Error al exportar a Excel:', error);
