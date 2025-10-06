@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   FaPlus, 
@@ -48,6 +48,7 @@ const Implementaciones = () => {
   const [loading, setLoading] = useState(true);
   const [usuario, setUsuario] = useState({ nombre: '', rol: 'usuario' });
   const [showModal, setShowModal] = useState(false);
+  const [implementacionesProgreso, setImplementacionesProgreso] = useState({});
   const [expandedSections, setExpandedSections] = useState({});
   const [formData, setFormData] = useState({
     cliente: '',
@@ -153,6 +154,51 @@ const Implementaciones = () => {
     cargarImplementaciones();
   }, []);
 
+  // Hook para analizar implementaciones con 0% automáticamente (deshabilitado temporalmente)
+  /*
+  useEffect(() => {
+    const analizarImplementacionesCero = async () => {
+      // Esperar un poco para que se carguen los progresos
+      setTimeout(async () => {
+        console.log(`🔍 === ANÁLISIS AUTOMÁTICO DE IMPLEMENTACIONES EN 0% ===`);
+        
+        const implementacionesEnCero = Object.entries(implementacionesProgreso)
+          .filter(([, progreso]) => progreso === 0)
+          .map(([id]) => id);
+        
+        if (implementacionesEnCero.length > 0) {
+          console.log(`📊 Encontradas ${implementacionesEnCero.length} implementaciones en 0%:`, implementacionesEnCero);
+          
+          // Analizar cada una
+          for (const implementacionId of implementacionesEnCero.slice(0, 3)) { // Solo las primeras 3 para no saturar
+            try {
+              const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+              const config = { headers: { Authorization: `Bearer ${token}` } };
+              
+              console.log(`\n🔍 Analizando implementación ${implementacionId}...`);
+              const response = await axios.get(`http://localhost:8000/implementaciones/${implementacionId}`, config);
+              
+              analizarImplementacionDetallado(response.data, implementacionId);
+              
+              // Pequeña pausa entre análisis
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+              console.error(`❌ Error analizando implementación ${implementacionId}:`, error);
+            }
+          }
+        } else {
+          console.log(`✅ No se encontraron implementaciones en 0%`);
+        }
+      }, 3000); // Esperar 3 segundos para que se carguen los progresos
+    };
+
+    // Solo ejecutar si hay implementaciones y algunos progresos calculados
+    if (implementaciones.length > 0 && Object.keys(implementacionesProgreso).length > 0) {
+      analizarImplementacionesCero();
+    }
+  }, [implementaciones, implementacionesProgreso, analizarImplementacionDetallado]);
+  */
+
   // Obtener usuario del localStorage/sessionStorage al montar
   useEffect(() => {
     const userRaw = localStorage.getItem('user') || sessionStorage.getItem('user');
@@ -167,7 +213,7 @@ const Implementaciones = () => {
   }, []);
 
   // Función para obtener el peso de un estado
-  const obtenerPesoEstado = (estado) => {
+  const obtenerPesoEstado = useCallback((estado) => {
     const pesos = {
       'ok': 100,
       'cancelado': 100,
@@ -175,7 +221,124 @@ const Implementaciones = () => {
       'No definido': 0
     };
     return pesos[estado] || 0;
-  };
+  }, []);
+
+  // Función para analizar una implementación en detalle (para debugging)
+  const analizarImplementacionDetallado = useCallback((datosCompletos, implementacionId) => {
+    console.log(`🔍 === ANÁLISIS DETALLADO IMPLEMENTACIÓN ${implementacionId} ===`);
+    
+    const analisis = {
+      implementacionId,
+      seccionesEncontradas: [],
+      totalSubsesiones: 0,
+      subsesionesConEstado: 0,
+      distribicionEstados: {},
+      pesoTotal: 0,
+      detallesPorSeccion: {}
+    };
+
+    const secciones = [
+      {
+        nombre: 'Contractual',
+        data: datosCompletos.contractual,
+        subsesiones: [
+          { key: 'modeloContrato', nombre: 'Modelo Contrato' },
+          { key: 'modeloConfidencialidad', nombre: 'Modelo Confidencialidad' },
+          { key: 'alcance', nombre: 'Alcance' },
+          { key: 'fechaInicio', nombre: 'Fecha Inicio' }
+        ]
+      },
+      {
+        nombre: 'Talento Humano',
+        data: datosCompletos.talento_humano,
+        subsesiones: [
+          { key: 'perfilPersonal', nombre: 'Perfil Personal' },
+          { key: 'cantidadAsesores', nombre: 'Cantidad Asesores' },
+          { key: 'horarios', nombre: 'Horarios' },
+          { key: 'formador', nombre: 'Formador' },
+          { key: 'capacitacionesAndes', nombre: 'Capacitaciones Andes' },
+          { key: 'capacitacionesCliente', nombre: 'Capacitaciones Cliente' }
+        ]
+      },
+      {
+        nombre: 'Procesos',
+        data: datosCompletos.procesos,
+        subsesiones: [
+          { key: 'responsableCliente', nombre: 'Responsable Cliente' },
+          { key: 'responsableAndes', nombre: 'Responsable Andes' },
+          { key: 'responsablesOperacion', nombre: 'Responsables Operación' },
+          { key: 'listadoReportes', nombre: 'Listado Reportes' },
+          { key: 'protocoloComunicaciones', nombre: 'Protocolo Comunicaciones' },
+          { key: 'guionesProtocolos', nombre: 'Guiones Protocolos' },
+          { key: 'procesoMonitoreo', nombre: 'Proceso Monitoreo' },
+          { key: 'cronogramaTecnologia', nombre: 'Cronograma Tecnología' },
+          { key: 'cronogramaCapacitaciones', nombre: 'Cronograma Capacitaciones' },
+          { key: 'realizacionPruebas', nombre: 'Realización Pruebas' }
+        ]
+      },
+      {
+        nombre: 'Tecnología',
+        data: datosCompletos.tecnologia,
+        subsesiones: [
+          { key: 'creacionModulo', nombre: 'Creación Módulo' },
+          { key: 'tipificacionInteracciones', nombre: 'Tipificación Interacciones' },
+          { key: 'aplicativosProceso', nombre: 'Aplicativos Proceso' },
+          { key: 'whatsapp', nombre: 'WhatsApp' },
+          { key: 'correosElectronicos', nombre: 'Correos Electrónicos' },
+          { key: 'requisitosGrabacion', nombre: 'Requisitos Grabación' }
+        ]
+      }
+    ];
+
+    secciones.forEach(seccion => {
+      console.log(`\n📂 Sección: ${seccion.nombre}`);
+      console.log(`   Datos disponibles:`, !!seccion.data);
+      
+      if (seccion.data) {
+        analisis.seccionesEncontradas.push(seccion.nombre);
+        analisis.detallesPorSeccion[seccion.nombre] = {
+          subsesiones: [],
+          pesoSeccion: 0
+        };
+
+        seccion.subsesiones.forEach(subsesion => {
+          const estado = seccion.data[subsesion.key]?.estado;
+          const peso = obtenerPesoEstado(estado);
+          
+          console.log(`     ├─ ${subsesion.nombre}: ${estado || 'SIN ESTADO'} (peso: ${peso})`);
+          
+          analisis.totalSubsesiones++;
+          if (estado) {
+            analisis.subsesionesConEstado++;
+            analisis.distribicionEstados[estado] = (analisis.distribicionEstados[estado] || 0) + 1;
+          }
+          analisis.pesoTotal += peso;
+          
+          analisis.detallesPorSeccion[seccion.nombre].subsesiones.push({
+            nombre: subsesion.nombre,
+            estado: estado || 'sin estado',
+            peso
+          });
+          analisis.detallesPorSeccion[seccion.nombre].pesoSeccion += peso;
+        });
+      } else {
+        console.log(`   ❌ No hay datos para esta sección`);
+      }
+    });
+    
+    const maxPosible = analisis.totalSubsesiones * 100;
+    const porcentajeFinal = maxPosible > 0 ? Math.round((analisis.pesoTotal / maxPosible) * 100) : 0;
+    
+    console.log(`\n📊 RESUMEN:`);
+    console.log(`   Total subsesiones: ${analisis.totalSubsesiones}`);
+    console.log(`   Subsesiones con estado: ${analisis.subsesionesConEstado}`);
+    console.log(`   Peso total acumulado: ${analisis.pesoTotal}`);
+    console.log(`   Peso máximo posible: ${maxPosible}`);
+    console.log(`   Porcentaje final: ${porcentajeFinal}%`);
+    console.log(`   Distribución de estados:`, analisis.distribicionEstados);
+    
+    return analisis;
+  }, [obtenerPesoEstado]);
 
   // Función para calcular el progreso de una sección
   const calcularProgresoSeccion = (seccionData, subsesiones) => {
@@ -188,6 +351,180 @@ const Implementaciones = () => {
     
     const maxPosible = subsesiones.length * 100;
     return Math.round((totalPeso / maxPosible) * 100);
+  };
+
+  // Función para calcular el progreso real de una implementación específica
+  const calcularProgresoRealImplementacion = (datosCompletos) => {
+    if (!datosCompletos) return 0;
+
+    const secciones = [
+      {
+        data: datosCompletos.contractual,
+        subsesiones: [
+          { key: 'modeloContrato' },
+          { key: 'modeloConfidencialidad' },
+          { key: 'alcance' },
+          { key: 'fechaInicio' }
+        ]
+      },
+      {
+        data: datosCompletos.talento_humano,
+        subsesiones: [
+          { key: 'perfilPersonal' },
+          { key: 'cantidadAsesores' },
+          { key: 'horarios' },
+          { key: 'formador' },
+          { key: 'capacitacionesAndes' },
+          { key: 'capacitacionesCliente' }
+        ]
+      },
+      {
+        data: datosCompletos.procesos,
+        subsesiones: [
+          { key: 'responsableCliente' },
+          { key: 'responsableAndes' },
+          { key: 'responsablesOperacion' },
+          { key: 'listadoReportes' },
+          { key: 'protocoloComunicaciones' },
+          { key: 'guionesProtocolos' },
+          { key: 'procesoMonitoreo' },
+          { key: 'cronogramaTecnologia' },
+          { key: 'cronogramaCapacitaciones' },
+          { key: 'realizacionPruebas' }
+        ]
+      },
+      {
+        data: datosCompletos.tecnologia,
+        subsesiones: [
+          { key: 'creacionModulo' },
+          { key: 'tipificacionInteracciones' },
+          { key: 'aplicativosProceso' },
+          { key: 'whatsapp' },
+          { key: 'correosElectronicos' },
+          { key: 'requisitosGrabacion' }
+        ]
+      }
+    ];
+
+    let totalPeso = 0;
+    let totalSubsesiones = 0;
+
+    secciones.forEach(seccion => {
+      if (seccion.data && seccion.subsesiones) {
+        seccion.subsesiones.forEach(subsesion => {
+          const estado = seccion.data[subsesion.key]?.estado;
+          totalPeso += obtenerPesoEstado(estado);
+          totalSubsesiones += 1;
+        });
+      }
+    });
+
+    if (totalSubsesiones === 0) return 0;
+    const maxPosible = totalSubsesiones * 100;
+    return Math.round((totalPeso / maxPosible) * 100);
+  };
+
+
+
+  // Componente para mostrar el progreso en la tabla
+  const ProgresoImplementacionCelda = ({ implementacion }) => {
+    const progresoGuardado = implementacionesProgreso[implementacion.id];
+    const [progreso, setProgreso] = useState(progresoGuardado ?? null);
+    const [cargando, setCargando] = useState(false);
+
+    useEffect(() => {
+      // Si ya tenemos el progreso guardado globalmente, usarlo
+      if (progresoGuardado !== undefined) {
+        setProgreso(progresoGuardado);
+        return;
+      }
+
+      // Si ya estamos cargando o ya tenemos progreso local, no hacer nada
+      if (cargando || progreso !== null) return;
+
+      const cargarProgreso = async () => {
+        setCargando(true);
+        
+        try {
+          const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+          const config = { headers: { Authorization: `Bearer ${token}` } };
+          
+          console.log(`🔍 Cargando progreso para implementación ${implementacion.id} (${implementacion.nombre_proyecto || 'Sin nombre'})`);
+          
+          const response = await axios.get(`http://localhost:8000/implementaciones/${implementacion.id}`, config);
+          console.log(`📊 Datos completos para implementación ${implementacion.id}:`, response.data);
+          
+          const progresoCalculado = calcularProgresoRealImplementacion(response.data);
+          
+          // Crear información de debug solo para la primera carga
+          const debug = analizarImplementacionDetallado(response.data, implementacion.id);
+          
+          console.log(`✅ Progreso calculado para ${implementacion.id}: ${progresoCalculado}%`);
+          console.log(`🔬 Análisis detallado:`, debug);
+          
+          setProgreso(progresoCalculado);
+          // También actualizar el estado global
+          setImplementacionesProgreso(prev => ({
+            ...prev,
+            [implementacion.id]: progresoCalculado
+          }));
+          
+        } catch (error) {
+          console.error(`❌ Error al cargar progreso de implementación ${implementacion.id}:`, error);
+          setProgreso(0);
+        } finally {
+          setCargando(false);
+        }
+      };
+
+      cargarProgreso();
+    }, [implementacion.id, progresoGuardado, cargando, progreso, implementacion.nombre_proyecto]);
+
+    if (cargando) {
+      return (
+        <div className="flex justify-center items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    const handleDebugClick = async (e) => {
+      e.stopPropagation();
+      console.log(`🚀 DEBUG MANUAL IMPLEMENTACIÓN ${implementacion.id}`);
+      console.log(`📋 Datos básicos:`, implementacion);
+      
+      try {
+        setCargando(true);
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        
+        const response = await axios.get(`http://localhost:8000/implementaciones/${implementacion.id}`, config);
+        analizarImplementacionDetallado(response.data, implementacion.id);
+        
+      } catch (error) {
+        console.error(`❌ Error en debug manual:`, error);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    return (
+      <div className="flex justify-center items-center">
+        <div className="relative group">
+          <div onClick={handleDebugClick} className="cursor-pointer">
+            <RuedaProgreso 
+              porcentaje={progreso || 0}
+              size={40}
+              strokeWidth={4}
+            />
+          </div>
+          <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+            <div>Progreso real: {progreso || 0}%</div>
+            <div className="text-gray-300 mt-1">Click para debug en consola</div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Función para calcular el progreso total de toda la implementación
@@ -2320,6 +2657,12 @@ const Implementaciones = () => {
                   </div>
                 </th>
                 <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <div className="flex items-center justify-center gap-2">
+                    <FaChartPie className="text-emerald-500" />
+                    Progreso
+                  </div>
+                </th>
+                <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
@@ -2431,6 +2774,9 @@ const Implementaciones = () => {
                       )}
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                      <ProgresoImplementacionCelda implementacion={implementacion} />
+                    </td>
+                    <td className="px-6 py-5 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-center gap-2">
                         <button
                           onClick={() => abrirModalEdicion(implementacion)}
@@ -2462,7 +2808,7 @@ const Implementaciones = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center">
+                  <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-4 bg-gray-100 rounded-full">
                         <FaLaptop className="text-gray-400 text-2xl" />
