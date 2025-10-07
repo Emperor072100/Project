@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { 
   FaPlus, 
   FaEdit, 
@@ -1221,7 +1223,7 @@ const Implementaciones = () => {
     }
   };
 
-  // Función para exportar a Excel con plantilla específica
+  // Función para exportar a Excel con plantilla específica usando ExcelJS
   const exportarImplementacionExcel = async (implementacion) => {
     try {
       console.log('🟢 Iniciando exportación para implementación:', implementacion);
@@ -1236,407 +1238,695 @@ const Implementaciones = () => {
       console.log('🟢 Datos recibidos del backend:', response.data);
       const detalleCompleto = response.data;
       
-      // Crear un nuevo libro de trabajo
-      console.log('🟢 Creando libro de Excel nuevo');
-      const wb = XLSX.utils.book_new();
+      // =========================
+      // Setup: crear libro y hoja usando ExcelJS
+      // =========================
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Mapa Implementación');
+
+      // -------------------------------------------------
+      // Configuración de columnas y alturas de filas
+      // -------------------------------------------------
+      // Anchos específicos convertidos de píxeles a unidades de Excel:
+      // A: 132px ≈ 18 unidades, B: 156px ≈ 21 unidades, C: 134px ≈ 18 unidades
+      // D-E: 264px ≈ 36 unidades, F-G: 140px ≈ 19 unidades  
+      // H-I: 176px ≈ 24 unidades, J-K: 264px ≈ 36 unidades
+      ws.columns = [
+        { width: 20 },  // A: 132px
+        { width: 25 },  // B: 156px
+        { width: 25 },  // C: 134px
+        { width: 18 },  // D: 264px (fusionada con E)
+        { width: 18 },  // E: 264px (fusionada con D)
+        { width: 8 },  // F: 140px (fusionada con G)
+        { width: 8 },  // G: 140px (fusionada con F)
+        { width: 10 },  // H: 176px (fusionada con I)
+        { width: 10 },  // I: 176px (fusionada con H)
+        { width: 15 },  // J: 264px (fusionada con K)
+        { width: 15 }   // K: 264px (fusionada con J)
+      ];
       
-      // Crear la hoja principal "Mapa de Implementación Servicios"
-      console.log('🟢 Iniciando creación de hoja de trabajo');
-      const wsData = [];
+      // Fijar altura de las primeras 6 filas para el bloque de título
+      ws.getRow(1).height = 20;
+      ws.getRow(2).height = 20;
+      ws.getRow(3).height = 20;
+      ws.getRow(4).height = 20;
+      ws.getRow(5).height = 20;
+      ws.getRow(6).height = 20;
+      ws.getRow(7).height = 1;
+      ws.getRow(8).height = 12;
+      ws.getRow(9).height = 12;
+      ws.getRow(35).height = 28;
       
-      // Fila 1 vacía para espacio
-      wsData.push([]);
+      // Configurar altura automática para las filas de contenido (fila 10 en adelante)
+      // Las siguientes filas tendrán altura automática basada en el contenido
+
+      // =========================
+      // Bloque de título (A1:K6) - Diseño como la imagen de muestra
+      // =========================
       
-      // Fila 2: Título con el nombre de la implementación
-      wsData.push(['', 'NOMBRE DE IMPLEMENTACIÓN']);
+      // Fondo blanco para todo el bloque
+      const whiteFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+      const blackBorder = { style: 'thin', color: { argb: 'FF000000' } };
       
-      // Fila 3 vacía para espacio
-      wsData.push([]);
-      
-      // Fila 4: Subtítulo
-      wsData.push(['', 'MAPA DE IMPLEMENTACIÓN SERVICIOS']);
-      
-      // Fila 5 vacía para espacio
-      wsData.push([]);
-      
-      // Fila 6: Encabezados de tabla
-      wsData.push(['Fase', 'Proceso', 'Actividades', 'Seguimiento Actividades', 'Estado', 'Responsable']);
-      
-      // Contenido de la tabla
-      
-      // Fase: Inicio - Desarrollar el acta de Inicio
-      wsData.push(['Inicio', 'Desarrollar el acta de Inicio', 'Modelo de contrato', 
-                   detalleCompleto.contractual?.modeloContrato?.seguimiento || '', 
-                   detalleCompleto.contractual?.modeloContrato?.estado || '', 
-                   detalleCompleto.contractual?.modeloContrato?.responsable || '']);
-      
-      wsData.push(['', '', 'Modelo del Acuerdo de Confidencialidad', 
-                   detalleCompleto.contractual?.modeloConfidencialidad?.seguimiento || '', 
-                   detalleCompleto.contractual?.modeloConfidencialidad?.estado || '', 
-                   detalleCompleto.contractual?.modeloConfidencialidad?.responsable || '']);
-      
-      wsData.push(['', '', 'Alcance', 
-                   detalleCompleto.contractual?.alcance?.seguimiento || '', 
-                   detalleCompleto.contractual?.alcance?.estado || '', 
-                   detalleCompleto.contractual?.alcance?.responsable || '']);
-      
-      wsData.push(['', '', 'Fecha de Inicio prestación del Servicio', 
-                   detalleCompleto.contractual?.fechaInicio?.seguimiento || '', 
-                   detalleCompleto.contractual?.fechaInicio?.estado || '', 
-                   detalleCompleto.contractual?.fechaInicio?.responsable || '']);
-      
-      // Fase: Inicio - Talento Humano
-      wsData.push(['', 'Talento Humano', 'Perfil del Personal Requerido', 
-                   detalleCompleto.talento_humano?.perfil_personal?.seguimiento || '', 
-                   detalleCompleto.talento_humano?.perfil_personal?.estado || '', 
-                   detalleCompleto.talento_humano?.perfil_personal?.responsable || '']);
-      
-      wsData.push(['', '', 'Cantidad de Asesores requeridos', 
-                   detalleCompleto.talento_humano?.cantidad_asesores?.seguimiento || '', 
-                   detalleCompleto.talento_humano?.cantidad_asesores?.estado || '', 
-                   detalleCompleto.talento_humano?.cantidad_asesores?.responsable || '']);
-      
-      wsData.push(['', '', 'Horarios', 
-                   detalleCompleto.talento_humano?.horarios?.seguimiento || '', 
-                   detalleCompleto.talento_humano?.horarios?.estado || '', 
-                   detalleCompleto.talento_humano?.horarios?.responsable || '']);
-      
-      wsData.push(['', '', 'Formador', 
-                   detalleCompleto.talento_humano?.formador?.seguimiento || '', 
-                   detalleCompleto.talento_humano?.formador?.estado || '', 
-                   detalleCompleto.talento_humano?.formador?.responsable || '']);
-      
-      wsData.push(['', '', 'Programa de Capacitaciones de Andes BPO', 
-                   detalleCompleto.talento_humano?.capacitaciones_andes?.seguimiento || '', 
-                   detalleCompleto.talento_humano?.capacitaciones_andes?.estado || '', 
-                   detalleCompleto.talento_humano?.capacitaciones_andes?.responsable || '']);
-      
-      wsData.push(['', '', 'Programa de Capacitaciones del cliente', 
-                   detalleCompleto.talento_humano?.capacitaciones_cliente?.seguimiento || '', 
-                   detalleCompleto.talento_humano?.capacitaciones_cliente?.estado || '', 
-                   detalleCompleto.talento_humano?.capacitaciones_cliente?.responsable || '']);
-      
-      // Fase: Inicio - Tecnología
-      wsData.push(['', 'Tecnología', 'Creación Módulo en Wolkvox para cliente nuevo', 
-                   detalleCompleto.tecnologia?.creacionModulo?.seguimiento || '', 
-                   detalleCompleto.tecnologia?.creacionModulo?.estado || '', 
-                   detalleCompleto.tecnologia?.creacionModulo?.responsable || '']);
-      
-      wsData.push(['', '', 'Tipificación de interacciones', 
-                   detalleCompleto.tecnologia?.tipificacionInteracciones?.seguimiento || '', 
-                   detalleCompleto.tecnologia?.tipificacionInteracciones?.estado || '', 
-                   detalleCompleto.tecnologia?.tipificacionInteracciones?.responsable || '']);
-      
-      wsData.push(['', '', 'Aplicativos para el proceso', 
-                   detalleCompleto.tecnologia?.aplicativosProceso?.seguimiento || '', 
-                   detalleCompleto.tecnologia?.aplicativosProceso?.estado || '', 
-                   detalleCompleto.tecnologia?.aplicativosProceso?.responsable || '']);
-      
-      wsData.push(['', '', 'Whatsapp', 
-                   detalleCompleto.tecnologia?.whatsapp?.seguimiento || '', 
-                   detalleCompleto.tecnologia?.whatsapp?.estado || '', 
-                   detalleCompleto.tecnologia?.whatsapp?.responsable || '']);
-      
-      wsData.push(['', '', 'Correos Electrónicos (Condiciones de uso, capacidades)', 
-                   detalleCompleto.tecnologia?.correosElectronicos?.seguimiento || '', 
-                   detalleCompleto.tecnologia?.correosElectronicos?.estado || '', 
-                   detalleCompleto.tecnologia?.correosElectronicos?.responsable || '']);
-      
-      wsData.push(['', '', 'Requisitos Grabación de llamada, entrega y resguardo de las mismas', 
-                   detalleCompleto.tecnologia?.requisitosGrabacion?.seguimiento || '', 
-                   detalleCompleto.tecnologia?.requisitosGrabacion?.estado || '', 
-                   detalleCompleto.tecnologia?.requisitosGrabacion?.responsable || '']);
-      
-      // Fase: Inicio - Procesos
-      wsData.push(['', 'Procesos', 'Nombrar Responsable de Implementar el Proyecto por el cliente', 
-                   detalleCompleto.procesos?.responsableCliente?.seguimiento || '', 
-                   detalleCompleto.procesos?.responsableCliente?.estado || '', 
-                   detalleCompleto.procesos?.responsableCliente?.responsable || '']);
-      
-      wsData.push(['', '', 'Nombrar Responsable de Implementar el Proyecto por parte de Andes BPO', 
-                   detalleCompleto.procesos?.responsableAndes?.seguimiento || '', 
-                   detalleCompleto.procesos?.responsableAndes?.estado || '', 
-                   detalleCompleto.procesos?.responsableAndes?.responsable || '']);
-      
-      wsData.push(['', '', 'Responsables de la operación', 
-                   detalleCompleto.procesos?.responsablesOperacion?.seguimiento || '', 
-                   detalleCompleto.procesos?.responsablesOperacion?.estado || '', 
-                   detalleCompleto.procesos?.responsablesOperacion?.responsable || '']);
-      
-      wsData.push(['', '', 'Listado Reportes de Andes BPO', 
-                   detalleCompleto.procesos?.listadoReportes?.seguimiento || '', 
-                   detalleCompleto.procesos?.listadoReportes?.estado || '', 
-                   detalleCompleto.procesos?.listadoReportes?.responsable || '']);
-      
-      wsData.push(['', '', 'Protocolo de Comunicaciones de ambas empresas\nInformación del día a día\nSeguimiento periódico', 
-                   detalleCompleto.procesos?.protocoloComunicaciones?.seguimiento || '', 
-                   detalleCompleto.procesos?.protocoloComunicaciones?.estado || '', 
-                   detalleCompleto.procesos?.protocoloComunicaciones?.responsable || '']);
-      
-      wsData.push(['', '', 'Guiones y/o Protocolos de la atención', 
-                   detalleCompleto.procesos?.guionesProtocolos?.seguimiento || '', 
-                   detalleCompleto.procesos?.guionesProtocolos?.estado || '', 
-                   detalleCompleto.procesos?.guionesProtocolos?.responsable || '']);
-      
-      wsData.push(['', '', 'Proceso Monitoreo y Calidad Andes BPO', 
-                   detalleCompleto.procesos?.procesoMonitoreo?.seguimiento || '', 
-                   detalleCompleto.procesos?.procesoMonitoreo?.estado || '', 
-                   detalleCompleto.procesos?.procesoMonitoreo?.responsable || '']);
-      
-      wsData.push(['', '', 'Cronograma de Tecnología con Tiempos ajustados', 
-                   detalleCompleto.procesos?.cronogramaTecnologia?.seguimiento || '', 
-                   detalleCompleto.procesos?.cronogramaTecnologia?.estado || '', 
-                   detalleCompleto.procesos?.cronogramaTecnologia?.responsable || '']);
-      
-      wsData.push(['', '', 'Cronograma de Capacitaciones con Duraciones y Fechas', 
-                   detalleCompleto.procesos?.cronogramaCapacitaciones?.seguimiento || '', 
-                   detalleCompleto.procesos?.cronogramaCapacitaciones?.estado || '', 
-                   detalleCompleto.procesos?.cronogramaCapacitaciones?.responsable || '']);
-      
-      wsData.push(['', '', 'Realización de pruebas', 
-                   detalleCompleto.procesos?.realizacionPruebas?.seguimiento || '', 
-                   detalleCompleto.procesos?.realizacionPruebas?.estado || '', 
-                   detalleCompleto.procesos?.realizacionPruebas?.responsable || '']);
-      
-      // Fase: Cierre
-      wsData.push(['Cierre', 'Entrega al Área de Servicios', 'Acta de Cierre', 
-                   detalleCompleto.contractual?.actaCierre?.seguimiento || '', 
-                   detalleCompleto.contractual?.actaCierre?.estado || '', 
-                   detalleCompleto.contractual?.actaCierre?.responsable || '']);
-      
-      // Crear la hoja de trabajo
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      
-      // Definir estilos de los títulos principales y encabezados
-      const titleStyle = {
-        font: { bold: true, color: { rgb: "000000" }, name: "Arial", sz: 16 },
-        alignment: { horizontal: "center", vertical: "center" },
-        fill: { fgColor: { rgb: "FFFFFF" } },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
+      // Aplicar fondo blanco y bordes a todo el bloque A1:K6
+      for (let r = 1; r <= 6; r++) {
+        for (let c = 1; c <= 11; c++) {
+          const cell = ws.getRow(r).getCell(c);
+          cell.fill = whiteFill;
+          
+          // Aplicar bordes solo en el perímetro del bloque
+          let cellBorder = {};
+          if (r === 1) cellBorder.top = blackBorder;
+          if (r === 6) cellBorder.bottom = blackBorder;
+          if (c === 1) cellBorder.left = blackBorder;
+          if (c === 11) cellBorder.right = blackBorder;
+          cell.border = cellBorder;
+        }
+      }
+
+      // Título con el nombre del cliente (centrado en la parte superior izquierda)
+      ws.mergeCells('A2:G3');
+      const titleCell = ws.getCell('A2');
+      titleCell.value = detalleCompleto.cliente || implementacion.cliente || 'Cliente';
+      titleCell.font = { 
+        bold: true, 
+        size: 24, 
+        color: { argb: 'FF000000' },
+        name: 'Arial'
+      };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      titleCell.fill = whiteFill;
+
+      // Subtítulo "MAPA DE IMPLEMENTACION SERVICIOS" (centrado en la parte inferior izquierda)
+      ws.mergeCells('A4:G5');
+      const subtitleCell = ws.getCell('A4');
+      subtitleCell.value = 'MAPA DE IMPLEMENTACION SERVICIOS';
+      subtitleCell.font = { 
+        bold: false, 
+        size: 16, 
+        color: { argb: 'FF666666' },
+        name: 'Arial'
+      };
+      subtitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      subtitleCell.fill = whiteFill;
+
+      // Área para el logo Andes BPO (esquina superior derecha)
+      // Función para cargar y convertir la imagen PNG a base64
+      const loadLogoAsBase64 = async () => {
+        try {
+          // Cargar la imagen del logo desde la carpeta public
+          const response = await fetch('/logo-andesbpo.png');
+          const blob = await response.blob();
+          
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.log('⚠️ No se pudo cargar el logo desde archivo:', error);
+          return null;
         }
       };
 
-      const subtitleStyle = {
-        font: { bold: true, color: { rgb: "000000" }, name: "Arial", sz: 14 },
-        alignment: { horizontal: "center", vertical: "center" },
-        fill: { fgColor: { rgb: "FFFFFF" } },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
+      // Intentar agregar el logo como imagen
+      try {
+        const logoBase64 = await loadLogoAsBase64();
+        
+        if (logoBase64) {
+          // Crear imagen desde base64
+          const logoImageId = wb.addImage({
+            base64: logoBase64,
+            extension: 'png',
+          });
+
+          // Posicionar el logo en la parte superior izquierda del área derecha (columnas H-K, filas 1-5)
+          ws.addImage(logoImageId, {
+            tl: { col: 6.5, row: 0.2 }, // Movido más a la izquierda y hacia arriba
+            ext: { width: 240, height: 80 } // Tamaño reducido 20% (300→240, 100→80)
+          });
+          
+          console.log('✅ Logo agregado exitosamente al Excel');
+        } else {
+          throw new Error('No se pudo cargar el logo');
         }
-      };
-
-      const headerStyle = {
-        font: { bold: true, color: { rgb: "FFFFFF" }, name: "Arial", sz: 11 },
-        alignment: { horizontal: "center", vertical: "center", wrapText: true },
-        fill: { fgColor: { rgb: "00B050" } },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
-        }
-      };
-
-      const phaseStyle = {
-        font: { bold: true, color: { rgb: "000000" }, name: "Arial", sz: 11 },
-        alignment: { horizontal: "center", vertical: "center", wrapText: true },
-        fill: { fgColor: { rgb: "E2EFDA" } },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
-        }
-      };
-
-      const processStyle = {
-        font: { bold: true, color: { rgb: "000000" }, name: "Arial", sz: 11 },
-        alignment: { horizontal: "center", vertical: "center", wrapText: true },
-        fill: { fgColor: { rgb: "E2EFDA" } },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
-        }
-      };
-
-      const dataStyle = {
-        font: { color: { rgb: "000000" }, name: "Arial", sz: 11 },
-        alignment: { horizontal: "left", vertical: "center", wrapText: true },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
-        }
-      };
-
-      // Aplicar estilos a los títulos
-      ws['B2'] = { v: 'NOMBRE DE IMPLEMENTACIÓN', t: 's', s: titleStyle };
-      ws['B4'] = { v: 'MAPA DE IMPLEMENTACIÓN SERVICIOS', t: 's', s: subtitleStyle };
-
-      // Combinar celdas para los títulos
-      if (!ws['!merges']) ws['!merges'] = [];
-      ws['!merges'].push(
-        { s: { r: 1, c: 1 }, e: { r: 1, c: 5 } }, // B2:F2
-        { s: { r: 3, c: 1 }, e: { r: 3, c: 5 } }  // B4:F4
-      );
-
-      // Aplicar estilos a los encabezados (fila 6)
-      const headerRowIndex = 5;
-      const headers = ['A', 'B', 'C', 'D', 'E', 'F'];
+      } catch (error) {
+        console.log('⚠️ No se pudo agregar el logo como imagen, usando fallback:', error);
+        
+        // Fallback: agregar texto "ANDES BPO" con mejor simetría
+        ws.mergeCells('H2:K5');
+        const logoTextCell = ws.getCell('H2');
+        logoTextCell.value = 'ANDES BPO\nBusiness Process\nOutsourcing\nContact Center';
+        logoTextCell.font = { 
+          bold: true, 
+          size: 12, 
+          color: { argb: 'FF0DB14B' },
+          name: 'Arial'
+        };
+        logoTextCell.alignment = { 
+          horizontal: 'center', 
+          vertical: 'middle',
+          wrapText: true 
+        };
+        logoTextCell.fill = whiteFill;
+      }
       
-      headers.forEach(col => {
-        const cellRef = col + (headerRowIndex + 1);
-        if (ws[cellRef]) {
-          ws[cellRef].s = headerStyle;
+      // Línea divisoria inferior opcional (fila 6)
+      ws.mergeCells('A6:K6');
+      const dividerCell = ws.getCell('A6');
+      dividerCell.value = '';
+      dividerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+      
+      // Dejar la fila 1 completamente limpia para mejor diseño
+      ws.mergeCells('A1:K1');
+      const topCell = ws.getCell('A1');
+      topCell.value = '';
+      topCell.fill = whiteFill;
+
+      // Definir el estilo de borde con puntos seguidos y muy juntos
+      const dottedBorder = { style: 'dotted', color: { argb: 'FF434343' } };
+      const fullDottedBorder = {
+        top: dottedBorder,
+        left: dottedBorder,
+        bottom: dottedBorder,
+        right: dottedBorder
+      };
+
+      // Definir el estilo de borde grueso para columnas A y B (filas 10-36)
+      const thickBlueBorder = { style: 'thick', color: { argb: 'FF1155CC' } };
+      const fullThickBlueBorder = {
+        top: thickBlueBorder,
+        left: thickBlueBorder,
+        bottom: thickBlueBorder,
+        right: thickBlueBorder
+      };
+
+      // Definir el estilo de borde delgado negro para encabezados (filas 8-9)
+      const thinBlackBorder = { style: 'thin', color: { argb: 'FF000000' } };
+      const fullThinBlackBorder = {
+        top: thinBlackBorder,
+        left: thinBlackBorder,
+        bottom: thinBlackBorder,
+        right: thinBlackBorder
+      };
+
+      // -----------------------------
+      // Encabezados de la tabla (fila 8)
+      // -----------------------------
+      ws.mergeCells('A8:A9');
+      const headerFase = ws.getCell('A8');
+      headerFase.value = 'Fase';
+      headerFase.alignment = { horizontal: 'center', vertical: 'middle' };
+      headerFase.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' };
+      headerFase.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0DB14B' } };
+      headerFase.border = fullThinBlackBorder;
+      // Aplicar bordes a A9 también
+      ws.getCell('A9').border = fullThinBlackBorder;
+
+      ws.mergeCells('B8:B9');
+      const headerProceso = ws.getCell('B8');
+      headerProceso.value = 'Proceso';
+      headerProceso.alignment = { horizontal: 'center', vertical: 'middle' };
+      headerProceso.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' };
+      headerProceso.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0DB14B' } };
+      headerProceso.border = {
+        top: thinBlackBorder,
+        left: thinBlackBorder,
+        bottom: thinBlackBorder,
+        right: dottedBorder // Borde derecho punteado para separar de columna C
+      };
+      // Aplicar bordes a B9 también con borde derecho punteado
+      ws.getCell('B9').border = {
+        top: thinBlackBorder,
+        left: thinBlackBorder,
+        bottom: thinBlackBorder,
+        right: dottedBorder
+      };
+
+      ws.mergeCells('C8:C9');
+      const headerActividades = ws.getCell('C8');
+      headerActividades.value = 'Actividades';
+      headerActividades.alignment = { horizontal: 'center', vertical: 'middle' };
+      headerActividades.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' };
+      headerActividades.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0DB14B' } };
+      headerActividades.border = {
+        top: thinBlackBorder,
+        left: dottedBorder, // Borde izquierdo punteado para separar de columna B
+        bottom: thinBlackBorder,
+        right: thinBlackBorder
+      };
+      // Aplicar bordes a C9 también con borde izquierdo punteado
+      ws.getCell('C9').border = {
+        top: thinBlackBorder,
+        left: dottedBorder,
+        bottom: thinBlackBorder,
+        right: thinBlackBorder
+      };
+
+      ws.mergeCells('D8:E9');
+      const headerSeguimiento = ws.getCell('D8');
+      headerSeguimiento.value = 'Seguimiento Actividades';
+      headerSeguimiento.alignment = { horizontal: 'center', vertical: 'middle' };
+      headerSeguimiento.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' };
+      headerSeguimiento.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0DB14B' } };
+      headerSeguimiento.border = fullThinBlackBorder;
+      // Aplicar bordes a D9 y E8, E9 también
+      ws.getCell('D9').border = fullThinBlackBorder;
+      ws.getCell('E8').border = fullThinBlackBorder;
+      ws.getCell('E9').border = fullThinBlackBorder;
+
+      ws.mergeCells('F8:G9');
+      const headerEstado = ws.getCell('F8');
+      headerEstado.value = 'Estado';
+      headerEstado.alignment = { horizontal: 'center', vertical: 'middle' };
+      headerEstado.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' };
+      headerEstado.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0DB14B' } };
+      headerEstado.border = fullThinBlackBorder;
+      // Aplicar bordes a F9 y G8, G9 también
+      ws.getCell('F9').border = fullThinBlackBorder;
+      ws.getCell('G8').border = fullThinBlackBorder;
+      ws.getCell('G9').border = fullThinBlackBorder;
+
+      ws.mergeCells('H8:I9');
+      const headerResponsable = ws.getCell('H8');
+      headerResponsable.value = 'Responsable';
+      headerResponsable.alignment = { horizontal: 'center', vertical: 'middle' };
+      headerResponsable.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' };
+      headerResponsable.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0DB14B' } };
+      headerResponsable.border = fullThinBlackBorder;
+      // Aplicar bordes a H9 y I8, I9 también
+      ws.getCell('H9').border = fullThinBlackBorder;
+      ws.getCell('I8').border = fullThinBlackBorder;
+      ws.getCell('I9').border = fullThinBlackBorder;
+
+      ws.mergeCells('J8:K9');
+      const headerNotas = ws.getCell('J8');
+      headerNotas.value = 'Notas';
+      headerNotas.alignment = { horizontal: 'center', vertical: 'middle' };
+      headerNotas.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' };
+      headerNotas.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0DB14B' } };
+      headerNotas.border = fullThinBlackBorder;
+      // Aplicar bordes a J9 y K8, K9 también
+      ws.getCell('J9').border = fullThinBlackBorder;
+      ws.getCell('K8').border = fullThinBlackBorder;
+      ws.getCell('K9').border = fullThinBlackBorder;
+
+      // =========================
+      // Contenido de datos (empezando en fila 10)
+      // =========================
+      let currentRow = 10;
+      
+      // Función auxiliar para agregar datos con estilos
+      const addDataRow = (fase, proceso, actividad, seguimiento, estado, responsable, notas, isProcess = false, isPhase = false, customBgColor = null) => {
+        // La altura de esta fila será automática basada en el contenido (wrapText: true)
+        
+        // Columna A (Fase)
+        const cellFase = ws.getCell(`A${currentRow}`);
+        cellFase.value = fase;
+        cellFase.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        // Aplicar borde grueso azul para filas 10-36, sino borde normal
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellFase.border = fullThickBlueBorder;
+        } else {
+          cellFase.border = fullDottedBorder;
         }
-      });
+        if (isPhase) {
+          cellFase.font = { bold: true, color: { argb: 'FF000000' } };
+          cellFase.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } };
+        }
 
-      // Aplicar estilos a las celdas de datos
-      for (let r = headerRowIndex + 1; r < wsData.length; r++) {
-        for (let c = 0; c < 6; c++) {
-          const col = headers[c];
-          const cellRef = col + (r + 1);
-
-          if (ws[cellRef]) {
-            if (c === 0) { // Columna Fase
-              ws[cellRef].s = phaseStyle;
-            } else if (c === 1) { // Columna Proceso
-              ws[cellRef].s = processStyle;
-            } else { // Columnas de datos
-              ws[cellRef].s = dataStyle;
+        // Columna B (Proceso)
+        const cellProceso = ws.getCell(`B${currentRow}`);
+        cellProceso.value = proceso;
+        cellProceso.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        // Aplicar borde grueso azul para filas 10-36, pero con borde derecho punteado para separar de columna C
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellProceso.border = {
+            top: thickBlueBorder,
+            left: thickBlueBorder,
+            bottom: thickBlueBorder,
+            right: dottedBorder // Borde derecho punteado para separar de columna C
+          };
+        } else {
+          cellProceso.border = fullDottedBorder;
+        }
+        
+        // Aplicar fuente Calibri tamaño 12 para toda la columna B (filas 10-36)
+        if (currentRow >= 10 && currentRow <= 36) {
+          if (isProcess) {
+            cellProceso.font = { bold: true, color: { argb: 'FF000000' }, name: 'Calibri', size: 12 };
+            // Aplicar color personalizado si se proporciona, sino usar el color por defecto
+            if (customBgColor) {
+              cellProceso.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: customBgColor } };
+            } else {
+              cellProceso.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } };
+            }
+          } else {
+            // Para celdas que no son proceso, aplicar solo la fuente sin negrita
+            cellProceso.font = { name: 'Calibri', size: 12 };
+          }
+        } else {
+          // Para filas fuera del rango 10-36, mantener el comportamiento original
+          if (isProcess) {
+            cellProceso.font = { bold: true, color: { argb: 'FF000000' } };
+            if (customBgColor) {
+              cellProceso.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: customBgColor } };
+            } else {
+              cellProceso.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } };
             }
           }
         }
-      }
 
-      // Ajustar altura de filas
-      ws['!rows'] = [];
-      for (let i = 0; i < wsData.length; i++) {
-        if (i === headerRowIndex) { // Fila de encabezados
-          ws['!rows'][i] = { hpt: 25 }; // 25 puntos de altura
-        } else if (i === 1 || i === 3) { // Filas de título y subtítulo
-          ws['!rows'][i] = { hpt: 30 }; // 30 puntos de altura
+        // Columna C (Actividades)
+        const cellActividad = ws.getCell(`C${currentRow}`);
+        cellActividad.value = actividad;
+        cellActividad.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        // Aplicar borde específico para columnas C-K en filas 10-36
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellActividad.border = fullDottedBorder;
         } else {
-          ws['!rows'][i] = { hpt: 20 }; // 20 puntos para el resto
+          cellActividad.border = fullDottedBorder;
         }
-      }
+        // Aplicar fuente Calibri tamaño 11 para columnas C-K (filas 10-35)
+        if (currentRow >= 10 && currentRow <= 35) {
+          cellActividad.font = { name: 'Calibri', size: 11 };
+        }
 
-      // Ajustar ancho de columnas
-      ws['!cols'] = [
-        { wch: 15 },  // Fase
-        { wch: 25 },  // Proceso
-        { wch: 45 },  // Actividades
-        { wch: 35 },  // Seguimiento Actividades
-        { wch: 20 },  // Estado
-        { wch: 25 }   // Responsable
-      ];
-      
-      // Ajustar altura de las filas
-      ws['!rows'] = [];
-      for (let i = 0; i < wsData.length; i++) {
-        if (i === headerRowIndex) {
-          ws['!rows'][i] = { hpt: 25 }; // Altura de 25 puntos para la fila de encabezados
-        } else if (i === 1 || i === 3) {
-          ws['!rows'][i] = { hpt: 30 }; // Altura de 30 puntos para los títulos
+        // Columnas D:E (Seguimiento)
+        ws.mergeCells(`D${currentRow}:E${currentRow}`);
+        const cellSeguimiento = ws.getCell(`D${currentRow}`);
+        cellSeguimiento.value = seguimiento;
+        cellSeguimiento.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        // Aplicar borde específico para columnas C-K en filas 10-36
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellSeguimiento.border = fullDottedBorder;
         } else {
-          ws['!rows'][i] = { hpt: 20 }; // Altura estándar para el resto
+          cellSeguimiento.border = fullDottedBorder;
         }
-      }
-      
-      // Configurar las combinaciones de celdas para la columna "Fase"
-      const merges = [];
-      
-      // Definir las combinaciones para la fase "Inicio" (filas 7-26)
-      merges.push({ s: { r: 6, c: 0 }, e: { r: 25, c: 0 } });
-      
-      // Definir las combinaciones para la fase "Cierre" (fila 27)
-      merges.push({ s: { r: 26, c: 0 }, e: { r: 26, c: 0 } });
-      
-      // Definir las combinaciones para los procesos
-      // "Desarrollar el acta de Inicio" (filas 7-10)
-      merges.push({ s: { r: 6, c: 1 }, e: { r: 9, c: 1 } });
-      
-      // "Talento Humano" (filas 11-16)
-      merges.push({ s: { r: 10, c: 1 }, e: { r: 15, c: 1 } });
-      
-      // "Tecnología" (filas 17-22)
-      merges.push({ s: { r: 16, c: 1 }, e: { r: 21, c: 1 } });
-      
-      // "Procesos" (filas 23-26)
-      merges.push({ s: { r: 22, c: 1 }, e: { r: 25, c: 1 } });
-      
-      // Aplicar las combinaciones de celdas
-      ws['!merges'] = merges;
-      
-      // Configurar el ancho de las columnas
-      ws['!cols'] = [
-        { width: 15 }, // Fase
-        { width: 20 }, // Proceso
-        { width: 40 }, // Actividades
-        { width: 30 }, // Seguimiento Actividades
-        { width: 20 }, // Estado
-        { width: 20 }  // Responsable
-      ];
-      
-      // Configurar altura de filas
-      ws['!rows'] = [];
-      for (let i = 0; i < wsData.length; i++) {
-        if (i === 5) { // Fila de encabezados (índice 5 para fila 6)
-          ws['!rows'][i] = { hpt: 25 }; // Altura en puntos
+        // Aplicar bordes también a la celda E para la fusión
+        const cellE = ws.getCell(`E${currentRow}`);
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellE.border = fullDottedBorder;
         } else {
-          ws['!rows'][i] = { hpt: 20 }; // Altura estándar para el resto
+          cellE.border = fullDottedBorder;
         }
-      }
+        // Aplicar fuente Calibri tamaño 11 para columnas C-K (filas 10-35)
+        if (currentRow >= 10 && currentRow <= 35) {
+          cellSeguimiento.font = { name: 'Calibri', size: 11 };
+        }
+
+        // Columnas F:G (Estado)
+        ws.mergeCells(`F${currentRow}:G${currentRow}`);
+        const cellEstado = ws.getCell(`F${currentRow}`);
+        cellEstado.value = estado;
+        cellEstado.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        // Aplicar borde específico para columnas C-K en filas 10-36
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellEstado.border = fullDottedBorder;
+        } else {
+          cellEstado.border = fullDottedBorder;
+        }
+        // Aplicar bordes también a la celda G para la fusión
+        const cellG = ws.getCell(`G${currentRow}`);
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellG.border = fullDottedBorder;
+        } else {
+          cellG.border = fullDottedBorder;
+        }
+        // Aplicar fuente Calibri tamaño 11 para columnas C-K (filas 10-35)
+        if (currentRow >= 10 && currentRow <= 35) {
+          cellEstado.font = { name: 'Calibri', size: 11 };
+        }
+
+        // Columnas H:I (Responsable)
+        ws.mergeCells(`H${currentRow}:I${currentRow}`);
+        const cellResponsable = ws.getCell(`H${currentRow}`);
+        cellResponsable.value = responsable;
+        cellResponsable.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        // Aplicar borde específico para columnas C-K en filas 10-36
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellResponsable.border = fullDottedBorder;
+        } else {
+          cellResponsable.border = fullDottedBorder;
+        }
+        // Aplicar bordes también a la celda I para la fusión
+        const cellI = ws.getCell(`I${currentRow}`);
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellI.border = fullDottedBorder;
+        } else {
+          cellI.border = fullDottedBorder;
+        }
+        // Aplicar fuente Calibri tamaño 11 para columnas C-K (filas 10-35)
+        if (currentRow >= 10 && currentRow <= 35) {
+          cellResponsable.font = { name: 'Calibri', size: 11 };
+        }
+
+        // Columnas J:K (Notas)
+        ws.mergeCells(`J${currentRow}:K${currentRow}`);
+        const cellNotas = ws.getCell(`J${currentRow}`);
+        cellNotas.value = notas;
+        cellNotas.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        // Aplicar borde específico para columnas C-K en filas 10-36
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellNotas.border = fullDottedBorder;
+        } else {
+          cellNotas.border = fullDottedBorder;
+        }
+        // Aplicar bordes también a la celda K para la fusión
+        const cellK = ws.getCell(`K${currentRow}`);
+        if (currentRow >= 10 && currentRow <= 36) {
+          cellK.border = fullDottedBorder;
+        } else {
+          cellK.border = fullDottedBorder;
+        }
+        // Aplicar fuente Calibri tamaño 11 para columnas C-K (filas 10-35)
+        if (currentRow >= 10 && currentRow <= 35) {
+          cellNotas.font = { name: 'Calibri', size: 11 };
+        }
+
+        currentRow++;
+      };
+
+      // FASE: INICIO
+      const inicioStartRow = currentRow;
       
-      // Añadir la hoja al libro
-      XLSX.utils.book_append_sheet(wb, ws, 'Mapa Implementación');
+      // Proceso: Desarrollar el acta de Inicio
+      const contractualStartRow = currentRow;
+      addDataRow('INICIO', 'Desarrollar el acta de Inicio', 'Modelo de contrato', 
+                 detalleCompleto.contractual?.modeloContrato?.seguimiento || '', 
+                 detalleCompleto.contractual?.modeloContrato?.estado || '', 
+                 detalleCompleto.contractual?.modeloContrato?.responsable || '',
+                 detalleCompleto.contractual?.modeloContrato?.notas || '', true, false, 'FFD6DCE4');
+
+      addDataRow('', '', 'Modelo del Acuerdo de Confidencialidad', 
+                 detalleCompleto.contractual?.modeloConfidencialidad?.seguimiento || '', 
+                 detalleCompleto.contractual?.modeloConfidencialidad?.estado || '', 
+                 detalleCompleto.contractual?.modeloConfidencialidad?.responsable || '',
+                 detalleCompleto.contractual?.modeloConfidencialidad?.notas || '');
+
+      addDataRow('', '', 'Alcance', 
+                 detalleCompleto.contractual?.alcance?.seguimiento || '', 
+                 detalleCompleto.contractual?.alcance?.estado || '', 
+                 detalleCompleto.contractual?.alcance?.responsable || '',
+                 detalleCompleto.contractual?.alcance?.notas || '');
+
+      addDataRow('', '', 'Fecha de Inicio prestación del Servicio', 
+                 detalleCompleto.contractual?.fechaInicio?.seguimiento || '', 
+                 detalleCompleto.contractual?.fechaInicio?.estado || '', 
+                 detalleCompleto.contractual?.fechaInicio?.responsable || '',
+                 detalleCompleto.contractual?.fechaInicio?.notas || '');
+
+      // Fusionar células del proceso contractual
+      ws.mergeCells(`B${contractualStartRow}:B${currentRow - 1}`);
       
-      // Generar el archivo Excel
-      console.log('🟢 Preparando para escribir el archivo Excel');
-      const nombreArchivo = `Mapa_Implementacion.xlsx`;
+      // Fusionar y aplicar color de fondo para la fase INICIO (filas 10-13)
+      ws.mergeCells(`A${inicioStartRow}:A${currentRow - 1}`);
+      const faseInicioCell = ws.getCell(`A${inicioStartRow}`);
+      faseInicioCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8496B0' } };
+      faseInicioCell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // Texto blanco para mejor contraste
+
+      // FASE: DESARROLLO (desde fila 14)
+      const desarrolloStartRow = currentRow;
+
+      // Proceso: Talento Humano
+      const talentoStartRow = currentRow;
+      addDataRow('', 'Talento Humano', 'Perfil del Personal Requerido', 
+                 detalleCompleto.talento_humano?.perfilPersonal?.seguimiento || '', 
+                 detalleCompleto.talento_humano?.perfilPersonal?.estado || '', 
+                 detalleCompleto.talento_humano?.perfilPersonal?.responsable || '',
+                 detalleCompleto.talento_humano?.perfilPersonal?.notas || '', true, false, 'FFDEEAF6');
+
+      addDataRow('', '', 'Cantidad de Asesores requeridos', 
+                 detalleCompleto.talento_humano?.cantidadAsesores?.seguimiento || '', 
+                 detalleCompleto.talento_humano?.cantidadAsesores?.estado || '', 
+                 detalleCompleto.talento_humano?.cantidadAsesores?.responsable || '',
+                 detalleCompleto.talento_humano?.cantidadAsesores?.notas || '');
+
+      addDataRow('', '', 'Horarios', 
+                 detalleCompleto.talento_humano?.horarios?.seguimiento || '', 
+                 detalleCompleto.talento_humano?.horarios?.estado || '', 
+                 detalleCompleto.talento_humano?.horarios?.responsable || '',
+                 detalleCompleto.talento_humano?.horarios?.notas || '');
+
+      addDataRow('', '', 'Formador', 
+                 detalleCompleto.talento_humano?.formador?.seguimiento || '', 
+                 detalleCompleto.talento_humano?.formador?.estado || '', 
+                 detalleCompleto.talento_humano?.formador?.responsable || '',
+                 detalleCompleto.talento_humano?.formador?.notas || '');
+
+      addDataRow('', '', 'Programa de Capacitaciones de Andes BPO', 
+                 detalleCompleto.talento_humano?.capacitacionesAndes?.seguimiento || '', 
+                 detalleCompleto.talento_humano?.capacitacionesAndes?.estado || '', 
+                 detalleCompleto.talento_humano?.capacitacionesAndes?.responsable || '',
+                 detalleCompleto.talento_humano?.capacitacionesAndes?.notas || '');
+
+      addDataRow('', '', 'Programa de Capacitaciones del cliente', 
+                 detalleCompleto.talento_humano?.capacitacionesCliente?.seguimiento || '', 
+                 detalleCompleto.talento_humano?.capacitacionesCliente?.estado || '', 
+                 detalleCompleto.talento_humano?.capacitacionesCliente?.responsable || '',
+                 detalleCompleto.talento_humano?.capacitacionesCliente?.notas || '');
+
+      // Fusionar células del proceso talento humano
+      ws.mergeCells(`B${talentoStartRow}:B${currentRow - 1}`);
+
+      // Proceso: Tecnología
+      const tecnologiaStartRow = currentRow;
+      addDataRow('', 'Tecnología', 'Creación Módulo en Wolkvox para cliente nuevo', 
+                 detalleCompleto.tecnologia?.creacionModulo?.seguimiento || '', 
+                 detalleCompleto.tecnologia?.creacionModulo?.estado || '', 
+                 detalleCompleto.tecnologia?.creacionModulo?.responsable || '',
+                 detalleCompleto.tecnologia?.creacionModulo?.notas || '', true, false, 'FFDEEAF6');
+
+      addDataRow('', '', 'Tipificación de interacciones', 
+                 detalleCompleto.tecnologia?.tipificacionInteracciones?.seguimiento || '', 
+                 detalleCompleto.tecnologia?.tipificacionInteracciones?.estado || '', 
+                 detalleCompleto.tecnologia?.tipificacionInteracciones?.responsable || '',
+                 detalleCompleto.tecnologia?.tipificacionInteracciones?.notas || '');
+
+      addDataRow('', '', 'Aplicativos para el proceso', 
+                 detalleCompleto.tecnologia?.aplicativosProceso?.seguimiento || '', 
+                 detalleCompleto.tecnologia?.aplicativosProceso?.estado || '', 
+                 detalleCompleto.tecnologia?.aplicativosProceso?.responsable || '',
+                 detalleCompleto.tecnologia?.aplicativosProceso?.notas || '');
+
+      addDataRow('', '', 'WhatsApp', 
+                 detalleCompleto.tecnologia?.whatsapp?.seguimiento || '', 
+                 detalleCompleto.tecnologia?.whatsapp?.estado || '', 
+                 detalleCompleto.tecnologia?.whatsapp?.responsable || '',
+                 detalleCompleto.tecnologia?.whatsapp?.notas || '');
+
+      addDataRow('', '', 'Correos Electrónicos (Condiciones de uso, capacidades)', 
+                 detalleCompleto.tecnologia?.correosElectronicos?.seguimiento || '', 
+                 detalleCompleto.tecnologia?.correosElectronicos?.estado || '', 
+                 detalleCompleto.tecnologia?.correosElectronicos?.responsable || '',
+                 detalleCompleto.tecnologia?.correosElectronicos?.notas || '');
+
+      addDataRow('', '', 'Requisitos Grabación de llamada, entrega y resguardo', 
+                 detalleCompleto.tecnologia?.requisitosGrabacion?.seguimiento || '', 
+                 detalleCompleto.tecnologia?.requisitosGrabacion?.estado || '', 
+                 detalleCompleto.tecnologia?.requisitosGrabacion?.responsable || '',
+                 detalleCompleto.tecnologia?.requisitosGrabacion?.notas || '');
+
+      // Fusionar células del proceso tecnología
+      ws.mergeCells(`B${tecnologiaStartRow}:B${currentRow - 1}`);
+
+      // Proceso: Procesos
+      const procesosStartRow = currentRow;
+      addDataRow('', 'Procesos', 'Nombrar Responsable de Implementar el Proyecto por el cliente', 
+                 detalleCompleto.procesos?.responsableCliente?.seguimiento || '', 
+                 detalleCompleto.procesos?.responsableCliente?.estado || '', 
+                 detalleCompleto.procesos?.responsableCliente?.responsable || '',
+                 detalleCompleto.procesos?.responsableCliente?.notas || '', true, false, 'FFDEEAF6');
+
+      addDataRow('', '', 'Nombrar Responsable de Implementar el Proyecto por parte de Andes BPO', 
+                 detalleCompleto.procesos?.responsableAndes?.seguimiento || '', 
+                 detalleCompleto.procesos?.responsableAndes?.estado || '', 
+                 detalleCompleto.procesos?.responsableAndes?.responsable || '',
+                 detalleCompleto.procesos?.responsableAndes?.notas || '');
+
+      addDataRow('', '', 'Responsables de la operación', 
+                 detalleCompleto.procesos?.responsablesOperacion?.seguimiento || '', 
+                 detalleCompleto.procesos?.responsablesOperacion?.estado || '', 
+                 detalleCompleto.procesos?.responsablesOperacion?.responsable || '',
+                 detalleCompleto.procesos?.responsablesOperacion?.notas || '');
+
+      addDataRow('', '', 'Listado Reportes de Andes BPO', 
+                 detalleCompleto.procesos?.listadoReportes?.seguimiento || '', 
+                 detalleCompleto.procesos?.listadoReportes?.estado || '', 
+                 detalleCompleto.procesos?.listadoReportes?.responsable || '',
+                 detalleCompleto.procesos?.listadoReportes?.notas || '');
+
+      addDataRow('', '', 'Protocolo de Comunicaciones', 
+                 detalleCompleto.procesos?.protocoloComunicaciones?.seguimiento || '', 
+                 detalleCompleto.procesos?.protocoloComunicaciones?.estado || '', 
+                 detalleCompleto.procesos?.protocoloComunicaciones?.responsable || '',
+                 detalleCompleto.procesos?.protocoloComunicaciones?.notas || '');
+
+      addDataRow('', '', 'Guiones y/o Protocolos de la atención', 
+                 detalleCompleto.procesos?.guionesProtocolos?.seguimiento || '', 
+                 detalleCompleto.procesos?.guionesProtocolos?.estado || '', 
+                 detalleCompleto.procesos?.guionesProtocolos?.responsable || '',
+                 detalleCompleto.procesos?.guionesProtocolos?.notas || '');
+
+      addDataRow('', '', 'Proceso Monitoreo y Calidad Andes BPO', 
+                 detalleCompleto.procesos?.procesoMonitoreo?.seguimiento || '', 
+                 detalleCompleto.procesos?.procesoMonitoreo?.estado || '', 
+                 detalleCompleto.procesos?.procesoMonitoreo?.responsable || '',
+                 detalleCompleto.procesos?.procesoMonitoreo?.notas || '');
+
+      addDataRow('', '', 'Cronograma de Tecnología con Tiempos ajustados', 
+                 detalleCompleto.procesos?.cronogramaTecnologia?.seguimiento || '', 
+                 detalleCompleto.procesos?.cronogramaTecnologia?.estado || '', 
+                 detalleCompleto.procesos?.cronogramaTecnologia?.responsable || '',
+                 detalleCompleto.procesos?.cronogramaTecnologia?.notas || '');
+
+      addDataRow('', '', 'Cronograma de Capacitaciones con Duraciones y Fechas', 
+                 detalleCompleto.procesos?.cronogramaCapacitaciones?.seguimiento || '', 
+                 detalleCompleto.procesos?.cronogramaCapacitaciones?.estado || '', 
+                 detalleCompleto.procesos?.cronogramaCapacitaciones?.responsable || '',
+                 detalleCompleto.procesos?.cronogramaCapacitaciones?.notas || '');
+
+      addDataRow('', '', 'Realización de pruebas', 
+                 detalleCompleto.procesos?.realizacionPruebas?.seguimiento || '', 
+                 detalleCompleto.procesos?.realizacionPruebas?.estado || '', 
+                 detalleCompleto.procesos?.realizacionPruebas?.responsable || '',
+                 detalleCompleto.procesos?.realizacionPruebas?.notas || '');
+
+      // Fusionar células del proceso procesos
+      ws.mergeCells(`B${procesosStartRow}:B${currentRow - 1}`);
+
+      // Fusionar y aplicar color de fondo para la fase DESARROLLO (filas 14-35)
+      ws.mergeCells(`A${desarrolloStartRow}:A${currentRow - 1}`);
+      const faseDesarrolloCell = ws.getCell(`A${desarrolloStartRow}`);
+      faseDesarrolloCell.value = 'DESARROLLO';
+      faseDesarrolloCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9CC2E5' } };
+      faseDesarrolloCell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // Texto blanco para mejor contraste
+      faseDesarrolloCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+      // FASE: CIERRE
+      const cierreStartRow = currentRow;
+      addDataRow('CIERRE', 'Entrega al Área de Servicios', 'Acta de Cierre', 
+                 detalleCompleto.contractual?.actaCierre?.seguimiento || '', 
+                 detalleCompleto.contractual?.actaCierre?.estado || '', 
+                 detalleCompleto.contractual?.actaCierre?.responsable || '',
+                 detalleCompleto.contractual?.actaCierre?.notas || '', true, true);
+
+      // Aplicar estilo específico a la celda A36 (CIERRE)
+      const cellA36 = ws.getCell('A36');
+      cellA36.font = { name: 'Calibri', size: 18, color: { argb: 'FFFFFFFF' } };
+
+      // Generar buffer y descargar
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/octet-stream' });
+      const nombreArchivo = `Mapa_Implementacion_${detalleCompleto.cliente || implementacion.cliente}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      saveAs(blob, nombreArchivo);
       
-      try {
-        // Convertir el libro a un array buffer
-        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        
-        // Crear un blob con el array buffer
-        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        
-        // Crear una URL para el blob
-        const url = URL.createObjectURL(blob);
-        
-        // Crear un enlace temporal y simular un clic
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = nombreArchivo;
-        document.body.appendChild(a);
-        a.click();
-        
-        // Limpiar
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 0);
-        
-        console.log('🟢 Archivo Excel generado exitosamente');
-        toast.success('Excel exportado exitosamente', { id: 'excel-export' });
-      } catch (writeError) {
-        console.error('❌ Error al escribir el archivo Excel:', writeError);
-        throw writeError;
-      }
+      console.log('🟢 Archivo Excel generado exitosamente');
+      toast.success('Excel exportado exitosamente', { id: 'excel-export' });
       
     } catch (error) {
-      console.error('Error al exportar a Excel:', error);
+      console.error('❌ Error al exportar a Excel:', error);
       toast.error('Error al exportar a Excel', { id: 'excel-export' });
     }
   };
