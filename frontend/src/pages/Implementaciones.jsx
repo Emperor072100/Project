@@ -13,6 +13,8 @@ import {
   FaFileContract,
   FaTrash,
   FaFileExcel,
+  FaFilePdf,
+  FaCheckCircle,
   FaChevronRight,
   FaChevronDown,
   FaChartPie,
@@ -116,6 +118,45 @@ const Implementaciones = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [implementacionToDelete, setImplementacionToDelete] = useState(null);
   const [deletingInProgress, setDeletingInProgress] = useState(false);
+
+  // Estados para modal de entrega
+  const [showEntregaModal, setShowEntregaModal] = useState(false);
+  const [showEntregasRealizadasModal, setShowEntregasRealizadasModal] = useState(false);
+  const [implementacionEntrega, setImplementacionEntrega] = useState(null);
+  const [entregasRealizadas, setEntregasRealizadas] = useState([]);
+  const [formEntregaData, setFormEntregaData] = useState({
+    contractual: {
+      contrato: '',
+      acuerdoNivelesServicio: '',
+      polizas: '',
+      penalidades: '',
+      alcanceServicio: '',
+      unidadesFacturacion: '',
+      acuerdoPago: '',
+      incremento: ''
+    },
+    tecnologia: {
+      mapaAplicativos: '',
+      internet: '',
+      telefonia: '',
+      whatsapp: '',
+      integraciones: '',
+      vpn: '',
+      disenoIVR: '',
+      transferenciaLlamadas: '',
+      correosElectronicos: '',
+      linea018000: '',
+      lineaEntrada: '',
+      sms: '',
+      requisitosGrabacion: '',
+      entregaResguardo: '',
+      encuestaSatisfaccion: ''
+    },
+    procesos: {
+      listadoReportes: '',
+      procesoMonitoreoCalidad: ''
+    }
+  });
 
   // Efecto para cerrar el dropdown al hacer clic fuera
   useEffect(() => {
@@ -1191,6 +1232,155 @@ const Implementaciones = () => {
     setImplementacionToDelete(null);
     setDeleteConfirmText('');
     setDeletingInProgress(false);
+  };
+
+  // Función para abrir modal de entrega
+  const entregarImplementacion = (implementacion) => {
+    setImplementacionEntrega(implementacion);
+    setShowEntregaModal(true);
+    // Resetear el formulario
+    setFormEntregaData({
+      contractual: {
+        contrato: '',
+        acuerdoNivelesServicio: '',
+        polizas: '',
+        penalidades: '',
+        alcanceServicio: '',
+        unidadesFacturacion: '',
+        acuerdoPago: '',
+        incremento: ''
+      },
+      tecnologia: {
+        mapaAplicativos: '',
+        internet: '',
+        telefonia: '',
+        whatsapp: '',
+        integraciones: '',
+        vpn: '',
+        disenoIVR: '',
+        transferenciaLlamadas: '',
+        correosElectronicos: '',
+        linea018000: '',
+        lineaEntrada: '',
+        sms: '',
+        requisitosGrabacion: '',
+        entregaResguardo: '',
+        encuestaSatisfaccion: ''
+      },
+      procesos: {
+        listadoReportes: '',
+        procesoMonitoreoCalidad: ''
+      }
+    });
+  };
+
+  // Función para cerrar modal de entrega
+  const cerrarModalEntrega = () => {
+    setShowEntregaModal(false);
+    setImplementacionEntrega(null);
+  };
+
+  // Funciones para el modal de entregas realizadas
+  const abrirModalEntregasRealizadas = () => {
+    // Aquí puedes cargar las entregas realizadas desde la base de datos
+    // Por ahora simularé algunos datos de ejemplo
+    const entregasEjemplo = [
+      {
+        id: 1,
+        cliente: 'Empresa ABC',
+        servicio: 'Servicio al Cliente',
+        fechaEntrega: '2024-01-15',
+        estado: 'Completada',
+        responsable: 'Juan Pérez'
+      },
+      {
+        id: 2,
+        cliente: 'Corporación XYZ',
+        servicio: 'Soporte Técnico',
+        fechaEntrega: '2024-01-20',
+        estado: 'En Proceso',
+        responsable: 'María García'
+      },
+      {
+        id: 3,
+        cliente: 'Tech Solutions',
+        servicio: 'Consultoría IT',
+        fechaEntrega: '2024-02-05',
+        estado: 'Completada',
+        responsable: 'Carlos Rodríguez'
+      }
+    ];
+    setEntregasRealizadas(entregasEjemplo);
+    setShowEntregasRealizadasModal(true);
+  };
+
+  const cerrarModalEntregasRealizadas = () => {
+    setShowEntregasRealizadasModal(false);
+    setEntregasRealizadas([]);
+  };
+
+  // Función para manejar cambios en el formulario de entrega
+  const handleEntregaInputChange = (seccion, campo, valor) => {
+    setFormEntregaData(prev => ({
+      ...prev,
+      [seccion]: {
+        ...prev[seccion],
+        [campo]: valor
+      }
+    }));
+  };
+
+  // Función para procesar la entrega
+  const procesarEntrega = async () => {
+    try {
+      console.log('🚀 Procesando entrega de implementación:', implementacionEntrega);
+      
+      toast.loading('Procesando entrega...', { id: 'procesar-entrega' });
+      
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      // Preparar datos para enviar al backend
+      const entregaData = {
+        implementacion_id: implementacionEntrega.id,
+        fecha_entrega: new Date().toISOString().split('T')[0],
+        datos_entrega: formEntregaData
+      };
+      
+      // Enviar datos de entrega al backend
+      await axios.post('http://localhost:8000/entregas', entregaData, config);
+      
+      // Cambiar el estado de la implementación a "Finalizado"
+      await axios.put(
+        `http://localhost:8000/implementaciones/${implementacionEntrega.id}/estado`,
+        { estado: 'Finalizado' },
+        config
+      );
+      
+      // Actualizar el estado local
+      setImplementaciones(prev => 
+        prev.map(imp => 
+          imp.id === implementacionEntrega.id 
+            ? { ...imp, estado: 'Finalizado' }
+            : imp
+        )
+      );
+      
+      toast.success(`✅ Implementación de "${implementacionEntrega.cliente}" entregada exitosamente`, { id: 'procesar-entrega' });
+      
+      // Cerrar modal
+      cerrarModalEntrega();
+      
+      console.log('✅ Entrega procesada correctamente');
+      
+    } catch (error) {
+      console.error('❌ Error al procesar entrega:', error);
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Error al procesar la entrega';
+      
+      toast.error(`❌ ${errorMessage}`, { id: 'procesar-entrega' });
+    }
   };
 
   const eliminarImplementacion = async () => {
@@ -3262,10 +3452,18 @@ const Implementaciones = () => {
                 resetFormulario();
                 setShowModal(true);
               }}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
             >
-              <FaPlus size={16} />
+              <FaPlus size={14} />
               Nueva Implementación
+            </button>
+
+            <button
+              onClick={abrirModalEntregasRealizadas}
+              className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
+            >
+              <FaCheckCircle size={14} />
+              Entregas Realizadas
             </button>
             
             <div className="flex items-center gap-2">
@@ -3513,6 +3711,14 @@ const Implementaciones = () => {
                           Editar
                         </button>
                         <button
+                          onClick={() => entregarImplementacion(implementacion)}
+                          className="inline-flex items-center px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          title="Entregar implementación"
+                        >
+                          <FaCheckCircle className="mr-1.5" size={12} />
+                          Entregar
+                        </button>
+                        <button
                           onClick={() => abrirModalEliminacion(implementacion)}
                           className="inline-flex items-center px-3 py-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           title="Eliminar implementación"
@@ -3582,6 +3788,328 @@ const Implementaciones = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de Entrega */}
+      {showEntregaModal && (
+        <Modal 
+          isOpen={showEntregaModal} 
+          onClose={cerrarModalEntrega}
+          title={`Entregar Implementación: ${implementacionEntrega?.cliente || ''}`}
+          size="fullWidth"
+        >
+          <div className="max-h-[80vh] overflow-y-auto">
+            {/* Información Principal */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">📋 Información de Implementación</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Tarjeta: Nombre de la Implementación */}
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-md border border-blue-200 p-4 hover:shadow-lg transition-all duration-200">
+                  <div className="flex items-center mb-2">
+                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3 shadow-sm">
+                      <span className="text-white text-sm font-bold">🏢</span>
+                    </div>
+                    <h4 className="text-sm font-medium text-blue-700">Cliente</h4>
+                  </div>
+                  <p className="text-lg font-semibold text-blue-900 truncate">
+                    {implementacionEntrega?.cliente || 'No especificado'}
+                  </p>
+                </div>
+
+                {/* Tarjeta: Tipo de Servicio */}
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl shadow-md border border-emerald-200 p-4 hover:shadow-lg transition-all duration-200">
+                  <div className="flex items-center mb-2">
+                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center mr-3 shadow-sm">
+                      <span className="text-white text-sm font-bold">⚙️</span>
+                    </div>
+                    <h4 className="text-sm font-medium text-emerald-700">Servicio</h4>
+                  </div>
+                  <p className="text-lg font-semibold text-emerald-900">
+                    {implementacionEntrega?.proceso || 'No especificado'}
+                  </p>
+                </div>
+
+                {/* Tarjeta: Fecha de Entrega */}
+                <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl shadow-md border border-amber-200 p-4 hover:shadow-lg transition-all duration-200">
+                  <div className="flex items-center mb-2">
+                    <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center mr-3 shadow-sm">
+                      <span className="text-white text-sm font-bold">📅</span>
+                    </div>
+                    <h4 className="text-sm font-medium text-amber-700">Fecha de Entrega</h4>
+                  </div>
+                  <p className="text-lg font-semibold text-amber-900">
+                    {new Date().toLocaleDateString('es-ES')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Sección Contractual */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-8 mb-8 shadow-lg border border-blue-200">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mr-4 shadow-md">
+                  <span className="text-white text-2xl">📄</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-blue-800">Sección Contractual</h3>
+                  <p className="text-blue-600 text-sm">Documentación y acuerdos legales</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { key: 'contrato', label: 'Contrato', icon: '📋' },
+                  { key: 'acuerdoNivelesServicio', label: 'Acuerdo de Niveles de Servicio', icon: '🎯' },
+                  { key: 'polizas', label: 'Pólizas', icon: '🛡️' },
+                  { key: 'penalidades', label: 'Penalidades', icon: '⚠️' },
+                  { key: 'alcanceServicio', label: 'Alcance de Servicio', icon: '🔍' },
+                  { key: 'unidadesFacturacion', label: 'Unidades de Facturación', icon: '💰' },
+                  { key: 'acuerdoPago', label: 'Acuerdo de Pago', icon: '💳' },
+                  { key: 'incremento', label: 'Incremento', icon: '📈' }
+                ].map((campo) => (
+                  <div key={campo.key} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
+                    <label className="flex items-center text-sm font-semibold text-gray-800 mb-3">
+                      <span className="mr-2 text-lg">{campo.icon}</span>
+                      {campo.label}
+                    </label>
+                    <textarea
+                      rows={3}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-3 focus:ring-blue-500/20 focus:border-blue-400 resize-none bg-white shadow-sm transition-all duration-200 placeholder-gray-400"
+                      placeholder="Ingrese sus observaciones aquí..."
+                      value={formEntregaData.contractual[campo.key]}
+                      onChange={(e) => handleEntregaInputChange('contractual', campo.key, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sección Tecnología */}
+            <div className="bg-gradient-to-br from-emerald-50 to-green-100 rounded-2xl p-8 mb-8 shadow-lg border border-emerald-200">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center mr-4 shadow-md">
+                  <span className="text-white text-2xl">💻</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-emerald-800">Sección Tecnología</h3>
+                  <p className="text-emerald-600 text-sm">Infraestructura y herramientas tecnológicas</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { key: 'mapaAplicativos', label: 'Mapa de Aplicativos', icon: '🗺️' },
+                  { key: 'internet', label: 'Internet', icon: '🌐' },
+                  { key: 'telefonia', label: 'Telefonía', icon: '📞' },
+                  { key: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+                  { key: 'integraciones', label: 'Integraciones', icon: '🔗' },
+                  { key: 'vpn', label: 'VPN', icon: '🔒' },
+                  { key: 'disenoIVR', label: 'Diseño del IVR', icon: '📋' },
+                  { key: 'transferenciaLlamadas', label: 'Transferencia de Llamadas', icon: '📲' },
+                  { key: 'correosElectronicos', label: 'Correos Electrónicos', icon: '📧' },
+                  { key: 'linea018000', label: 'Línea 018000', icon: '☎️' },
+                  { key: 'lineaEntrada', label: 'Línea de Entrada', icon: '📞' },
+                  { key: 'sms', label: 'SMS', icon: '💬' },
+                  { key: 'requisitosGrabacion', label: 'Requisitos de Grabación', icon: '🎙️' },
+                  { key: 'entregaResguardo', label: 'Entrega y Resguardo', icon: '🗃️' },
+                  { key: 'encuestaSatisfaccion', label: 'Encuesta de Satisfacción', icon: '📊' }
+                ].map((campo) => (
+                  <div key={campo.key} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
+                    <label className="flex items-center text-sm font-semibold text-gray-800 mb-3">
+                      <span className="mr-2 text-lg">{campo.icon}</span>
+                      {campo.label}
+                    </label>
+                    <textarea
+                      rows={3}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-3 focus:ring-emerald-500/20 focus:border-emerald-400 resize-none bg-white shadow-sm transition-all duration-200 placeholder-gray-400"
+                      placeholder="Ingrese sus observaciones aquí..."
+                      value={formEntregaData.tecnologia[campo.key]}
+                      onChange={(e) => handleEntregaInputChange('tecnologia', campo.key, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sección Procesos */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-8 mb-8 shadow-lg border border-amber-200">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center mr-4 shadow-md">
+                  <span className="text-white text-2xl">⚙️</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-amber-800">Sección Procesos</h3>
+                  <p className="text-amber-600 text-sm">Procedimientos y metodologías operativas</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { key: 'listadoReportes', label: 'Listado de Reportes Esperados', icon: '📊' },
+                  { key: 'procesoMonitoreoCalidad', label: 'Proceso de Monitoreo y Calidad Andes BPO', icon: '🔍' }
+                ].map((campo) => (
+                  <div key={campo.key} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
+                    <label className="flex items-center text-sm font-semibold text-gray-800 mb-3">
+                      <span className="mr-2 text-lg">{campo.icon}</span>
+                      {campo.label}
+                    </label>
+                    <textarea
+                      rows={4}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-3 focus:ring-amber-500/20 focus:border-amber-400 resize-none bg-white shadow-sm transition-all duration-200 placeholder-gray-400"
+                      placeholder="Describa los detalles y observaciones aquí..."
+                      value={formEntregaData.procesos[campo.key]}
+                      onChange={(e) => handleEntregaInputChange('procesos', campo.key, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={cerrarModalEntrega}
+                className="px-6 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={procesarEntrega}
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                <FaCheckCircle size={16} />
+                Procesar Entrega
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de Entregas Realizadas */}
+      {showEntregasRealizadasModal && (
+        <Modal 
+          isOpen={showEntregasRealizadasModal} 
+          onClose={cerrarModalEntregasRealizadas}
+          title="📋 Entregas Realizadas"
+          size="fullWidth"
+        >
+          <div className="max-h-[80vh] overflow-y-auto">
+            {/* Header del modal */}
+            <div className="mb-6">
+              <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center shadow-sm">
+                    <span className="text-white text-xl">📊</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-emerald-800">Historial de Entregas</h3>
+                    <p className="text-emerald-600 text-sm">Registro completo de todas las entregas realizadas</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla de entregas */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Cliente
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Servicio
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Fecha de Entrega
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {entregasRealizadas.length > 0 ? (
+                      entregasRealizadas.map((entrega) => (
+                        <tr key={entrega.id} className="hover:bg-gray-50 transition-colors duration-150">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                <span className="text-blue-600 text-sm">🏢</span>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{entrega.cliente}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{entrega.servicio}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {new Date(entrega.fechaEntrega).toLocaleDateString('es-ES')}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button 
+                                onClick={() => console.log('Editando entrega:', entrega.id)}
+                                className="inline-flex items-center px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                                title="Editar entrega"
+                              >
+                                <FaEdit className="mr-1.5" size={12} />
+                                Editar
+                              </button>
+                              <button 
+                                onClick={() => console.log('Eliminando entrega:', entrega.id)}
+                                className="inline-flex items-center px-3 py-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                                title="Eliminar entrega"
+                              >
+                                <FaTrash className="mr-1.5" size={12} />
+                                Eliminar
+                              </button>
+                              <button 
+                                onClick={() => console.log('Descargando PDF:', entrega.id)}
+                                className="inline-flex items-center px-3 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 hover:border-green-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                                title="Descargar PDF"
+                              >
+                                <FaFilePdf className="mr-1.5" size={12} />
+                                PDF
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                              <span className="text-3xl">📋</span>
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No hay entregas registradas</h3>
+                            <p className="text-gray-500">Aún no se han realizado entregas de implementaciones.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Botón de cerrar */}
+            <div className="flex justify-end pt-6 border-t border-gray-200 mt-6">
+              <button
+                type="button"
+                onClick={cerrarModalEntregasRealizadas}
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
