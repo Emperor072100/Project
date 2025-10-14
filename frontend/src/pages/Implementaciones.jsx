@@ -1283,34 +1283,7 @@ const Implementaciones = () => {
   // Funciones para el modal de entregas realizadas
   const abrirModalEntregasRealizadas = () => {
     // Aquí puedes cargar las entregas realizadas desde la base de datos
-    // Por ahora simularé algunos datos de ejemplo
-    const entregasEjemplo = [
-      {
-        id: 1,
-        cliente: 'Empresa ABC',
-        servicio: 'Servicio al Cliente',
-        fechaEntrega: '2024-01-15',
-        estado: 'Completada',
-        responsable: 'Juan Pérez'
-      },
-      {
-        id: 2,
-        cliente: 'Corporación XYZ',
-        servicio: 'Soporte Técnico',
-        fechaEntrega: '2024-01-20',
-        estado: 'En Proceso',
-        responsable: 'María García'
-      },
-      {
-        id: 3,
-        cliente: 'Tech Solutions',
-        servicio: 'Consultoría IT',
-        fechaEntrega: '2024-02-05',
-        estado: 'Completada',
-        responsable: 'Carlos Rodríguez'
-      }
-    ];
-    setEntregasRealizadas(entregasEjemplo);
+    setEntregasRealizadas([]);
     setShowEntregasRealizadasModal(true);
   };
 

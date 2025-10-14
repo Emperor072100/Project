@@ -1,5 +1,7 @@
 from sqlalchemy import Column, Integer, String, JSON
+from sqlalchemy.orm import relationship
 from core.database import Base
+
 
 class ProjectImplementacionesClienteImple(Base):
     __tablename__ = "project_implementaciones_clienteimple"
@@ -12,3 +14,9 @@ class ProjectImplementacionesClienteImple(Base):
     talento_humano = Column(JSON, nullable=True)
     procesos = Column(JSON, nullable=True)
     tecnologia = Column(JSON, nullable=True)
+    
+    # Relación con entregas
+    entregas = relationship(
+        "ProjectEntregaImplementaciones",
+        back_populates="implementacion"
+    )
