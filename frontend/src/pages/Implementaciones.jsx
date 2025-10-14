@@ -122,8 +122,16 @@ const Implementaciones = () => {
   // Estados para modal de entrega
   const [showEntregaModal, setShowEntregaModal] = useState(false);
   const [showEntregasRealizadasModal, setShowEntregasRealizadasModal] = useState(false);
+  const [showDetalleEntregaModal, setShowDetalleEntregaModal] = useState(false);
+  const [showEditarEntregaModal, setShowEditarEntregaModal] = useState(false);
+  const [showEliminarEntregaModal, setShowEliminarEntregaModal] = useState(false);
   const [implementacionEntrega, setImplementacionEntrega] = useState(null);
   const [entregasRealizadas, setEntregasRealizadas] = useState([]);
+  const [entregaSeleccionada, setEntregaSeleccionada] = useState(null);
+  const [entregaParaEditar, setEntregaParaEditar] = useState(null);
+  const [entregaParaEliminar, setEntregaParaEliminar] = useState(null);
+  const [formEditarEntregaData, setFormEditarEntregaData] = useState({});
+  const [confirmacionEliminar, setConfirmacionEliminar] = useState('');
   const [formEntregaData, setFormEntregaData] = useState({
     contractual: {
       contrato: '',
@@ -1304,6 +1312,201 @@ const Implementaciones = () => {
   const cerrarModalEntregasRealizadas = () => {
     setShowEntregasRealizadasModal(false);
     setEntregasRealizadas([]);
+  };
+
+  // Funciones para el modal de detalles de entrega
+  const abrirModalDetalleEntrega = async (entregaId) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      console.log('🔍 Cargando detalles de entrega:', entregaId);
+      const response = await axios.get(`http://localhost:8000/entregas/${entregaId}`, config);
+      
+      console.log('📦 Detalles de entrega:', response.data);
+      setEntregaSeleccionada(response.data);
+      setShowDetalleEntregaModal(true);
+      
+    } catch (error) {
+      console.error('❌ Error al cargar detalles de entrega:', error);
+      toast.error('Error al cargar los detalles de la entrega');
+    }
+  };
+
+  const cerrarModalDetalleEntrega = () => {
+    setShowDetalleEntregaModal(false);
+    setEntregaSeleccionada(null);
+  };
+
+  // Funciones para el modal de editar entrega
+  const abrirModalEditarEntrega = async (entregaId) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      console.log('🔍 Cargando entrega para editar:', entregaId);
+      const response = await axios.get(`http://localhost:8000/entregas/${entregaId}`, config);
+      
+      console.log('📦 Datos de entrega para editar:', response.data);
+      setEntregaParaEditar(response.data);
+      
+      // Pre-llenar el formulario con los datos existentes
+      setFormEditarEntregaData({
+        fecha_entrega: new Date(response.data.fecha_entrega).toISOString().split('T')[0],
+        contractual: {
+          contrato: response.data.contrato || '',
+          acuerdoNivelesServicio: response.data.acuerdo_niveles_servicio || '',
+          polizas: response.data.polizas || '',
+          penalidades: response.data.penalidades || '',
+          alcanceServicio: response.data.alcance_servicio || '',
+          unidadesFacturacion: response.data.unidades_facturacion || '',
+          acuerdoPago: response.data.acuerdo_pago || '',
+          incremento: response.data.incremento || ''
+        },
+        tecnologia: {
+          mapaAplicativos: response.data.mapa_aplicativos || '',
+          internet: response.data.internet || '',
+          telefonia: response.data.telefonia || '',
+          whatsapp: response.data.whatsapp || '',
+          integraciones: response.data.integraciones || '',
+          vpn: response.data.vpn || '',
+          disenoIVR: response.data.diseno_ivr || '',
+          transferenciaLlamadas: response.data.transferencia_llamadas || '',
+          correosElectronicos: response.data.correos_electronicos || '',
+          linea018000: response.data.linea_018000 || '',
+          lineaEntrada: response.data.linea_entrada || '',
+          sms: response.data.sms || '',
+          requisitosGrabacion: response.data.requisitos_grabacion || '',
+          entregaResguardo: response.data.entrega_resguardo || '',
+          encuestaSatisfaccion: response.data.encuesta_satisfaccion || ''
+        },
+        procesos: {
+          listadoReportes: response.data.listado_reportes || '',
+          procesoMonitoreoCalidad: response.data.proceso_monitoreo_calidad || ''
+        }
+      });
+      
+      setShowEditarEntregaModal(true);
+      
+    } catch (error) {
+      console.error('❌ Error al cargar entrega para editar:', error);
+      toast.error('Error al cargar los datos de la entrega');
+    }
+  };
+
+  const cerrarModalEditarEntrega = () => {
+    setShowEditarEntregaModal(false);
+    setEntregaParaEditar(null);
+    setFormEditarEntregaData({});
+  };
+
+  const handleEditarEntregaInputChange = (seccion, campo, valor) => {
+    if (seccion === 'fecha_entrega') {
+      setFormEditarEntregaData(prev => ({
+        ...prev,
+        fecha_entrega: valor
+      }));
+    } else {
+      setFormEditarEntregaData(prev => ({
+        ...prev,
+        [seccion]: {
+          ...prev[seccion],
+          [campo]: valor
+        }
+      }));
+    }
+  };
+
+  const actualizarEntrega = async () => {
+    try {
+      if (!entregaParaEditar) return;
+
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      const datosActualizados = {
+        implementacion_id: entregaParaEditar.implementacion_id,
+        fecha_entrega: formEditarEntregaData.fecha_entrega,
+        datos_entrega: {
+          contractual: formEditarEntregaData.contractual,
+          tecnologia: formEditarEntregaData.tecnologia,
+          procesos: formEditarEntregaData.procesos
+        }
+      };
+
+      console.log('📤 Actualizando entrega:', datosActualizados);
+      
+      await axios.put(`http://localhost:8000/entregas/${entregaParaEditar.id}`, datosActualizados, config);
+      
+      toast.success('✅ Entrega actualizada exitosamente');
+      cerrarModalEditarEntrega();
+      
+      // Recargar la lista de entregas si está abierta
+      if (showEntregasRealizadasModal) {
+        abrirModalEntregasRealizadas();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error al actualizar entrega:', error);
+      toast.error('Error al actualizar la entrega');
+    }
+  };
+
+  // Funciones para el modal de eliminar entrega
+  const abrirModalEliminarEntrega = async (entregaId) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      console.log('🔍 Cargando entrega para eliminar:', entregaId);
+      const response = await axios.get(`http://localhost:8000/entregas/${entregaId}`, config);
+      
+      console.log('📦 Datos de entrega para eliminar:', response.data);
+      setEntregaParaEliminar(response.data);
+      setConfirmacionEliminar('');
+      setShowEliminarEntregaModal(true);
+      
+    } catch (error) {
+      console.error('❌ Error al cargar entrega para eliminar:', error);
+      toast.error('Error al cargar los datos de la entrega');
+    }
+  };
+
+  const cerrarModalEliminarEntrega = () => {
+    setShowEliminarEntregaModal(false);
+    setEntregaParaEliminar(null);
+    setConfirmacionEliminar('');
+  };
+
+  const eliminarEntrega = async () => {
+    try {
+      if (!entregaParaEliminar) return;
+
+      // Verificar que se escribió exactamente "eliminar"
+      if (confirmacionEliminar.toLowerCase().trim() !== 'eliminar') {
+        toast.error('❌ Debe escribir exactamente "eliminar" para confirmar');
+        return;
+      }
+
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      console.log('🗑️ Eliminando entrega:', entregaParaEliminar.id);
+      
+      await axios.delete(`http://localhost:8000/entregas/${entregaParaEliminar.id}`, config);
+      
+      toast.success('✅ Entrega eliminada exitosamente');
+      cerrarModalEliminarEntrega();
+      
+      // Recargar la lista de entregas si está abierta
+      if (showEntregasRealizadasModal) {
+        abrirModalEntregasRealizadas();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error al eliminar entrega:', error);
+      toast.error('Error al eliminar la entrega');
+    }
   };
 
   // Función para manejar cambios en el formulario de entrega
@@ -3995,25 +4198,40 @@ const Implementaciones = () => {
             </div>
 
             {/* Tabla de entregas */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Cliente
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-xs">🏢</span>
+                          Cliente
+                        </div>
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Proceso
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-xs">⚙️</span>
+                          Proceso
+                        </div>
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Fecha de Entrega
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-xs">📅</span>
+                          Fecha de Entrega
+                        </div>
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Estado
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-xs">✅</span>
+                          Estado
+                        </div>
                       </th>
                       <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Acciones
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-gray-400 text-xs">🔧</span>
+                          Acciones
+                        </div>
                       </th>
                     </tr>
                   </thead>
@@ -4024,7 +4242,9 @@ const Implementaciones = () => {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                                <span className="text-blue-600 text-sm">🏢</span>
+                                <span className="text-blue-600 text-sm font-medium">
+                                  {(entrega.implementacion?.cliente || 'C').charAt(0).toUpperCase()}
+                                </span>
                               </div>
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
@@ -4034,13 +4254,27 @@ const Implementaciones = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {entrega.implementacion?.proceso || 'Proceso no disponible'}
+                            <div className="flex items-center">
+                              <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center mr-3">
+                                <span className="text-purple-600 text-xs">⚙️</span>
+                              </div>
+                              <div>
+                                <div className="text-sm text-gray-900">
+                                  {entrega.implementacion?.proceso || 'Proceso no disponible'}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {new Date(entrega.fecha_entrega).toLocaleDateString('es-ES')}
+                            <div className="flex items-center">
+                              <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center mr-3">
+                                <span className="text-green-600 text-xs">📅</span>
+                              </div>
+                              <div>
+                                <div className="text-sm text-gray-900">
+                                  {new Date(entrega.fecha_entrega).toLocaleDateString('es-ES')}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -4049,34 +4283,45 @@ const Implementaciones = () => {
                                 ? 'bg-green-100 text-green-800' 
                                 : 'bg-yellow-100 text-yellow-800'
                             }`}>
+                              <span className="mr-1 text-xs">
+                                {entrega.estado_entrega === 'Completada' ? '✅' : '⏳'}
+                              </span>
                               {entrega.estado_entrega}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <div className="flex items-center justify-center gap-2">
                               <button 
-                                onClick={() => console.log('Editando entrega:', entrega.id)}
+                                onClick={() => abrirModalDetalleEntrega(entrega.id)}
                                 className="inline-flex items-center px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                                title="Ver detalles de entrega"
+                              >
+                                <span className="mr-1.5 text-xs">👁️</span>
+                                Ver
+                              </button>
+                              <button 
+                                onClick={() => abrirModalEditarEntrega(entrega.id)}
+                                className="inline-flex items-center px-3 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 hover:border-emerald-300 transition-all duration-200 shadow-sm hover:shadow-md"
                                 title="Editar entrega"
                               >
                                 <FaEdit className="mr-1.5" size={12} />
                                 Editar
                               </button>
                               <button 
-                                onClick={() => console.log('Eliminando entrega:', entrega.id)}
+                                onClick={() => console.log('Descargando PDF:', entrega.id)}
+                                className="inline-flex items-center px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                                title="Descargar PDF"
+                              >
+                                <FaFilePdf className="mr-1.5" size={12} />
+                                PDF
+                              </button>
+                              <button 
+                                onClick={() => abrirModalEliminarEntrega(entrega.id)}
                                 className="inline-flex items-center px-3 py-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
                                 title="Eliminar entrega"
                               >
                                 <FaTrash className="mr-1.5" size={12} />
                                 Eliminar
-                              </button>
-                              <button 
-                                onClick={() => console.log('Descargando PDF:', entrega.id)}
-                                className="inline-flex items-center px-3 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 hover:border-green-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                                title="Descargar PDF"
-                              >
-                                <FaFilePdf className="mr-1.5" size={12} />
-                                PDF
                               </button>
                             </div>
                           </td>
@@ -4087,7 +4332,7 @@ const Implementaciones = () => {
                         <td colSpan="5" className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                              <span className="text-3xl">📋</span>
+                              <span className="text-2xl">📋</span>
                             </div>
                             <h3 className="text-lg font-medium text-gray-900 mb-2">No hay entregas registradas</h3>
                             <p className="text-gray-500">Aún no se han realizado entregas de implementaciones.</p>
@@ -4108,6 +4353,512 @@ const Implementaciones = () => {
                 className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de Detalles de Entrega */}
+      {showDetalleEntregaModal && entregaSeleccionada && (
+        <Modal 
+          isOpen={showDetalleEntregaModal} 
+          onClose={cerrarModalDetalleEntrega}
+          title="📋 Detalles de la Entrega"
+          size="fullWidth"
+        >
+          <div className="max-h-[80vh] overflow-y-auto">
+            {/* Header del modal */}
+            <div className="mb-6">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-white text-2xl">📄</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-blue-800 mb-1">
+                      Entrega #{entregaSeleccionada.id}
+                    </h3>
+                    <p className="text-blue-600">
+                      Cliente: <span className="font-semibold">{entregaSeleccionada.implementacion?.cliente || 'N/A'}</span>
+                    </p>
+                    <p className="text-blue-600 text-sm">
+                      Proceso: {entregaSeleccionada.implementacion?.proceso || 'N/A'}
+                    </p>
+                  </div>
+                  <div className="ml-auto">
+                    <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${
+                      entregaSeleccionada.estado_entrega === 'Completada' 
+                        ? 'bg-green-100 text-green-800 border border-green-200' 
+                        : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                    }`}>
+                      {entregaSeleccionada.estado_entrega === 'Completada' ? '✅' : '⏳'} {entregaSeleccionada.estado_entrega}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Información General */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="text-blue-600">ℹ️</span> Información General
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">ID de Implementación</label>
+                    <p className="text-gray-900 font-semibold">#{entregaSeleccionada.implementacion_id}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Fecha de Entrega</label>
+                    <p className="text-gray-900 font-semibold">
+                      {new Date(entregaSeleccionada.fecha_entrega).toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'long'
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Fecha de Creación</label>
+                    <p className="text-gray-900">
+                      {new Date(entregaSeleccionada.created_at).toLocaleDateString('es-ES')}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Última Actualización</label>
+                    <p className="text-gray-900">
+                      {new Date(entregaSeleccionada.updated_at).toLocaleDateString('es-ES')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="text-purple-600">🏢</span> Cliente y Proceso
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Cliente</label>
+                    <p className="text-gray-900 font-semibold">
+                      {entregaSeleccionada.implementacion?.cliente || 'No especificado'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Proceso</label>
+                    <p className="text-gray-900 font-semibold">
+                      {entregaSeleccionada.implementacion?.proceso || 'No especificado'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Información Contractual */}
+            <div className="mb-8">
+              <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
+                  <span className="text-green-600">📄</span> Información Contractual
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { label: 'Contrato', value: entregaSeleccionada.contrato },
+                    { label: 'Acuerdo Niveles de Servicio', value: entregaSeleccionada.acuerdo_niveles_servicio },
+                    { label: 'Pólizas', value: entregaSeleccionada.polizas },
+                    { label: 'Penalidades', value: entregaSeleccionada.penalidades },
+                    { label: 'Alcance del Servicio', value: entregaSeleccionada.alcance_servicio },
+                    { label: 'Unidades de Facturación', value: entregaSeleccionada.unidades_facturacion },
+                    { label: 'Acuerdo de Pago', value: entregaSeleccionada.acuerdo_pago },
+                    { label: 'Incremento', value: entregaSeleccionada.incremento }
+                  ].map((item, index) => (
+                    <div key={index} className="bg-white rounded-lg p-4 border border-green-100">
+                      <label className="text-sm font-medium text-green-700">{item.label}</label>
+                      <p className="text-gray-900 text-sm mt-1 break-words">
+                        {item.value || 'No especificado'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Información Tecnológica */}
+            <div className="mb-8">
+              <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+                <h4 className="text-lg font-semibold text-purple-800 mb-4 flex items-center gap-2">
+                  <span className="text-purple-600">⚙️</span> Información Tecnológica
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { label: 'Mapa de Aplicativos', value: entregaSeleccionada.mapa_aplicativos },
+                    { label: 'Internet', value: entregaSeleccionada.internet },
+                    { label: 'Telefonía', value: entregaSeleccionada.telefonia },
+                    { label: 'WhatsApp', value: entregaSeleccionada.whatsapp },
+                    { label: 'Integraciones', value: entregaSeleccionada.integraciones },
+                    { label: 'VPN', value: entregaSeleccionada.vpn },
+                    { label: 'Diseño IVR', value: entregaSeleccionada.diseno_ivr },
+                    { label: 'Transferencia de Llamadas', value: entregaSeleccionada.transferencia_llamadas },
+                    { label: 'Correos Electrónicos', value: entregaSeleccionada.correos_electronicos },
+                    { label: 'Línea 018000', value: entregaSeleccionada.linea_018000 },
+                    { label: 'Línea de Entrada', value: entregaSeleccionada.linea_entrada },
+                    { label: 'SMS', value: entregaSeleccionada.sms },
+                    { label: 'Requisitos de Grabación', value: entregaSeleccionada.requisitos_grabacion },
+                    { label: 'Entrega de Resguardo', value: entregaSeleccionada.entrega_resguardo },
+                    { label: 'Encuesta de Satisfacción', value: entregaSeleccionada.encuesta_satisfaccion }
+                  ].map((item, index) => (
+                    <div key={index} className="bg-white rounded-lg p-4 border border-purple-100">
+                      <label className="text-sm font-medium text-purple-700">{item.label}</label>
+                      <p className="text-gray-900 text-sm mt-1 break-words">
+                        {item.value || 'No especificado'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Información de Procesos */}
+            <div className="mb-8">
+              <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+                <h4 className="text-lg font-semibold text-orange-800 mb-4 flex items-center gap-2">
+                  <span className="text-orange-600">🔄</span> Información de Procesos
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { label: 'Listado de Reportes', value: entregaSeleccionada.listado_reportes },
+                    { label: 'Proceso de Monitoreo de Calidad', value: entregaSeleccionada.proceso_monitoreo_calidad }
+                  ].map((item, index) => (
+                    <div key={index} className="bg-white rounded-lg p-4 border border-orange-100">
+                      <label className="text-sm font-medium text-orange-700">{item.label}</label>
+                      <p className="text-gray-900 text-sm mt-1 break-words">
+                        {item.value || 'No especificado'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={cerrarModalDetalleEntrega}
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  cerrarModalDetalleEntrega();
+                  abrirModalEditarEntrega(entregaSeleccionada.id);
+                }}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
+              >
+                Editar Entrega
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de Editar Entrega */}
+      {showEditarEntregaModal && entregaParaEditar && (
+        <Modal 
+          isOpen={showEditarEntregaModal} 
+          onClose={cerrarModalEditarEntrega}
+          title={`✏️ Editar Entrega #${entregaParaEditar.id}`}
+          size="fullWidth"
+        >
+          <div className="max-h-[80vh] overflow-y-auto">
+            {/* Header del modal */}
+            <div className="mb-6">
+              <div className="bg-gradient-to-r from-emerald-50 to-green-100 rounded-xl p-6 border border-emerald-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-white text-2xl">✏️</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-emerald-800 mb-1">
+                      Editando Entrega #{entregaParaEditar.id}
+                    </h3>
+                    <p className="text-emerald-600">
+                      Cliente: <span className="font-semibold">{entregaParaEditar.implementacion?.cliente || 'N/A'}</span>
+                    </p>
+                    <p className="text-emerald-600 text-sm">
+                      Proceso: {entregaParaEditar.implementacion?.proceso || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Fecha de Entrega */}
+            <div className="mb-8">
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="text-blue-600">📅</span> Fecha de Entrega
+                </h4>
+                <input
+                  type="date"
+                  value={formEditarEntregaData.fecha_entrega || ''}
+                  onChange={(e) => handleEditarEntregaInputChange('fecha_entrega', '', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Información Contractual */}
+            <div className="mb-8">
+              <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
+                  <span className="text-green-600">📄</span> Información Contractual
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { key: 'contrato', label: 'Contrato' },
+                    { key: 'acuerdoNivelesServicio', label: 'Acuerdo Niveles de Servicio' },
+                    { key: 'polizas', label: 'Pólizas' },
+                    { key: 'penalidades', label: 'Penalidades' },
+                    { key: 'alcanceServicio', label: 'Alcance del Servicio' },
+                    { key: 'unidadesFacturacion', label: 'Unidades de Facturación' },
+                    { key: 'acuerdoPago', label: 'Acuerdo de Pago' },
+                    { key: 'incremento', label: 'Incremento' }
+                  ].map((campo) => (
+                    <div key={campo.key}>
+                      <label className="block text-sm font-medium text-green-700 mb-2">
+                        {campo.label}
+                      </label>
+                      <textarea
+                        value={formEditarEntregaData.contractual?.[campo.key] || ''}
+                        onChange={(e) => handleEditarEntregaInputChange('contractual', campo.key, e.target.value)}
+                        className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none h-20"
+                        placeholder={`Ingrese ${campo.label.toLowerCase()}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Información Tecnológica */}
+            <div className="mb-8">
+              <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+                <h4 className="text-lg font-semibold text-purple-800 mb-4 flex items-center gap-2">
+                  <span className="text-purple-600">⚙️</span> Información Tecnológica
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { key: 'mapaAplicativos', label: 'Mapa de Aplicativos' },
+                    { key: 'internet', label: 'Internet' },
+                    { key: 'telefonia', label: 'Telefonía' },
+                    { key: 'whatsapp', label: 'WhatsApp' },
+                    { key: 'integraciones', label: 'Integraciones' },
+                    { key: 'vpn', label: 'VPN' },
+                    { key: 'disenoIVR', label: 'Diseño IVR' },
+                    { key: 'transferenciaLlamadas', label: 'Transferencia de Llamadas' },
+                    { key: 'correosElectronicos', label: 'Correos Electrónicos' },
+                    { key: 'linea018000', label: 'Línea 018000' },
+                    { key: 'lineaEntrada', label: 'Línea de Entrada' },
+                    { key: 'sms', label: 'SMS' },
+                    { key: 'requisitosGrabacion', label: 'Requisitos de Grabación' },
+                    { key: 'entregaResguardo', label: 'Entrega de Resguardo' },
+                    { key: 'encuestaSatisfaccion', label: 'Encuesta de Satisfacción' }
+                  ].map((campo) => (
+                    <div key={campo.key}>
+                      <label className="block text-sm font-medium text-purple-700 mb-2">
+                        {campo.label}
+                      </label>
+                      <textarea
+                        value={formEditarEntregaData.tecnologia?.[campo.key] || ''}
+                        onChange={(e) => handleEditarEntregaInputChange('tecnologia', campo.key, e.target.value)}
+                        className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none h-20"
+                        placeholder={`Ingrese ${campo.label.toLowerCase()}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Información de Procesos */}
+            <div className="mb-8">
+              <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+                <h4 className="text-lg font-semibold text-orange-800 mb-4 flex items-center gap-2">
+                  <span className="text-orange-600">🔄</span> Información de Procesos
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { key: 'listadoReportes', label: 'Listado de Reportes' },
+                    { key: 'procesoMonitoreoCalidad', label: 'Proceso de Monitoreo de Calidad' }
+                  ].map((campo) => (
+                    <div key={campo.key}>
+                      <label className="block text-sm font-medium text-orange-700 mb-2">
+                        {campo.label}
+                      </label>
+                      <textarea
+                        value={formEditarEntregaData.procesos?.[campo.key] || ''}
+                        onChange={(e) => handleEditarEntregaInputChange('procesos', campo.key, e.target.value)}
+                        className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none h-24"
+                        placeholder={`Ingrese ${campo.label.toLowerCase()}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={cerrarModalEditarEntrega}
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={actualizarEntrega}
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                <span>💾</span>
+                Guardar Cambios
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de Confirmar Eliminación */}
+      {showEliminarEntregaModal && entregaParaEliminar && (
+        <Modal 
+          isOpen={showEliminarEntregaModal} 
+          onClose={cerrarModalEliminarEntrega}
+          title="⚠️ Confirmar Eliminación"
+          size="medium"
+        >
+          <div className="max-h-[80vh] overflow-y-auto">
+            {/* Header de advertencia */}
+            <div className="mb-6">
+              <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-red-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-white text-2xl">⚠️</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-red-800 mb-1">
+                      ¿Eliminar Entrega #{entregaParaEliminar.id}?
+                    </h3>
+                    <p className="text-red-600">
+                      Cliente: <span className="font-semibold">{entregaParaEliminar.implementacion?.cliente || 'N/A'}</span>
+                    </p>
+                    <p className="text-red-600 text-sm">
+                      Proceso: {entregaParaEliminar.implementacion?.proceso || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Información de la entrega */}
+            <div className="mb-6">
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="text-blue-600">📋</span> Información de la Entrega
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">ID de Entrega</label>
+                    <p className="text-gray-900 font-semibold">#{entregaParaEliminar.id}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">ID de Implementación</label>
+                    <p className="text-gray-900 font-semibold">#{entregaParaEliminar.implementacion_id}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Fecha de Entrega</label>
+                    <p className="text-gray-900">
+                      {new Date(entregaParaEliminar.fecha_entrega).toLocaleDateString('es-ES')}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Estado</label>
+                    <p className="text-gray-900">{entregaParaEliminar.estado_entrega}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Advertencia */}
+            <div className="mb-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <span className="text-yellow-600 text-2xl">⚠️</span>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-yellow-800 mb-2">
+                      ¡Atención! Esta acción no se puede deshacer
+                    </h4>
+                    <ul className="text-yellow-700 space-y-1 text-sm">
+                      <li>• Se eliminarán todos los datos de esta entrega permanentemente</li>
+                      <li>• Se perderá toda la información contractual, tecnológica y de procesos</li>
+                      <li>• Esta acción no se puede revertir una vez confirmada</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Campo de confirmación */}
+            <div className="mb-6">
+              <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                <h4 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
+                  <span className="text-red-600">🔒</span> Confirmación de Seguridad
+                </h4>
+                <p className="text-red-700 mb-4">
+                  Para confirmar la eliminación, escriba exactamente la palabra: <strong>"eliminar"</strong>
+                </p>
+                <input
+                  type="text"
+                  value={confirmacionEliminar}
+                  onChange={(e) => setConfirmacionEliminar(e.target.value)}
+                  placeholder="Escriba 'eliminar' aquí..."
+                  className="w-full px-4 py-3 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                  autoComplete="off"
+                />
+                <p className="mt-2 text-xs text-red-600">
+                  * Escriba exactamente "eliminar" (sin comillas) para habilitar el botón de eliminación
+                </p>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={cerrarModalEliminarEntrega}
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={eliminarEntrega}
+                disabled={confirmacionEliminar.toLowerCase().trim() !== 'eliminar'}
+                className={`px-6 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                  confirmacionEliminar.toLowerCase().trim() === 'eliminar'
+                    ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer transform hover:scale-105'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <span>🗑️</span>
+                {confirmacionEliminar.toLowerCase().trim() === 'eliminar' ? 'Eliminar Entrega' : 'Escriba "eliminar"'}
               </button>
             </div>
           </div>
