@@ -34,6 +34,7 @@ try:
     from routers.estados import router as estados_router
     from routers.prioridades import router as prioridades_router
     from routers.implementaciones import router as implementaciones_router
+    from routers.entregas import router as entregas_router
     
     # Registrar todos los routers
     app.include_router(contactos_router)  # Endpoint para contactos
@@ -47,8 +48,9 @@ try:
     app.include_router(equipos_router)    # Equipos
     app.include_router(tipos_router)      # Tipos
     app.include_router(estados_router)    # Estados
-    app.include_router(prioridades_router) # Prioridades
-    app.include_router(implementaciones_router) # Implementaciones
+    app.include_router(prioridades_router)  # Prioridades
+    app.include_router(implementaciones_router)  # Implementaciones
+    app.include_router(entregas_router)  # Entregas
     
     print("✅ Todos los routers registrados correctamente")
     print(f"   - Contactos: {contactos_router.prefix}")
@@ -63,6 +65,7 @@ try:
     print(f"   - Estados: {estados_router.prefix}")
     print(f"   - Prioridades: {prioridades_router.prefix}")
     print(f"   - Implementaciones: {implementaciones_router.prefix}")
+    print(f"   - Entregas: {entregas_router.prefix}")
     
 except ImportError as e:
     print(f"❌ Error importando routers: {e}")

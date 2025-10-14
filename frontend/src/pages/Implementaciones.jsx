@@ -1281,10 +1281,24 @@ const Implementaciones = () => {
   };
 
   // Funciones para el modal de entregas realizadas
-  const abrirModalEntregasRealizadas = () => {
-    // Aquí puedes cargar las entregas realizadas desde la base de datos
-    setEntregasRealizadas([]);
-    setShowEntregasRealizadasModal(true);
+  const abrirModalEntregasRealizadas = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      
+      console.log('🔍 Cargando todas las entregas realizadas...');
+      const response = await axios.get(`http://localhost:8000/entregas`, config);
+      
+      console.log('📦 Entregas encontradas:', response.data);
+      setEntregasRealizadas(response.data);
+      setShowEntregasRealizadasModal(true);
+      
+    } catch (error) {
+      console.error('❌ Error al cargar entregas:', error);
+      toast.error('Error al cargar las entregas realizadas');
+      setEntregasRealizadas([]);
+      setShowEntregasRealizadasModal(true);
+    }
   };
 
   const cerrarModalEntregasRealizadas = () => {
@@ -3990,10 +4004,13 @@ const Implementaciones = () => {
                         Cliente
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Servicio
+                        Proceso
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Fecha de Entrega
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Estado
                       </th>
                       <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Acciones
@@ -4010,17 +4027,30 @@ const Implementaciones = () => {
                                 <span className="text-blue-600 text-sm">🏢</span>
                               </div>
                               <div>
-                                <div className="text-sm font-medium text-gray-900">{entrega.cliente}</div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {entrega.implementacion?.cliente || 'Cliente no disponible'}
+                                </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{entrega.servicio}</div>
+                            <div className="text-sm text-gray-900">
+                              {entrega.implementacion?.proceso || 'Proceso no disponible'}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
-                              {new Date(entrega.fechaEntrega).toLocaleDateString('es-ES')}
+                              {new Date(entrega.fecha_entrega).toLocaleDateString('es-ES')}
                             </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              entrega.estado_entrega === 'Completada' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {entrega.estado_entrega}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <div className="flex items-center justify-center gap-2">
@@ -4054,7 +4084,7 @@ const Implementaciones = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="4" className="px-6 py-12 text-center">
+                        <td colSpan="5" className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                               <span className="text-3xl">📋</span>
