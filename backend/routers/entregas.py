@@ -11,19 +11,6 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/entregas", tags=["entregas"])
 
 
-@router.get("/")
-async def listar_entregas(db: Session = Depends(get_db)):
-    """
-    Obtener todas las entregas con información de la implementación
-    """
-    from sqlalchemy.orm import joinedload
-    
-    entregas = db.query(ProjectEntregaImplementaciones).options(
-        joinedload(ProjectEntregaImplementaciones.implementacion)
-    ).all()
-    return entregas
-
-
 # Schemas de Pydantic
 class EntregaCreate(BaseModel):
     implementacion_id: int
