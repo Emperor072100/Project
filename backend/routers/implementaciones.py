@@ -800,6 +800,8 @@ def descargar_pdf_implementacion(id: int, db: Session = Depends(get_db)):
     """Genera PDF con formato de entrega de campaña desde la última entrega"""
     try:
         from models.project_entregaImplementaciones import ProjectEntregaImplementaciones
+        import base64
+        import os
         
         print(f"\n🔍 Buscando implementación ID: {id}")
         imp = db.query(ProjectImplementacionesClienteImple).filter_by(id=id).first()
@@ -822,6 +824,16 @@ def descargar_pdf_implementacion(id: int, db: Session = Depends(get_db)):
         print(f"✅ Entrega encontrada ID: {entrega.id}, Fecha: {entrega.fecha_entrega}")
         
         fecha_actual = datetime.now().strftime("%d/%m/%Y")
+        
+        # Cargar logo como base64
+        logo_path = os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'src', 'img', 'logo-andesbpo (1).png')
+        logo_base64 = ''
+        try:
+            with open(logo_path, 'rb') as f:
+                logo_bytes = f.read()
+                logo_base64 = 'data:image/png;base64,' + base64.b64encode(logo_bytes).decode('utf-8')
+        except Exception as e:
+            print(f"⚠️ No se pudo cargar el logo: {e}")
         
         # Función helper para sanitizar texto
         def safe_text(text):
@@ -882,34 +894,22 @@ def descargar_pdf_implementacion(id: int, db: Session = Depends(get_db)):
         word-wrap: break-word;
         overflow-wrap: break-word;
     }}
-    .header-row {{
-        width: 100%;
-        margin-bottom: 8px;
-    }}
-    .header-title {{
-        display: inline-block;
-        width: 68%;
-        vertical-align: middle;
-    }}
-    .header-logo {{
-        display: inline-block;
-        width: 30%;
-        text-align: right;
-        vertical-align: middle;
-    }}
     </style>
     </head>
     <body>
 
-    <!-- Header con título y logo -->
-    <div class="header-row">
-        <div class="header-title">
-            <h1 style="text-align:center; font-size:10pt; margin:0; padding:0; font-family:Roboto, Arial, sans-serif; font-weight:bold; display:inline-block;">FORMATO ENTREGA CAMPAÑAS</h1>
-        </div>
-        <div class="header-logo">
-            <span style="font-size:13pt; font-weight:bold; color:#22c55e; font-family:Arial, sans-serif;">Andes</span><span style="font-size:13pt; font-weight:bold; color:#6b7280; font-family:Arial, sans-serif;">BPO</span>
-        </div>
-    </div>
+    <!-- Header con título centrado y logo a la derecha -->
+    <table style="width:100%; margin-bottom:8px; border:none; border-collapse:collapse;">
+        <tr>
+            <td style="width:15%; border:none; padding:0;"></td>
+            <td style="width:55%; text-align:center; border:none; padding:0; vertical-align:bottom;">
+                <h1 style="font-size:10pt; margin:0; font-family:Roboto, Arial, sans-serif; font-weight:bold;">FORMATO ENTREGA CAMPAÑAS</h1>
+            </td>
+            <td style="width:30%; text-align:right; border:none; padding:0; vertical-align:bottom;">
+                <img src="{logo_base64}" style="height:60px; width:auto; display:block; margin-left:auto;" alt="AndesBPO" />
+            </td>
+        </tr>
+    </table>
 
     <!-- Tabla de información del cliente -->
     <table class="info-table">
@@ -1050,35 +1050,51 @@ def descargar_pdf_implementacion(id: int, db: Session = Depends(get_db)):
     </tbody>
     </table>
 
-    <!-- Firmas - optimizadas para usar menos espacio -->
-    <div style="margin-top:15px; page-break-inside:avoid;">
-    <table style="width:100%; border:none;">
+    <!-- Firmas - con espacio para firmar -->
+    <div style="margin-top:25px; page-break-inside:avoid;">
+    <table style="width:100%; border:none; border-collapse:collapse;">
     <tr>
-    <td style="width:50%; padding:3px; border:none; vertical-align:bottom;">
-    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Ejecutivo Campaña</p>
-    <div style="border-bottom:1px solid #000; width:90%; height:20px;"></div>
+    <td style="width:50%; padding:8px 10px; border:none; vertical-align:top;">
+    <p style="margin:0 0 3px 0; font-weight:bold; font-size:9pt; font-family:Roboto, Arial, sans-serif;">Ejecutivo Campaña</p>
+    <div style="height:38px; margin-top:5px;">
+        <div style="display:block; border-bottom:2px solid #000; width:90%; height:1px;">&nbsp;</div>
+    </div>
     </td>
-    <td style="width:50%; padding:3px; border:none; vertical-align:bottom;">
-    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Líder Campaña</p>
-    <div style="border-bottom:1px solid #000; width:90%; height:20px;"></div>
+    <td style="width:50%; padding:8px 10px; border:none; vertical-align:top;">
+    <p style="margin:0 0 3px 0; font-weight:bold; font-size:9pt; font-family:Roboto, Arial, sans-serif;">Líder Campaña</p>
+    <div style="height:38px; margin-top:5px;">
+        <div style="display:block; border-bottom:2px solid #000; width:90%; height:1px;">&nbsp;</div>
+    </div>
     </td>
     </tr>
     <tr>
-    <td style="padding:3px 3px 0 3px; border:none; vertical-align:bottom;">
-    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Auxiliar Administrativo</p>
-    <div style="border-bottom:1px solid #000; width:90%; height:20px;"></div>
+    <td style="padding:15px 10px 8px 10px; border:none; vertical-align:top;">
+    <p style="margin:0 0 3px 0; font-weight:bold; font-size:9pt; font-family:Roboto, Arial, sans-serif;">Auxiliar Administrativo</p>
+    <div style="height:38px; margin-top:5px;">
+        <div style="display:block; border-bottom:2px solid #000; width:90%; height:1px;">&nbsp;</div>
+    </div>
     </td>
-    <td style="padding:3px 3px 0 3px; border:none; vertical-align:bottom;">
-    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Ejecutivo Comercial</p>
-    <div style="border-bottom:1px solid #000; width:90%; height:20px;"></div>
-    </td>
-    </tr>
-    <tr>
-    <td colspan="2" style="padding:3px 3px 0 3px; border:none; vertical-align:bottom;">
-    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Líder Implementación</p>
-    <div style="border-bottom:1px solid #000; width:45%; height:20px;"></div>
+    <td style="padding:15px 10px 8px 10px; border:none; vertical-align:top;">
+    <p style="margin:0 0 3px 0; font-weight:bold; font-size:9pt; font-family:Roboto, Arial, sans-serif;">Ejecutivo Comercial</p>
+    <div style="height:38px; margin-top:5px;">
+        <div style="display:block; border-bottom:2px solid #000; width:90%; height:1px;">&nbsp;</div>
+    </div>
     </td>
     </tr>
+        <tr>
+        <td colspan="2" style="padding:15px 10px 8px 10px; border:none; vertical-align:top;">
+        <p style="margin:0 0 3px 0; font-weight:bold; font-size:9pt; font-family:Roboto, Arial, sans-serif;">Líder Implementación</p>
+            <!-- Nested table with line on the left: 50% line | 50% empty -->
+            <table style="width:100%; border:none; border-collapse:collapse; margin-top:5px;">
+                <tr>
+                    <td style="width:48.5%; border:none; padding:0; vertical-align:bottom;">
+                        <div style="border-bottom:2px solid #000; width:100%; height:1px;">&nbsp;</div>
+                    </td>
+                    <td style="width:50%; border:none; padding:0;">&nbsp;</td>
+                </tr>
+            </table>
+        </td>
+        </tr>
     </table>
     </div>
 
