@@ -1085,7 +1085,7 @@ def descargar_pdf_implementacion(id: int, db: Session = Depends(get_db)):
         <td colspan="2" style="padding:15px 10px 8px 10px; border:none; vertical-align:top;">
         <p style="margin:0 0 3px 0; font-weight:bold; font-size:9pt; font-family:Roboto, Arial, sans-serif;">Líder Implementación</p>
             <!-- Nested table with line on the left: 50% line | 50% empty -->
-            <table style="width:100%; border:none; border-collapse:collapse; margin-top:5px;">
+            <table style="width:100%; border:none; border-collapse:collapse; margin-top:35px;">
                 <tr>
                     <td style="width:48.5%; border:none; padding:0; vertical-align:bottom;">
                         <div style="border-bottom:2px solid #000; width:100%; height:1px;">&nbsp;</div>
