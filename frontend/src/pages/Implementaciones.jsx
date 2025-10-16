@@ -132,6 +132,35 @@ const Implementaciones = () => {
   const [entregaParaEliminar, setEntregaParaEliminar] = useState(null);
   const [formEditarEntregaData, setFormEditarEntregaData] = useState({});
   const [confirmacionEliminar, setConfirmacionEliminar] = useState('');
+  // Estados para manejo de nuevas subsecciones
+  const [nuevoNombreSubsesion, setNuevoNombreSubsesion] = useState({
+    contractual: '',
+    talentoHumano: '',
+    procesos: '',
+    tecnologia: ''
+  });
+  const [agregandoSubsesion, setAgregandoSubsesion] = useState({
+    contractual: false,
+    talentoHumano: false,
+    procesos: false,
+    tecnologia: false
+  });
+
+  const agregarSubsesion = (seccion) => {
+    const nombre = nuevoNombreSubsesion[seccion];
+    if (!nombre.trim()) return;
+    const key = nombre.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+    setFormData(prev => ({
+      ...prev,
+      [seccion]: {
+        ...prev[seccion],
+        [key]: { seguimiento: '', estado: '', responsable: '', notas: '' }
+      }
+    }));
+    setNuevoNombreSubsesion(prev => ({ ...prev, [seccion]: '' }));
+    setAgregandoSubsesion(prev => ({ ...prev, [seccion]: false }));
+  };
+
   const [formEntregaData, setFormEntregaData] = useState({
     contractual: {
       contrato: '',
@@ -2509,14 +2538,49 @@ const Implementaciones = () => {
                   <h3 className="text-lg font-semibold text-purple-800">Contractual</h3>
                   <p className="text-purple-600">Gestión de documentos contractuales</p>
                 </div>
+                {/* Botón + para agregar subsesión */}
+                <button
+                  type="button"
+                  onClick={() => setAgregandoSubsesion(prev => ({ ...prev, contractual: true }))}
+                  className="ml-auto flex items-center gap-2 px-3 py-2 bg-purple-200 hover:bg-purple-300 text-purple-800 rounded-lg font-medium text-sm transition-all"
+                  title="Agregar nueva subsesión"
+                >
+                  <FaPlus />
+                  Nueva subsesión
+                </button>
               </div>
+              {/* Input para nueva subsesión */}
+              {agregandoSubsesion.contractual && (
+                <div className="flex items-center gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={nuevoNombreSubsesion.contractual}
+                    onChange={e => setNuevoNombreSubsesion(prev => ({ ...prev, contractual: e.target.value }))}
+                    placeholder="Nombre de la nueva subsesión"
+                    className="p-2 border rounded-lg flex-1"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => agregarSubsesion('contractual')}
+                    className="px-3 py-2 bg-purple-600 text-white rounded-lg font-medium"
+                  >
+                    Agregar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { 
+                      setAgregandoSubsesion(prev => ({ ...prev, contractual: false })); 
+                      setNuevoNombreSubsesion(prev => ({ ...prev, contractual: '' })); 
+                    }}
+                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
               <div className="space-y-6">
-                {Object.entries({
-                  modeloContrato: "Modelo de contrato",
-                  modeloConfidencialidad: "Modelo del Acuerdo de Confidencialidad",
-                  alcance: "Alcance",
-                  fechaInicio: "Fecha de Inicio prestación del Servicio"
-                }).map(([key, title]) => (
+                {Object.entries(formData.contractual).map(([key, value]) => (
                   <div key={key} className="border-t pt-4 first:border-t-0 first:pt-0">
                     <button 
                       onClick={() => setExpandedSections(prev => ({...prev, ['contractual_' + key]: !prev['contractual_' + key]}))}
@@ -2526,7 +2590,7 @@ const Implementaciones = () => {
                         <FaChevronDown className="mr-2 text-blue-500" size={14} /> : 
                         <FaChevronRight className="mr-2 text-gray-500" size={14} />
                       }
-                      {title}
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
                     </button>
                     <div className={`grid grid-cols-1 gap-4 ${expandedSections['contractual_' + key] ? 'block' : 'hidden'}`}>
                       <div>
@@ -2614,7 +2678,42 @@ const Implementaciones = () => {
                   <h3 className="text-lg font-semibold text-green-800">Talento Humano</h3>
                   <p className="text-green-600">Gestión del personal y capacitación</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setAgregandoSubsesion(prev => ({ ...prev, talentoHumano: true }))}
+                  className="ml-auto flex items-center gap-2 px-3 py-2 bg-green-200 hover:bg-green-300 text-green-800 rounded-lg font-medium text-sm transition-all"
+                  title="Agregar nueva subsesión"
+                >
+                  <FaPlus />
+                  Nueva subsesión
+                </button>
               </div>
+              {agregandoSubsesion.talentoHumano && (
+                <div className="flex items-center gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={nuevoNombreSubsesion.talentoHumano}
+                    onChange={e => setNuevoNombreSubsesion(prev => ({ ...prev, talentoHumano: e.target.value }))}
+                    placeholder="Nombre de la nueva subsesión"
+                    className="p-2 border rounded-lg flex-1"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => agregarSubsesion('talentoHumano')}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg font-medium"
+                  >
+                    Agregar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAgregandoSubsesion(prev => ({ ...prev, talentoHumano: false })); setNuevoNombreSubsesion(prev => ({ ...prev, talentoHumano: '' })); }}
+                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
               <div className="space-y-6">
                 {Object.entries({
                   perfilPersonal: "Perfil del Personal Requerido",
@@ -2721,7 +2820,42 @@ const Implementaciones = () => {
                   <h3 className="text-lg font-semibold text-amber-800">Procesos</h3>
                   <p className="text-amber-600">Gestión y configuración de procesos</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setAgregandoSubsesion(prev => ({ ...prev, procesos: true }))}
+                  className="ml-auto flex items-center gap-2 px-3 py-2 bg-amber-200 hover:bg-amber-300 text-amber-800 rounded-lg font-medium text-sm transition-all"
+                  title="Agregar nueva subsesión"
+                >
+                  <FaPlus />
+                  Nueva subsesión
+                </button>
               </div>
+              {agregandoSubsesion.procesos && (
+                <div className="flex items-center gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={nuevoNombreSubsesion.procesos}
+                    onChange={e => setNuevoNombreSubsesion(prev => ({ ...prev, procesos: e.target.value }))}
+                    placeholder="Nombre de la nueva subsesión"
+                    className="p-2 border rounded-lg flex-1"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => agregarSubsesion('procesos')}
+                    className="px-3 py-2 bg-amber-600 text-white rounded-lg font-medium"
+                  >
+                    Agregar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAgregandoSubsesion(prev => ({ ...prev, procesos: false })); setNuevoNombreSubsesion(prev => ({ ...prev, procesos: '' })); }}
+                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
               <div className="space-y-6">
                 {Object.entries({
                   responsableCliente: "Nombrar Responsable de Implementar el Proyecto por el cliente",
@@ -2832,7 +2966,42 @@ const Implementaciones = () => {
                   <h3 className="text-lg font-semibold text-blue-800">Tecnología</h3>
                   <p className="text-blue-600">Configuración tecnológica y sistemas</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setAgregandoSubsesion(prev => ({ ...prev, tecnologia: true }))}
+                  className="ml-auto flex items-center gap-2 px-3 py-2 bg-blue-200 hover:bg-blue-300 text-blue-800 rounded-lg font-medium text-sm transition-all"
+                  title="Agregar nueva subsesión"
+                >
+                  <FaPlus />
+                  Nueva subsesión
+                </button>
               </div>
+              {agregandoSubsesion.tecnologia && (
+                <div className="flex items-center gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={nuevoNombreSubsesion.tecnologia}
+                    onChange={e => setNuevoNombreSubsesion(prev => ({ ...prev, tecnologia: e.target.value }))}
+                    placeholder="Nombre de la nueva subsesión"
+                    className="p-2 border rounded-lg flex-1"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => agregarSubsesion('tecnologia')}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg font-medium"
+                  >
+                    Agregar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAgregandoSubsesion(prev => ({ ...prev, tecnologia: false })); setNuevoNombreSubsesion(prev => ({ ...prev, tecnologia: '' })); }}
+                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
               <div className="space-y-6">
                 {Object.entries({
                   creacionModulo: "Creación Modulo en Wolkvox para cliente nuevo",
