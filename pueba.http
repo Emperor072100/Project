@@ -1,0 +1,72 @@
+### 1. Login Admin
+POST http://localhost:8000/auth/login
+Content-Type: application/json
+
+{
+  "correo": "admin@admin.com",
+  "contraseña": "admin"
+}
+
+### 2. Crear Campaña Cobra (CORREGIDO)
+POST http://localhost:8000/campanas/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibm9tYnJlIjoiQUxWQVJPIiwiY29ycmVvIjoiYWRtaW5AYWRtaW4uY29tIiwicm9sIjoiUm9sVXN1YXJpby5hZG1pbiIsImV4cCI6MTc2MDU1MzU4NH0.GZkVhDPbW8DXunMw4TZBRov1v5DaRTN6q2VAWcIM4YM
+
+{
+  "cliente_corporativo_id": 1,
+  "contacto_id": 1,
+  "ejecutivo": "ALVARO",
+  "fecha_de_produccion": "2025-10-15",
+  "lider_de_campaña": "ALVARO",
+  "nombre": "cobra",
+  "tipo": "TMC"
+}
+
+### 3. Obtener todas las campañas
+GET http://localhost:8000/campanas/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibm9tYnJlIjoiQUxWQVJPIiwiY29ycmVvIjoiYWRtaW5AYWRtaW4uY29tIiwicm9sIjoiUm9sVXN1YXJpby5hZG1pbiIsImV4cCI6MTc2MDU1MzU4NH0.GZkVhDPbW8DXunMw4TZBRov1v5DaRTN6q2VAWcIM4YM
+
+### 4. Crear Campaña tipo SAC
+POST http://localhost:8000/campanas/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibm9tYnJlIjoiQUxWQVJPIiwiY29ycmVvIjoiYWRtaW5AYWRtaW4uY29tIiwicm9sIjoiUm9sVXN1YXJpby5hZG1pbiIsImV4cCI6MTc2MDU1MzU4NH0.GZkVhDPbW8DXunMw4TZBRov1v5DaRTN6q2VAWcIM4YM
+
+{
+  "cliente_corporativo_id": 1,
+  "contacto_id": 1,
+  "ejecutivo": "ALVARO",
+  "fecha_de_produccion": "2025-10-15",
+  "lider_de_campaña": "ALVARO",
+  "nombre": "Servicio al Cliente",
+  "tipo": "SAC"
+}
+
+### 5. Crear Campaña tipo TVT
+POST http://localhost:8000/campanas/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibm9tYnJlIjoiQUxWQVJPIiwiY29ycmVvIjoiYWRtaW5AYWRtaW4uY29tIiwicm9sIjoiUm9sVXN1YXJpby5hZG1pbiIsImV4cCI6MTc2MDU1MzU4NH0.GZkVhDPbW8DXunMw4TZBRov1v5DaRTN6q2VAWcIM4YM
+
+{
+  "cliente_corporativo_id": 1,
+  "contacto_id": 1,
+  "ejecutivo": "ALVARO",
+  "fecha_de_produccion": "2025-10-15",
+  "lider_de_campaña": "ALVARO",
+  "nombre": "Tele Ventas",
+  "tipo": "TVT"
+}
+
+### 6. Crear Campaña tipo CBZ
+POST http://localhost:8000/campanas/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibm9tYnJlIjoiQUxWQVJPIiwiY29ycmVvIjoiYWRtaW5AYWRtaW4uY29tIiwicm9sIjoiUm9sVXN1YXJpby5hZG1pbiIsImV4cCI6MTc2MDU1MzU4NH0.GZkVhDPbW8DXunMw4TZBRov1v5DaRTN6q2VAWcIM4YM
+
+{
+  "cliente_corporativo_id": 1,
+  "contacto_id": 1,
+  "ejecutivo": "ALVARO",
+  "fecha_de_produccion": "2025-10-15",
+  "lider_de_campaña": "ALVARO",
+  "nombre": "Cobranzas",
+  "tipo": "CBZ"
+}

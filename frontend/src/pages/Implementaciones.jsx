@@ -221,6 +221,43 @@ const Implementaciones = () => {
     cargarImplementaciones();
   }, []);
 
+  // Función para descargar PDF de implementación
+  const descargarPDFEntrega = async (implementacionId) => {
+    try {
+      console.log(`Descargando PDF para implementación: ${implementacionId}`);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const config = { 
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob' // Importante para recibir archivos binarios
+      };
+      
+      const response = await axios.get(
+        `http://localhost:8000/implementaciones/${implementacionId}/descargar_pdf`,
+        config
+      );
+      
+      // Crear un blob del PDF recibido
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      
+      // Crear un enlace temporal para descargar
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `entrega_implementacion_${implementacionId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpiar
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('PDF descargado exitosamente');
+    } catch (error) {
+      console.error('Error al descargar PDF:', error);
+      toast.error('❌ Error al descargar PDF: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   // Hook para analizar implementaciones con 0% automáticamente (deshabilitado temporalmente)
   /*
   useEffect(() => {
@@ -4308,7 +4345,7 @@ const Implementaciones = () => {
                                 Editar
                               </button>
                               <button 
-                                onClick={() => console.log('Descargando PDF:', entrega.id)}
+                                onClick={() => descargarPDFEntrega(entrega.implementacion_id)}
                                 className="inline-flex items-center px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 transition-all duration-200 shadow-sm hover:shadow-md"
                                 title="Descargar PDF"
                               >

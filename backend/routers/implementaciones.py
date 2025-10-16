@@ -10,6 +10,8 @@ from models.project_implementacion_tecnologia import ProjectImplementacionTecnol
 from pydantic import BaseModel
 import pandas as pd
 import io
+from xhtml2pdf import pisa
+from datetime import datetime
 
 class ImplementacionCreate(BaseModel):
     cliente: str
@@ -792,3 +794,322 @@ def descargar_excel(db: Session = Depends(get_db)):
     response = Response(output.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     response.headers["Content-Disposition"] = "attachment; filename=implementaciones.xlsx"
     return response
+
+@router.get("/{id}/descargar_pdf")
+def descargar_pdf_implementacion(id: int, db: Session = Depends(get_db)):
+    """Genera PDF con formato de entrega de campaña desde la última entrega"""
+    try:
+        from models.project_entregaImplementaciones import ProjectEntregaImplementaciones
+        
+        print(f"\n🔍 Buscando implementación ID: {id}")
+        imp = db.query(ProjectImplementacionesClienteImple).filter_by(id=id).first()
+        if not imp:
+            print(f"❌ Implementación {id} no encontrada")
+            raise HTTPException(status_code=404, detail="Implementación no encontrada")
+        
+        print(f"✅ Implementación encontrada: {imp.cliente}")
+        
+        # Obtener la ÚLTIMA entrega de esta implementación
+        entrega = db.query(ProjectEntregaImplementaciones)\
+            .filter_by(implementacion_id=id)\
+            .order_by(ProjectEntregaImplementaciones.fecha_entrega.desc())\
+            .first()
+        
+        if not entrega:
+            print(f"❌ No se encontró entrega para implementación {id}")
+            raise HTTPException(status_code=404, detail="No hay entregas registradas para esta implementación")
+        
+        print(f"✅ Entrega encontrada ID: {entrega.id}, Fecha: {entrega.fecha_entrega}")
+        
+        fecha_actual = datetime.now().strftime("%d/%m/%Y")
+        
+        # Función helper para sanitizar texto
+        def safe_text(text):
+            if not text:
+                return '&nbsp;'
+            return str(text).replace('"', "'").replace('<', '&lt;').replace('>', '&gt;')
+        
+        # Datos sanitizados
+        cliente = safe_text(imp.cliente) if imp.cliente else '&nbsp;'
+        proceso = safe_text(imp.proceso) if imp.proceso else '&nbsp;'
+        
+        # Estilos inline directos optimizados para mejor uso del espacio
+        style_header = 'background:#000; color:#fff; padding:3px 2px; text-align:center; vertical-align:middle; font-size:8pt; font-weight:bold; border:1px solid #000; font-family:Roboto, Arial, sans-serif; line-height:1.2;'
+        style_header_proceso = 'background:#000; color:#fff; padding:3px 2px; text-align:center; vertical-align:middle; font-size:8pt; font-weight:bold; border:1px solid #000; width:16%; font-family:Roboto, Arial, sans-serif; line-height:1.2;'
+        style_header_concepto = 'background:#000; color:#fff; padding:3px 2px; text-align:center; vertical-align:middle; font-size:8pt; font-weight:bold; border:1px solid #000; width:37%; font-family:Roboto, Arial, sans-serif; line-height:1.2;'
+        style_header_observacion = 'background:#000; color:#fff; padding:3px 2px; text-align:center; vertical-align:middle; font-size:8pt; font-weight:bold; border:1px solid #000; width:47%; font-family:Roboto, Arial, sans-serif; line-height:1.2;'
+        style_proceso = 'padding:3px 2px; font-size:8pt; border:1px solid #444; vertical-align:top; text-align:center; font-family:Roboto, Arial, sans-serif; line-height:1.3;'
+        style_concepto = 'padding:3px 2px; font-size:8pt; border:1px solid #444; vertical-align:top; text-align:left; font-family:Roboto, Arial, sans-serif; line-height:1.3;'
+        style_observacion = 'padding:3px 2px; font-size:8pt; border:1px solid #444; vertical-align:top; text-align:left; font-family:Roboto, Arial, sans-serif; line-height:1.3; word-wrap:break-word;'
+        
+        # HTML con maquetación optimizada para mejor uso del espacio
+        html_content = f"""<!doctype html>
+    <html lang="es">
+    <head>
+    <meta charset="utf-8"/>
+    <title>Formato Entrega Campañas</title>
+    <style>
+    @page {{ 
+        size: A4; 
+        margin: 12mm 10mm 12mm 10mm;
+    }}
+    body {{ 
+        font-family: 'Roboto', Arial, sans-serif; 
+        margin: 0; 
+        padding: 0; 
+        font-size: 8pt;
+        line-height: 1.3;
+    }}
+    table {{ 
+        width: 100%; 
+        border-collapse: collapse; 
+        font-family: 'Roboto', Arial, sans-serif;
+        table-layout: fixed;
+    }}
+    .info-table {{
+        margin-bottom: 8px;
+    }}
+    .data-table {{
+        page-break-inside: auto;
+    }}
+    .data-table thead {{
+        display: table-header-group;
+    }}
+    .data-table tbody tr {{
+        page-break-inside: avoid;
+    }}
+    td {{
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }}
+    .header-row {{
+        width: 100%;
+        margin-bottom: 8px;
+    }}
+    .header-title {{
+        display: inline-block;
+        width: 68%;
+        vertical-align: middle;
+    }}
+    .header-logo {{
+        display: inline-block;
+        width: 30%;
+        text-align: right;
+        vertical-align: middle;
+    }}
+    </style>
+    </head>
+    <body>
+
+    <!-- Header con título y logo -->
+    <div class="header-row">
+        <div class="header-title">
+            <h1 style="text-align:center; font-size:10pt; margin:0; padding:0; font-family:Roboto, Arial, sans-serif; font-weight:bold; display:inline-block;">FORMATO ENTREGA CAMPAÑAS</h1>
+        </div>
+        <div class="header-logo">
+            <span style="font-size:13pt; font-weight:bold; color:#22c55e; font-family:Arial, sans-serif;">Andes</span><span style="font-size:13pt; font-weight:bold; color:#6b7280; font-family:Arial, sans-serif;">BPO</span>
+        </div>
+    </div>
+
+    <!-- Tabla de información del cliente -->
+    <table class="info-table">
+    <tr>
+    <td style="width:35%; padding:2px 4px; border:1px solid #444; background:#f0f0f0; font-weight:bold; vertical-align:middle; text-align:left; font-size:8pt; font-family:Roboto, Arial, sans-serif;">NOMBRE DEL CLIENTE</td>
+    <td style="padding:2px 4px; border:1px solid #444; text-align:left; vertical-align:middle; font-size:8pt; font-family:Roboto, Arial, sans-serif;">{cliente}</td>
+    </tr>
+    <tr>
+    <td style="padding:2px 4px; border:1px solid #444; background:#f0f0f0; font-weight:bold; vertical-align:middle; text-align:left; font-size:8pt; font-family:Roboto, Arial, sans-serif;">TIPO DE SERVICIO</td>
+    <td style="padding:2px 4px; border:1px solid #444; text-align:left; vertical-align:middle; font-size:8pt; font-family:Roboto, Arial, sans-serif;">{proceso}</td>
+    </tr>
+    <tr>
+    <td style="padding:2px 4px; border:1px solid #444; background:#f0f0f0; font-weight:bold; vertical-align:middle; text-align:left; font-size:8pt; font-family:Roboto, Arial, sans-serif;">FECHA DE INICIO SERVICIO</td>
+    <td style="padding:2px 4px; border:1px solid #444; text-align:left; vertical-align:middle; font-size:8pt; font-family:Roboto, Arial, sans-serif;">{fecha_actual}</td>
+    </tr>
+    <tr>
+    <td style="padding:2px 4px; border:1px solid #444; background:#f0f0f0; font-weight:bold; vertical-align:middle; text-align:left; font-size:8pt; font-family:Roboto, Arial, sans-serif;">FECHA DE ENTREGA</td>
+    <td style="padding:2px 4px; border:1px solid #444; text-align:left; vertical-align:middle; font-size:8pt; font-family:Roboto, Arial, sans-serif;">{fecha_actual}</td>
+    </tr>
+    </table>
+
+    <!-- Tabla de tres columnas con encabezado repetido -->
+    <table class="data-table" style="margin-top:8px; width:100%;">
+    <!-- Encabezados que se repiten en cada página -->
+    <thead>
+    <tr>
+    <td style="{style_header_proceso}">PROCESO</td>
+    <td style="{style_header_concepto}">CONCEPTO</td>
+    <td style="{style_header_observacion}">OBSERVACION</td>
+    </tr>
+    </thead>
+    <tbody>
+
+    <!-- CONTRACTUAL -->
+    <tr>
+    <td rowspan="8" style="{style_proceso}">CONTRACTUAL</td>
+    <td style="{style_concepto}">Contrato</td>
+    <td style="{style_observacion}">{safe_text(entrega.contrato)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Acuerdos de Niveles de Servicio</td>
+    <td style="{style_observacion}">{safe_text(entrega.acuerdo_niveles_servicio)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Pólizas</td>
+    <td style="{style_observacion}">{safe_text(entrega.polizas)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Penalidades</td>
+    <td style="{style_observacion}">{safe_text(entrega.penalidades)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Alcance del Servicio</td>
+    <td style="{style_observacion}">{safe_text(entrega.alcance_servicio)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Unidades de Facturación</td>
+    <td style="{style_observacion}">{safe_text(entrega.unidades_facturacion)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Acuerdo de Pago</td>
+    <td style="{style_observacion}">{safe_text(entrega.acuerdo_pago)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Incremento</td>
+    <td style="{style_observacion}">{safe_text(entrega.incremento)}</td>
+    </tr>
+
+    <!-- TECNOLOGIA -->
+    <tr>
+    <td rowspan="14" style="{style_proceso}">TECNOLOGIA</td>
+    <td style="{style_concepto}">Mapa de Aplicativos a utilizarse (Nombres, alcances, requerimientos técnicos, funcionalidades)</td>
+    <td style="{style_observacion}">{safe_text(entrega.mapa_aplicativos)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Internet</td>
+    <td style="{style_observacion}">{safe_text(entrega.internet)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Telefonía</td>
+    <td style="{style_observacion}">{safe_text(entrega.telefonia)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Whatsapp</td>
+    <td style="{style_observacion}">{safe_text(entrega.whatsapp)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Integraciones</td>
+    <td style="{style_observacion}">{safe_text(entrega.integraciones)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">VPN</td>
+    <td style="{style_observacion}">{safe_text(entrega.vpn)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Diseño del IVR</td>
+    <td style="{style_observacion}">{safe_text(entrega.diseno_ivr)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Transferencia de llamadas entre empresas: Lineas Telefónicas, Volumen de Llamadas</td>
+    <td style="{style_observacion}">{safe_text(entrega.transferencia_llamadas)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Correos Electrónicos (Condiciones de Uso, capacidades)</td>
+    <td style="{style_observacion}">{safe_text(entrega.correos_electronicos)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Línea 018000</td>
+    <td style="{style_observacion}">{safe_text(entrega.linea_018000)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Línea de Entrada</td>
+    <td style="{style_observacion}">{safe_text(entrega.linea_entrada)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">SMS (Caracteristicas)</td>
+    <td style="{style_observacion}">{safe_text(entrega.sms)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Requisitos Grabación de llamada, entrega y resguardo de las mismas</td>
+    <td style="{style_observacion}">{safe_text(entrega.requisitos_grabacion)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Encuestas de satisfacción</td>
+    <td style="{style_observacion}">{safe_text(entrega.encuesta_satisfaccion)}</td>
+    </tr>
+
+    <!-- PROCESOS -->
+    <tr>
+    <td rowspan="2" style="{style_proceso}">PROCESOS</td>
+    <td style="{style_concepto}">Listado Reportes Esperados</td>
+    <td style="{style_observacion}">{safe_text(entrega.listado_reportes)}</td>
+    </tr>
+    <tr>
+    <td style="{style_concepto}">Proceso Monitoreo y Calidad Andes BPO</td>
+    <td style="{style_observacion}">{safe_text(entrega.proceso_monitoreo_calidad)}</td>
+    </tr>
+    </tbody>
+    </table>
+
+    <!-- Firmas - optimizadas para usar menos espacio -->
+    <div style="margin-top:15px; page-break-inside:avoid;">
+    <table style="width:100%; border:none;">
+    <tr>
+    <td style="width:50%; padding:3px; border:none; vertical-align:bottom;">
+    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Ejecutivo Campaña</p>
+    <div style="border-bottom:1px solid #000; width:90%; height:20px;"></div>
+    </td>
+    <td style="width:50%; padding:3px; border:none; vertical-align:bottom;">
+    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Líder Campaña</p>
+    <div style="border-bottom:1px solid #000; width:90%; height:20px;"></div>
+    </td>
+    </tr>
+    <tr>
+    <td style="padding:3px 3px 0 3px; border:none; vertical-align:bottom;">
+    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Auxiliar Administrativo</p>
+    <div style="border-bottom:1px solid #000; width:90%; height:20px;"></div>
+    </td>
+    <td style="padding:3px 3px 0 3px; border:none; vertical-align:bottom;">
+    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Ejecutivo Comercial</p>
+    <div style="border-bottom:1px solid #000; width:90%; height:20px;"></div>
+    </td>
+    </tr>
+    <tr>
+    <td colspan="2" style="padding:3px 3px 0 3px; border:none; vertical-align:bottom;">
+    <p style="margin:0 0 2px 0; font-weight:bold; font-size:8pt;">Líder Implementación</p>
+    <div style="border-bottom:1px solid #000; width:45%; height:20px;"></div>
+    </td>
+    </tr>
+    </table>
+    </div>
+
+    </body>
+    </html>
+    """
+        
+        print("📄 Generando PDF con maquetación limpia...")
+        
+        # Generar PDF con xhtml2pdf
+        pdf_buffer = io.BytesIO()
+        pisa_status = pisa.CreatePDF(html_content.encode('utf-8'), dest=pdf_buffer)
+        
+        if pisa_status.err:
+            print(f"❌ Error en pisa.CreatePDF: {pisa_status.err}")
+            print("Errores de pisa:", pisa_status.log)
+            raise HTTPException(status_code=500, detail="Error al generar PDF")
+        
+        print("✅ PDF generado exitosamente")
+        pdf_buffer.seek(0)
+        filename = f"entrega_{cliente.replace(' ', '_').replace('&nbsp;', '')}_{fecha_actual.replace('/', '-')}.pdf"
+        
+        return Response(
+            content=pdf_buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error inesperado generando PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error al generar PDF: {str(e)}")
