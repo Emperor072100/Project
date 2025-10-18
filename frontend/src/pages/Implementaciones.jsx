@@ -48,6 +48,43 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(styleSheet);
 }
 
+// Mapeo de nombres de campos a títulos legibles
+const FIELD_TITLES = {
+  contractual: {
+    modeloContrato: "Modelo de Contrato",
+    modeloConfidencialidad: "Acuerdo de Confidencialidad",
+    alcance: "Alcance",
+    fechaInicio: "Fecha de Inicio"
+  },
+  talentoHumano: {
+    perfilPersonal: "Perfil del Personal Requerido",
+    cantidadAsesores: "Cantidad de Asesores requeridos",
+    horarios: "Horarios",
+    formador: "Formador",
+    capacitacionesAndes: "Programa de Capacitaciones de Andes BPO",
+    capacitacionesCliente: "Programa de Capacitaciones del cliente"
+  },
+  procesos: {
+    responsableCliente: "Responsable Cliente",
+    responsableAndes: "Responsable Andes BPO",
+    responsablesOperacion: "Responsables de Operación",
+    listadoReportes: "Listado de Reportes",
+    protocoloComunicaciones: "Protocolo de Comunicaciones",
+    informacionDiaria: "Información Diaria",
+    seguimientoPeriodico: "Seguimiento Periódico",
+    guionesProtocolos: "Guiones y Protocolos",
+    procesoMonitoreo: "Proceso de Monitoreo"
+  },
+  tecnologia: {
+    creacionModulo: "Creación de Módulo",
+    tipificacionInteracciones: "Tipificación de Interacciones",
+    aplicativosProceso: "Aplicativos del Proceso",
+    whatsapp: "WhatsApp",
+    correosElectronicos: "Correos Electrónicos",
+    requisitosGrabacion: "Requisitos de Grabación"
+  }
+};
+
 const Implementaciones = () => {
   const [implementaciones, setImplementaciones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -473,16 +510,22 @@ const Implementaciones = () => {
     return analisis;
   }, [obtenerPesoEstado]);
 
-  // Función para calcular el progreso de una sección
-  const calcularProgresoSeccion = (seccionData, subsesiones) => {
-    if (!seccionData || !subsesiones || subsesiones.length === 0) return 0;
+  // Función para calcular el progreso de una sección dinámicamente
+  const calcularProgresoSeccion = (seccionData) => {
+    if (!seccionData || typeof seccionData !== 'object') return 0;
     
-    const totalPeso = subsesiones.reduce((suma, subsesion) => {
-      const estado = seccionData[subsesion.key]?.estado;
+    // Obtener todas las claves (campos predefinidos + personalizados)
+    const campos = Object.keys(seccionData);
+    if (campos.length === 0) return 0;
+    
+    // Calcular el peso total sumando el estado de cada campo
+    const totalPeso = campos.reduce((suma, key) => {
+      const estado = seccionData[key]?.estado;
       return suma + obtenerPesoEstado(estado);
     }, 0);
     
-    const maxPosible = subsesiones.length * 100;
+    // El máximo posible es 100 por cada campo
+    const maxPosible = campos.length * 100;
     return Math.round((totalPeso / maxPosible) * 100);
   };
 
@@ -1183,6 +1226,8 @@ const Implementaciones = () => {
         }
         
         const mapped = {};
+        
+        // Primero, mapear los campos predefinidos de defaultStructure
         Object.keys(defaultStructure).forEach(key => {
           mapped[key] = {
             seguimiento: seccionData[key]?.seguimiento || '',
@@ -1191,6 +1236,19 @@ const Implementaciones = () => {
             notas: seccionData[key]?.notas || ''
           };
         });
+        
+        // Luego, agregar los campos personalizados que vienen del backend pero no están en defaultStructure
+        Object.keys(seccionData).forEach(key => {
+          if (!defaultStructure.hasOwnProperty(key) && typeof seccionData[key] === 'object') {
+            mapped[key] = {
+              seguimiento: seccionData[key]?.seguimiento || '',
+              estado: seccionData[key]?.estado || '',
+              responsable: seccionData[key]?.responsable || '',
+              notas: seccionData[key]?.notas || ''
+            };
+          }
+        });
+        
         return mapped;
       };
       
@@ -2157,187 +2215,116 @@ const Implementaciones = () => {
       // FASE: INICIO
       const inicioStartRow = currentRow;
       
-      // Proceso: Desarrollar el acta de Inicio
+      // Proceso: Desarrollar el acta de Inicio (CONTRACTUAL - DINÁMICO)
       const contractualStartRow = currentRow;
-      addDataRow('INICIO', 'Desarrollar el acta de Inicio', 'Modelo de contrato', 
-                 detalleCompleto.contractual?.modeloContrato?.seguimiento || '', 
-                 detalleCompleto.contractual?.modeloContrato?.estado || '', 
-                 detalleCompleto.contractual?.modeloContrato?.responsable || '',
-                 detalleCompleto.contractual?.modeloContrato?.notas || '', true, false, 'FFD6DCE4');
-
-      addDataRow('', '', 'Modelo del Acuerdo de Confidencialidad', 
-                 detalleCompleto.contractual?.modeloConfidencialidad?.seguimiento || '', 
-                 detalleCompleto.contractual?.modeloConfidencialidad?.estado || '', 
-                 detalleCompleto.contractual?.modeloConfidencialidad?.responsable || '',
-                 detalleCompleto.contractual?.modeloConfidencialidad?.notas || '');
-
-      addDataRow('', '', 'Alcance', 
-                 detalleCompleto.contractual?.alcance?.seguimiento || '', 
-                 detalleCompleto.contractual?.alcance?.estado || '', 
-                 detalleCompleto.contractual?.alcance?.responsable || '',
-                 detalleCompleto.contractual?.alcance?.notas || '');
-
-      addDataRow('', '', 'Fecha de Inicio prestación del Servicio', 
-                 detalleCompleto.contractual?.fechaInicio?.seguimiento || '', 
-                 detalleCompleto.contractual?.fechaInicio?.estado || '', 
-                 detalleCompleto.contractual?.fechaInicio?.responsable || '',
-                 detalleCompleto.contractual?.fechaInicio?.notas || '');
+      let isFirstContractual = true;
+      
+      // Iterar dinámicamente sobre todos los campos de contractual
+      if (detalleCompleto.contractual) {
+        Object.entries(detalleCompleto.contractual).forEach(([key, value]) => {
+          const titulo = FIELD_TITLES.contractual[key] || key;
+          addDataRow(
+            isFirstContractual ? 'INICIO' : '', 
+            isFirstContractual ? 'Desarrollar el acta de Inicio' : '', 
+            titulo, 
+            value?.seguimiento || '', 
+            value?.estado || '', 
+            value?.responsable || '',
+            value?.notas || '', 
+            isFirstContractual, 
+            false, 
+            'FFD6DCE4'
+          );
+          isFirstContractual = false;
+        });
+      }
 
       // Fusionar células del proceso contractual
       ws.mergeCells(`B${contractualStartRow}:B${currentRow - 1}`);
       
-      // Fusionar y aplicar color de fondo para la fase INICIO (filas 10-13)
+      // Fusionar y aplicar color de fondo para la fase INICIO
       ws.mergeCells(`A${inicioStartRow}:A${currentRow - 1}`);
       const faseInicioCell = ws.getCell(`A${inicioStartRow}`);
       faseInicioCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8496B0' } };
-      faseInicioCell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // Texto blanco para mejor contraste
+      faseInicioCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
 
-      // FASE: DESARROLLO (desde fila 14)
+      // FASE: DESARROLLO
       const desarrolloStartRow = currentRow;
 
-      // Proceso: Talento Humano
+      // Proceso: Talento Humano (DINÁMICO)
       const talentoStartRow = currentRow;
-      addDataRow('', 'Talento Humano', 'Perfil del Personal Requerido', 
-                 detalleCompleto.talento_humano?.perfilPersonal?.seguimiento || '', 
-                 detalleCompleto.talento_humano?.perfilPersonal?.estado || '', 
-                 detalleCompleto.talento_humano?.perfilPersonal?.responsable || '',
-                 detalleCompleto.talento_humano?.perfilPersonal?.notas || '', true, false, 'FFDEEAF6');
-
-      addDataRow('', '', 'Cantidad de Asesores requeridos', 
-                 detalleCompleto.talento_humano?.cantidadAsesores?.seguimiento || '', 
-                 detalleCompleto.talento_humano?.cantidadAsesores?.estado || '', 
-                 detalleCompleto.talento_humano?.cantidadAsesores?.responsable || '',
-                 detalleCompleto.talento_humano?.cantidadAsesores?.notas || '');
-
-      addDataRow('', '', 'Horarios', 
-                 detalleCompleto.talento_humano?.horarios?.seguimiento || '', 
-                 detalleCompleto.talento_humano?.horarios?.estado || '', 
-                 detalleCompleto.talento_humano?.horarios?.responsable || '',
-                 detalleCompleto.talento_humano?.horarios?.notas || '');
-
-      addDataRow('', '', 'Formador', 
-                 detalleCompleto.talento_humano?.formador?.seguimiento || '', 
-                 detalleCompleto.talento_humano?.formador?.estado || '', 
-                 detalleCompleto.talento_humano?.formador?.responsable || '',
-                 detalleCompleto.talento_humano?.formador?.notas || '');
-
-      addDataRow('', '', 'Programa de Capacitaciones de Andes BPO', 
-                 detalleCompleto.talento_humano?.capacitacionesAndes?.seguimiento || '', 
-                 detalleCompleto.talento_humano?.capacitacionesAndes?.estado || '', 
-                 detalleCompleto.talento_humano?.capacitacionesAndes?.responsable || '',
-                 detalleCompleto.talento_humano?.capacitacionesAndes?.notas || '');
-
-      addDataRow('', '', 'Programa de Capacitaciones del cliente', 
-                 detalleCompleto.talento_humano?.capacitacionesCliente?.seguimiento || '', 
-                 detalleCompleto.talento_humano?.capacitacionesCliente?.estado || '', 
-                 detalleCompleto.talento_humano?.capacitacionesCliente?.responsable || '',
-                 detalleCompleto.talento_humano?.capacitacionesCliente?.notas || '');
+      let isFirstTalento = true;
+      
+      if (detalleCompleto.talento_humano) {
+        Object.entries(detalleCompleto.talento_humano).forEach(([key, value]) => {
+          const titulo = FIELD_TITLES.talentoHumano[key] || key;
+          addDataRow(
+            '', 
+            isFirstTalento ? 'Talento Humano' : '', 
+            titulo, 
+            value?.seguimiento || '', 
+            value?.estado || '', 
+            value?.responsable || '',
+            value?.notas || '', 
+            isFirstTalento, 
+            false, 
+            'FFDEEAF6'
+          );
+          isFirstTalento = false;
+        });
+      }
 
       // Fusionar células del proceso talento humano
       ws.mergeCells(`B${talentoStartRow}:B${currentRow - 1}`);
 
-      // Proceso: Tecnología
+      // Proceso: Tecnología (DINÁMICO)
       const tecnologiaStartRow = currentRow;
-      addDataRow('', 'Tecnología', 'Creación Módulo en Wolkvox para cliente nuevo', 
-                 detalleCompleto.tecnologia?.creacionModulo?.seguimiento || '', 
-                 detalleCompleto.tecnologia?.creacionModulo?.estado || '', 
-                 detalleCompleto.tecnologia?.creacionModulo?.responsable || '',
-                 detalleCompleto.tecnologia?.creacionModulo?.notas || '', true, false, 'FFDEEAF6');
-
-      addDataRow('', '', 'Tipificación de interacciones', 
-                 detalleCompleto.tecnologia?.tipificacionInteracciones?.seguimiento || '', 
-                 detalleCompleto.tecnologia?.tipificacionInteracciones?.estado || '', 
-                 detalleCompleto.tecnologia?.tipificacionInteracciones?.responsable || '',
-                 detalleCompleto.tecnologia?.tipificacionInteracciones?.notas || '');
-
-      addDataRow('', '', 'Aplicativos para el proceso', 
-                 detalleCompleto.tecnologia?.aplicativosProceso?.seguimiento || '', 
-                 detalleCompleto.tecnologia?.aplicativosProceso?.estado || '', 
-                 detalleCompleto.tecnologia?.aplicativosProceso?.responsable || '',
-                 detalleCompleto.tecnologia?.aplicativosProceso?.notas || '');
-
-      addDataRow('', '', 'WhatsApp', 
-                 detalleCompleto.tecnologia?.whatsapp?.seguimiento || '', 
-                 detalleCompleto.tecnologia?.whatsapp?.estado || '', 
-                 detalleCompleto.tecnologia?.whatsapp?.responsable || '',
-                 detalleCompleto.tecnologia?.whatsapp?.notas || '');
-
-      addDataRow('', '', 'Correos Electrónicos (Condiciones de uso, capacidades)', 
-                 detalleCompleto.tecnologia?.correosElectronicos?.seguimiento || '', 
-                 detalleCompleto.tecnologia?.correosElectronicos?.estado || '', 
-                 detalleCompleto.tecnologia?.correosElectronicos?.responsable || '',
-                 detalleCompleto.tecnologia?.correosElectronicos?.notas || '');
-
-      addDataRow('', '', 'Requisitos Grabación de llamada, entrega y resguardo', 
-                 detalleCompleto.tecnologia?.requisitosGrabacion?.seguimiento || '', 
-                 detalleCompleto.tecnologia?.requisitosGrabacion?.estado || '', 
-                 detalleCompleto.tecnologia?.requisitosGrabacion?.responsable || '',
-                 detalleCompleto.tecnologia?.requisitosGrabacion?.notas || '');
+      let isFirstTecnologia = true;
+      
+      if (detalleCompleto.tecnologia) {
+        Object.entries(detalleCompleto.tecnologia).forEach(([key, value]) => {
+          const titulo = FIELD_TITLES.tecnologia[key] || key;
+          addDataRow(
+            '', 
+            isFirstTecnologia ? 'Tecnología' : '', 
+            titulo, 
+            value?.seguimiento || '', 
+            value?.estado || '', 
+            value?.responsable || '',
+            value?.notas || '', 
+            isFirstTecnologia, 
+            false, 
+            'FFDEEAF6'
+          );
+          isFirstTecnologia = false;
+        });
+      }
 
       // Fusionar células del proceso tecnología
       ws.mergeCells(`B${tecnologiaStartRow}:B${currentRow - 1}`);
 
-      // Proceso: Procesos
+      // Proceso: Procesos (DINÁMICO)
       const procesosStartRow = currentRow;
-      addDataRow('', 'Procesos', 'Nombrar Responsable de Implementar el Proyecto por el cliente', 
-                 detalleCompleto.procesos?.responsableCliente?.seguimiento || '', 
-                 detalleCompleto.procesos?.responsableCliente?.estado || '', 
-                 detalleCompleto.procesos?.responsableCliente?.responsable || '',
-                 detalleCompleto.procesos?.responsableCliente?.notas || '', true, false, 'FFDEEAF6');
-
-      addDataRow('', '', 'Nombrar Responsable de Implementar el Proyecto por parte de Andes BPO', 
-                 detalleCompleto.procesos?.responsableAndes?.seguimiento || '', 
-                 detalleCompleto.procesos?.responsableAndes?.estado || '', 
-                 detalleCompleto.procesos?.responsableAndes?.responsable || '',
-                 detalleCompleto.procesos?.responsableAndes?.notas || '');
-
-      addDataRow('', '', 'Responsables de la operación', 
-                 detalleCompleto.procesos?.responsablesOperacion?.seguimiento || '', 
-                 detalleCompleto.procesos?.responsablesOperacion?.estado || '', 
-                 detalleCompleto.procesos?.responsablesOperacion?.responsable || '',
-                 detalleCompleto.procesos?.responsablesOperacion?.notas || '');
-
-      addDataRow('', '', 'Listado Reportes de Andes BPO', 
-                 detalleCompleto.procesos?.listadoReportes?.seguimiento || '', 
-                 detalleCompleto.procesos?.listadoReportes?.estado || '', 
-                 detalleCompleto.procesos?.listadoReportes?.responsable || '',
-                 detalleCompleto.procesos?.listadoReportes?.notas || '');
-
-      addDataRow('', '', 'Protocolo de Comunicaciones', 
-                 detalleCompleto.procesos?.protocoloComunicaciones?.seguimiento || '', 
-                 detalleCompleto.procesos?.protocoloComunicaciones?.estado || '', 
-                 detalleCompleto.procesos?.protocoloComunicaciones?.responsable || '',
-                 detalleCompleto.procesos?.protocoloComunicaciones?.notas || '');
-
-      addDataRow('', '', 'Guiones y/o Protocolos de la atención', 
-                 detalleCompleto.procesos?.guionesProtocolos?.seguimiento || '', 
-                 detalleCompleto.procesos?.guionesProtocolos?.estado || '', 
-                 detalleCompleto.procesos?.guionesProtocolos?.responsable || '',
-                 detalleCompleto.procesos?.guionesProtocolos?.notas || '');
-
-      addDataRow('', '', 'Proceso Monitoreo y Calidad Andes BPO', 
-                 detalleCompleto.procesos?.procesoMonitoreo?.seguimiento || '', 
-                 detalleCompleto.procesos?.procesoMonitoreo?.estado || '', 
-                 detalleCompleto.procesos?.procesoMonitoreo?.responsable || '',
-                 detalleCompleto.procesos?.procesoMonitoreo?.notas || '');
-
-      addDataRow('', '', 'Cronograma de Tecnología con Tiempos ajustados', 
-                 detalleCompleto.procesos?.cronogramaTecnologia?.seguimiento || '', 
-                 detalleCompleto.procesos?.cronogramaTecnologia?.estado || '', 
-                 detalleCompleto.procesos?.cronogramaTecnologia?.responsable || '',
-                 detalleCompleto.procesos?.cronogramaTecnologia?.notas || '');
-
-      addDataRow('', '', 'Cronograma de Capacitaciones con Duraciones y Fechas', 
-                 detalleCompleto.procesos?.cronogramaCapacitaciones?.seguimiento || '', 
-                 detalleCompleto.procesos?.cronogramaCapacitaciones?.estado || '', 
-                 detalleCompleto.procesos?.cronogramaCapacitaciones?.responsable || '',
-                 detalleCompleto.procesos?.cronogramaCapacitaciones?.notas || '');
-
-      addDataRow('', '', 'Realización de pruebas', 
-                 detalleCompleto.procesos?.realizacionPruebas?.seguimiento || '', 
-                 detalleCompleto.procesos?.realizacionPruebas?.estado || '', 
-                 detalleCompleto.procesos?.realizacionPruebas?.responsable || '',
-                 detalleCompleto.procesos?.realizacionPruebas?.notas || '');
+      let isFirstProcesos = true;
+      
+      if (detalleCompleto.procesos) {
+        Object.entries(detalleCompleto.procesos).forEach(([key, value]) => {
+          const titulo = FIELD_TITLES.procesos[key] || key;
+          addDataRow(
+            '', 
+            isFirstProcesos ? 'Procesos' : '', 
+            titulo, 
+            value?.seguimiento || '', 
+            value?.estado || '', 
+            value?.responsable || '',
+            value?.notas || '', 
+            isFirstProcesos, 
+            false, 
+            'FFDEEAF6'
+          );
+          isFirstProcesos = false;
+        });
+      }
 
       // Fusionar células del proceso procesos
       ws.mergeCells(`B${procesosStartRow}:B${currentRow - 1}`);
@@ -2715,14 +2702,7 @@ const Implementaciones = () => {
                 </div>
               )}
               <div className="space-y-6">
-                {Object.entries({
-                  perfilPersonal: "Perfil del Personal Requerido",
-                  cantidadAsesores: "Cantidad de Asesores requeridos",
-                  horarios: "Horarios",
-                  formador: "Formador",
-                  capacitacionesAndes: "Programa de Capacitaciones de Andes BPO",
-                  capacitacionesCliente: "Programa de Capacitaciones del cliente"
-                }).map(([key, title]) => (
+                {Object.entries(formData.talentoHumano).map(([key, value]) => (
                   <div key={key} className="border-t pt-4 first:border-t-0 first:pt-0">
                     <button 
                       onClick={() => setExpandedSections(prev => ({...prev, ['talentoHumano_' + key]: !prev['talentoHumano_' + key]}))}
@@ -2732,7 +2712,7 @@ const Implementaciones = () => {
                         <FaChevronDown className="mr-2 text-blue-500" size={14} /> : 
                         <FaChevronRight className="mr-2 text-gray-500" size={14} />
                       }
-                      {title}
+                      {FIELD_TITLES.talentoHumano[key] || key.replace(/([A-Z])/g, ' $1').trim()}
                     </button>
                     <div className={`grid grid-cols-1 gap-4 ${expandedSections['talentoHumano_' + key] ? 'block' : 'hidden'}`}>
                       <div>
@@ -2857,18 +2837,7 @@ const Implementaciones = () => {
                 </div>
               )}
               <div className="space-y-6">
-                {Object.entries({
-                  responsableCliente: "Nombrar Responsable de Implementar el Proyecto por el cliente",
-                  responsableAndes: "Nombrar Responsable de Implementar el Proyecto por parte de Andes BPO",
-                  responsablesOperacion: "Responsables de la operación",
-                  listadoReportes: "Listado Reportes de Andes BPO",
-                  protocoloComunicaciones: "Protocolo de Comunicaciones de ambas empresas",
-                  guionesProtocolos: "Guiones y/o Protocolos de la atención",
-                  procesoMonitoreo: "Proceso Monitoreo y Calidad Andes BPO",
-                  cronogramaTecnologia: "Cronograma de Tecnología con Tiempos ajustados",
-                  cronogramaCapacitaciones: "Cronograma de Capacitaciones con Duraciones y Fechas",
-                  realizacionPruebas: "Realización de pruebas"
-                }).map(([key, title]) => (
+                {Object.entries(formData.procesos).map(([key, value]) => (
                   <div key={key} className="border-t pt-4 first:border-t-0 first:pt-0">
                     <button 
                       onClick={() => setExpandedSections(prev => ({...prev, ['procesos_' + key]: !prev['procesos_' + key]}))}
@@ -2878,7 +2847,7 @@ const Implementaciones = () => {
                         <FaChevronDown className="mr-2 text-blue-500" size={14} /> : 
                         <FaChevronRight className="mr-2 text-gray-500" size={14} />
                       }
-                      {title}
+                      {FIELD_TITLES.procesos[key] || key.replace(/([A-Z])/g, ' $1').trim()}
                     </button>
                     <div className={`grid grid-cols-1 gap-4 ${expandedSections['procesos_' + key] ? 'block' : 'hidden'}`}>
                       <div>
@@ -3003,14 +2972,7 @@ const Implementaciones = () => {
                 </div>
               )}
               <div className="space-y-6">
-                {Object.entries({
-                  creacionModulo: "Creación Modulo en Wolkvox para cliente nuevo",
-                  tipificacionInteracciones: "Tipificación de interacciones",
-                  aplicativosProceso: "Aplicativos para el proceso",
-                  whatsapp: "Whatsapp",
-                  correosElectronicos: "Correos Electronicos (Condiciones de Uso, capacidades)",
-                  requisitosGrabacion: "Requisitos Grabación de llamada, entrega y resguardo de las mismas"
-                }).map(([key, title]) => (
+                {Object.entries(formData.tecnologia).map(([key, value]) => (
                   <div key={key} className="border-t pt-4 first:border-t-0 first:pt-0">
                     <button 
                       onClick={() => setExpandedSections(prev => ({...prev, ['tecnologia_' + key]: !prev['tecnologia_' + key]}))}
@@ -3020,7 +2982,7 @@ const Implementaciones = () => {
                         <FaChevronDown className="mr-2 text-blue-500" size={14} /> : 
                         <FaChevronRight className="mr-2 text-gray-500" size={14} />
                       }
-                      {title}
+                      {FIELD_TITLES.tecnologia[key] || key.replace(/([A-Z])/g, ' $1').trim()}
                     </button>
                     <div className={`grid grid-cols-1 gap-4 ${expandedSections['tecnologia_' + key] ? 'block' : 'hidden'}`}>
                       <div>
@@ -3222,7 +3184,10 @@ const Implementaciones = () => {
                       </div>
                       <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                         <span className="w-2 h-2 bg-indigo-400 rounded-full"></span>
-                        26 subsesiones totales
+                        {(implementacionDetail.contractual ? Object.keys(implementacionDetail.contractual).length : 0) +
+                         (implementacionDetail.talento_humano ? Object.keys(implementacionDetail.talento_humano).length : 0) +
+                         (implementacionDetail.procesos ? Object.keys(implementacionDetail.procesos).length : 0) +
+                         (implementacionDetail.tecnologia ? Object.keys(implementacionDetail.tecnologia).length : 0)} subsesiones totales
                       </div>
                     </div>
                     
@@ -3270,7 +3235,7 @@ const Implementaciones = () => {
                       <div className="mt-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">
-                            4 elementos
+                            {implementacionDetail.contractual ? Object.keys(implementacionDetail.contractual).length : 0} elementos
                           </span>
                           {expandedDetailSection === 'contractual' ? (
                             <FaChevronDown className="text-purple-600" />
@@ -3279,15 +3244,7 @@ const Implementaciones = () => {
                           )}
                         </div>
                         <RuedaProgreso 
-                          porcentaje={calcularProgresoSeccion(
-                            implementacionDetail.contractual,
-                            [
-                              { key: 'modeloContrato' },
-                              { key: 'modeloConfidencialidad' },
-                              { key: 'alcance' },
-                              { key: 'fechaInicio' }
-                            ]
-                          )}
+                          porcentaje={calcularProgresoSeccion(implementacionDetail.contractual)}
                           size={50}
                         />
                       </div>
@@ -3312,7 +3269,7 @@ const Implementaciones = () => {
                       <div className="mt-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
-                            6 elementos
+                            {implementacionDetail.talento_humano ? Object.keys(implementacionDetail.talento_humano).length : 0} elementos
                           </span>
                           {expandedDetailSection === 'talentoHumano' ? (
                             <FaChevronDown className="text-green-600" />
@@ -3321,17 +3278,7 @@ const Implementaciones = () => {
                           )}
                         </div>
                         <RuedaProgreso 
-                          porcentaje={calcularProgresoSeccion(
-                            implementacionDetail.talento_humano,
-                            [
-                              { key: 'perfilPersonal' },
-                              { key: 'cantidadAsesores' },
-                              { key: 'horarios' },
-                              { key: 'formador' },
-                              { key: 'capacitacionesAndes' },
-                              { key: 'capacitacionesCliente' }
-                            ]
-                          )}
+                          porcentaje={calcularProgresoSeccion(implementacionDetail.talento_humano)}
                           size={50}
                         />
                       </div>
@@ -3356,7 +3303,7 @@ const Implementaciones = () => {
                       <div className="mt-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs bg-amber-200 text-amber-800 px-2 py-1 rounded-full">
-                            10 elementos
+                            {implementacionDetail.procesos ? Object.keys(implementacionDetail.procesos).length : 0} elementos
                           </span>
                           {expandedDetailSection === 'procesos' ? (
                             <FaChevronDown className="text-amber-600" />
@@ -3365,21 +3312,7 @@ const Implementaciones = () => {
                           )}
                         </div>
                         <RuedaProgreso 
-                          porcentaje={calcularProgresoSeccion(
-                            implementacionDetail.procesos,
-                            [
-                              { key: 'responsableCliente' },
-                              { key: 'responsableAndes' },
-                              { key: 'responsablesOperacion' },
-                              { key: 'listadoReportes' },
-                              { key: 'protocoloComunicaciones' },
-                              { key: 'guionesProtocolos' },
-                              { key: 'procesoMonitoreo' },
-                              { key: 'cronogramaTecnologia' },
-                              { key: 'cronogramaCapacitaciones' },
-                              { key: 'realizacionPruebas' }
-                            ]
-                          )}
+                          porcentaje={calcularProgresoSeccion(implementacionDetail.procesos)}
                           size={50}
                         />
                       </div>
@@ -3404,7 +3337,7 @@ const Implementaciones = () => {
                       <div className="mt-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
-                            6 elementos
+                            {implementacionDetail.tecnologia ? Object.keys(implementacionDetail.tecnologia).length : 0} elementos
                           </span>
                           {expandedDetailSection === 'tecnologia' ? (
                             <FaChevronDown className="text-blue-600" />
@@ -3413,17 +3346,7 @@ const Implementaciones = () => {
                           )}
                         </div>
                         <RuedaProgreso 
-                          porcentaje={calcularProgresoSeccion(
-                            implementacionDetail.tecnologia,
-                            [
-                              { key: 'creacionModulo' },
-                              { key: 'tipificacionInteracciones' },
-                              { key: 'aplicativosProceso' },
-                              { key: 'whatsapp' },
-                              { key: 'correosElectronicos' },
-                              { key: 'requisitosGrabacion' }
-                            ]
-                          )}
+                          porcentaje={calcularProgresoSeccion(implementacionDetail.tecnologia)}
                           size={50}
                         />
                       </div>
@@ -3465,39 +3388,36 @@ const Implementaciones = () => {
                   <div className="p-6">
                     {expandedDetailSection === 'contractual' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[
-                          { key: 'modeloContrato', label: 'Modelo de contrato' },
-                          { key: 'modeloConfidencialidad', label: 'Acuerdo de Confidencialidad' },
-                          { key: 'alcance', label: 'Alcance' },
-                          { key: 'fechaInicio', label: 'Fecha de Inicio' }
-                        ].map(item => (
-                          <div key={item.key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">{item.label}</h5>
+                        {implementacionDetail.contractual && Object.entries(implementacionDetail.contractual).map(([key, value]) => (
+                          <div key={key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">
+                              {FIELD_TITLES.contractual[key] || key}
+                            </h5>
                             <div className="space-y-3 text-sm">
                               <EstadoEditable 
                                 seccion="contractual"
-                                campo={item.key}
-                                estado={implementacionDetail.contractual?.[item.key]?.estado}
+                                campo={key}
+                                estado={value?.estado}
                               />
                               <div>
                                 <span className="font-medium text-gray-600">Responsable:</span>
                                 <span className="ml-2 text-gray-800">
-                                  {implementacionDetail.contractual?.[item.key]?.responsable || 'No asignado'}
+                                  {value?.responsable || 'No asignado'}
                                 </span>
                               </div>
-                              {implementacionDetail.contractual?.[item.key]?.seguimiento && (
+                              {value?.seguimiento && (
                                 <div>
                                   <span className="font-medium text-gray-600">Seguimiento:</span>
                                   <p className="text-gray-800 mt-1 text-sm leading-relaxed bg-white p-3 rounded border">
-                                    {implementacionDetail.contractual[item.key].seguimiento}
+                                    {value.seguimiento}
                                   </p>
                                 </div>
                               )}
-                              {implementacionDetail.contractual?.[item.key]?.notas && (
+                              {value?.notas && (
                                 <div>
                                   <span className="font-medium text-gray-600">Notas:</span>
                                   <p className="text-gray-800 mt-1 text-sm leading-relaxed bg-white p-3 rounded border">
-                                    {implementacionDetail.contractual[item.key].notas}
+                                    {value.notas}
                                   </p>
                                 </div>
                               )}
@@ -3509,41 +3429,36 @@ const Implementaciones = () => {
 
                     {expandedDetailSection === 'talentoHumano' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[
-                          { key: 'perfilPersonal', label: 'Perfil del Personal' },
-                          { key: 'cantidadAsesores', label: 'Cantidad de Asesores' },
-                          { key: 'horarios', label: 'Horarios' },
-                          { key: 'formador', label: 'Formador' },
-                          { key: 'capacitacionesAndes', label: 'Capacitaciones Andes BPO' },
-                          { key: 'capacitacionesCliente', label: 'Capacitaciones Cliente' }
-                        ].map(item => (
-                          <div key={item.key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">{item.label}</h5>
+                        {implementacionDetail.talento_humano && Object.entries(implementacionDetail.talento_humano).map(([key, value]) => (
+                          <div key={key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">
+                              {FIELD_TITLES.talentoHumano[key] || key}
+                            </h5>
                             <div className="space-y-3 text-sm">
                               <EstadoEditable 
                                 seccion="talento_humano"
-                                campo={item.key}
-                                estado={implementacionDetail.talento_humano?.[item.key]?.estado}
+                                campo={key}
+                                estado={value?.estado}
                               />
                               <div>
                                 <span className="font-medium text-gray-600">Responsable:</span>
                                 <span className="ml-2 text-gray-800">
-                                  {implementacionDetail.talento_humano?.[item.key]?.responsable || 'No asignado'}
+                                  {value?.responsable || 'No asignado'}
                                 </span>
                               </div>
-                              {implementacionDetail.talento_humano?.[item.key]?.seguimiento && (
+                              {value?.seguimiento && (
                                 <div>
                                   <span className="font-medium text-gray-600">Seguimiento:</span>
                                   <p className="text-gray-800 mt-1 text-sm leading-relaxed bg-white p-3 rounded border">
-                                    {implementacionDetail.talento_humano[item.key].seguimiento}
+                                    {value.seguimiento}
                                   </p>
                                 </div>
                               )}
-                              {implementacionDetail.talento_humano?.[item.key]?.notas && (
+                              {value?.notas && (
                                 <div>
                                   <span className="font-medium text-gray-600">Notas:</span>
                                   <p className="text-gray-800 mt-1 text-sm leading-relaxed bg-white p-3 rounded border">
-                                    {implementacionDetail.talento_humano[item.key].notas}
+                                    {value.notas}
                                   </p>
                                 </div>
                               )}
@@ -3555,45 +3470,36 @@ const Implementaciones = () => {
 
                     {expandedDetailSection === 'procesos' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[
-                          { key: 'responsableCliente', label: 'Responsable Cliente' },
-                          { key: 'responsableAndes', label: 'Responsable Andes BPO' },
-                          { key: 'responsablesOperacion', label: 'Responsables Operación' },
-                          { key: 'listadoReportes', label: 'Listado Reportes' },
-                          { key: 'protocoloComunicaciones', label: 'Protocolo Comunicaciones' },
-                          { key: 'guionesProtocolos', label: 'Guiones y Protocolos' },
-                          { key: 'procesoMonitoreo', label: 'Proceso Monitoreo' },
-                          { key: 'cronogramaTecnologia', label: 'Cronograma Tecnología' },
-                          { key: 'cronogramaCapacitaciones', label: 'Cronograma Capacitaciones' },
-                          { key: 'realizacionPruebas', label: 'Realización Pruebas' }
-                        ].map(item => (
-                          <div key={item.key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">{item.label}</h5>
+                        {implementacionDetail.procesos && Object.entries(implementacionDetail.procesos).map(([key, value]) => (
+                          <div key={key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">
+                              {FIELD_TITLES.procesos[key] || key}
+                            </h5>
                             <div className="space-y-3 text-sm">
                               <EstadoEditable 
                                 seccion="procesos"
-                                campo={item.key}
-                                estado={implementacionDetail.procesos?.[item.key]?.estado}
+                                campo={key}
+                                estado={value?.estado}
                               />
                               <div>
                                 <span className="font-medium text-gray-600">Responsable:</span>
                                 <span className="ml-2 text-gray-800">
-                                  {implementacionDetail.procesos?.[item.key]?.responsable || 'No asignado'}
+                                  {value?.responsable || 'No asignado'}
                                 </span>
                               </div>
-                              {implementacionDetail.procesos?.[item.key]?.seguimiento && (
+                              {value?.seguimiento && (
                                 <div>
                                   <span className="font-medium text-gray-600">Seguimiento:</span>
                                   <p className="text-gray-800 mt-1 text-sm leading-relaxed bg-white p-3 rounded border">
-                                    {implementacionDetail.procesos[item.key].seguimiento}
+                                    {value.seguimiento}
                                   </p>
                                 </div>
                               )}
-                              {implementacionDetail.procesos?.[item.key]?.notas && (
+                              {value?.notas && (
                                 <div>
                                   <span className="font-medium text-gray-600">Notas:</span>
                                   <p className="text-gray-800 mt-1 text-sm leading-relaxed bg-white p-3 rounded border">
-                                    {implementacionDetail.procesos[item.key].notas}
+                                    {value.notas}
                                   </p>
                                 </div>
                               )}
@@ -3605,41 +3511,36 @@ const Implementaciones = () => {
 
                     {expandedDetailSection === 'tecnologia' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[
-                          { key: 'creacionModulo', label: 'Creación Módulo Wolkvox' },
-                          { key: 'tipificacionInteracciones', label: 'Tipificación Interacciones' },
-                          { key: 'aplicativosProceso', label: 'Aplicativos del Proceso' },
-                          { key: 'whatsapp', label: 'WhatsApp' },
-                          { key: 'correosElectronicos', label: 'Correos Electrónicos' },
-                          { key: 'requisitosGrabacion', label: 'Requisitos Grabación' }
-                        ].map(item => (
-                          <div key={item.key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">{item.label}</h5>
+                        {implementacionDetail.tecnologia && Object.entries(implementacionDetail.tecnologia).map(([key, value]) => (
+                          <div key={key} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <h5 className="font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-300">
+                              {FIELD_TITLES.tecnologia[key] || key}
+                            </h5>
                             <div className="space-y-3 text-sm">
                               <EstadoEditable 
                                 seccion="tecnologia"
-                                campo={item.key}
-                                estado={implementacionDetail.tecnologia?.[item.key]?.estado}
+                                campo={key}
+                                estado={value?.estado}
                               />
                               <div>
                                 <span className="font-medium text-gray-600">Responsable:</span>
                                 <span className="ml-2 text-gray-800">
-                                  {implementacionDetail.tecnologia?.[item.key]?.responsable || 'No asignado'}
+                                  {value?.responsable || 'No asignado'}
                                 </span>
                               </div>
-                              {implementacionDetail.tecnologia?.[item.key]?.seguimiento && (
+                              {value?.seguimiento && (
                                 <div>
                                   <span className="font-medium text-gray-600">Seguimiento:</span>
                                   <p className="text-gray-800 mt-1 text-sm leading-relaxed bg-white p-3 rounded border">
-                                    {implementacionDetail.tecnologia[item.key].seguimiento}
+                                    {value.seguimiento}
                                   </p>
                                 </div>
                               )}
-                              {implementacionDetail.tecnologia?.[item.key]?.notas && (
+                              {value?.notas && (
                                 <div>
                                   <span className="font-medium text-gray-600">Notas:</span>
                                   <p className="text-gray-800 mt-1 text-sm leading-relaxed bg-white p-3 rounded border">
-                                    {implementacionDetail.tecnologia[item.key].notas}
+                                    {value.notas}
                                   </p>
                                 </div>
                               )}

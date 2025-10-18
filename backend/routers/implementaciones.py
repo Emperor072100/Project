@@ -7,6 +7,10 @@ from models.project_implementacion_contractual import ProjectImplementacionContr
 from models.project_implementacion_talentoHumano import ProjectImplementacionTalentoHumano
 from models.project_implementacion_procesos import ProjectImplementacionProcesos
 from models.project_implementacion_tecnologia import ProjectImplementacionTecnologia
+from models.project_implementacion_subseccion_personalizada import ProjectImplementacionSubseccionPersonalizada
+from models.project_subseccion_implementacion_talentoHumano import ProjectSubseccionImplementacionTalentoHumano
+from models.project_subseccion_implementacion_procesos import ProjectSubseccionImplementacionProcesos
+from models.project_subseccion_implementacion_tecnologia import ProjectSubseccionImplementacionTecnologia
 from pydantic import BaseModel
 import pandas as pd
 import io
@@ -49,6 +53,251 @@ class EstadoUpdate(BaseModel):
     estado: str
 
 router = APIRouter(prefix="/implementaciones", tags=["Implementaciones"])
+
+# Campos predefinidos para cada sección (no son personalizados)
+CAMPOS_PREDEFINIDOS = {
+    'contractual': ['modeloContrato', 'modeloConfidencialidad', 'alcance', 'fechaInicio'],
+    'talento_humano': ['perfilPersonal', 'cantidadAsesores', 'horarios', 'formador', 'capacitacionesAndes', 'capacitacionesCliente'],
+    'procesos': ['responsableCliente', 'responsableAndes', 'responsablesOperacion', 'listadoReportes', 'protocoloComunicaciones', 'informacionDiaria', 'seguimientoPeriodico', 'guionesProtocolos', 'procesoMonitoreo'],
+    'tecnologia': ['creacionModulo', 'tipificacionInteracciones', 'aplicativosProceso', 'whatsapp', 'correosElectronicos', 'requisitosGrabacion']
+}
+
+# ============================================================================
+# HELPER FUNCTIONS - Subsecciones Personalizadas Contractual (tabla universal)
+# ============================================================================
+
+def guardar_subsecciones_contractual(db: Session, cliente_implementacion_id: int, contractual_data: Dict[str, Any]):
+    """
+    Guarda las subsecciones personalizadas (no predefinidas) de Contractual en la tabla universal.
+    
+    Args:
+        db: Sesión de base de datos
+        cliente_implementacion_id: ID de la implementación principal
+        contractual_data: Diccionario con todos los datos de Contractual (predefinidos + personalizados)
+    """
+    campos_predefinidos = CAMPOS_PREDEFINIDOS['contractual']
+    
+    # Filtrar solo las subsecciones personalizadas (las que no están en campos predefinidos)
+    for key, value in contractual_data.items():
+        if key not in campos_predefinidos and isinstance(value, dict):
+            # Esta es una subsección personalizada
+            subseccion = ProjectImplementacionSubseccionPersonalizada(
+                cliente_implementacion_id=cliente_implementacion_id,
+                seccion='contractual',
+                nombre_subsesion=key,
+                seguimiento=value.get('seguimiento', ''),
+                estado=value.get('estado', ''),
+                responsable=value.get('responsable', ''),
+                notas=value.get('notas', '')
+            )
+            db.add(subseccion)
+    
+    db.commit()
+
+def obtener_subsecciones_contractual(db: Session, cliente_implementacion_id: int) -> Dict[str, Any]:
+    """
+    Obtiene las subsecciones personalizadas de Contractual desde la tabla universal.
+    
+    Args:
+        db: Sesión de base de datos
+        cliente_implementacion_id: ID de la implementación principal
+        
+    Returns:
+        Diccionario con las subsecciones personalizadas en formato {nombre_subsesion: {seguimiento, estado, responsable, notas}}
+    """
+    subsecciones = db.query(ProjectImplementacionSubseccionPersonalizada).filter(
+        ProjectImplementacionSubseccionPersonalizada.cliente_implementacion_id == cliente_implementacion_id,
+        ProjectImplementacionSubseccionPersonalizada.seccion == 'contractual'
+    ).all()
+    
+    resultado = {}
+    for subseccion in subsecciones:
+        resultado[subseccion.nombre_subsesion] = {
+            'seguimiento': subseccion.seguimiento or '',
+            'estado': subseccion.estado or '',
+            'responsable': subseccion.responsable or '',
+            'notas': subseccion.notas or ''
+        }
+    
+    return resultado
+
+# ============================================================================
+# HELPER FUNCTIONS - Subsecciones Personalizadas Talento Humano
+# ============================================================================
+
+def guardar_subsecciones_talento_humano(db: Session, cliente_implementacion_id: int, talento_humano_data: Dict[str, Any]):
+    """
+    Guarda las subsecciones personalizadas (no predefinidas) de Talento Humano en la tabla específica.
+    
+    Args:
+        db: Sesión de base de datos
+        cliente_implementacion_id: ID de la implementación principal
+        talento_humano_data: Diccionario con todos los datos de Talento Humano (predefinidos + personalizados)
+    """
+    campos_predefinidos = CAMPOS_PREDEFINIDOS['talento_humano']
+    
+    # Filtrar solo las subsecciones personalizadas (las que no están en campos predefinidos)
+    for key, value in talento_humano_data.items():
+        if key not in campos_predefinidos and isinstance(value, dict):
+            # Esta es una subsección personalizada
+            subseccion = ProjectSubseccionImplementacionTalentoHumano(
+                cliente_implementacion_id=cliente_implementacion_id,
+                seccion='talento_humano',
+                nombre_subsesion=key,
+                seguimiento=value.get('seguimiento', ''),
+                estado=value.get('estado', ''),
+                responsable=value.get('responsable', ''),
+                notas=value.get('notas', '')
+            )
+            db.add(subseccion)
+    
+    db.commit()
+
+def obtener_subsecciones_talento_humano(db: Session, cliente_implementacion_id: int) -> Dict[str, Any]:
+    """
+    Obtiene las subsecciones personalizadas de Talento Humano desde la tabla específica.
+    
+    Args:
+        db: Sesión de base de datos
+        cliente_implementacion_id: ID de la implementación principal
+        
+    Returns:
+        Diccionario con las subsecciones personalizadas en formato {nombre_subsesion: {seguimiento, estado, responsable, notas}}
+    """
+    subsecciones = db.query(ProjectSubseccionImplementacionTalentoHumano).filter(
+        ProjectSubseccionImplementacionTalentoHumano.cliente_implementacion_id == cliente_implementacion_id
+    ).all()
+    
+    resultado = {}
+    for subseccion in subsecciones:
+        resultado[subseccion.nombre_subsesion] = {
+            'seguimiento': subseccion.seguimiento or '',
+            'estado': subseccion.estado or '',
+            'responsable': subseccion.responsable or '',
+            'notas': subseccion.notas or ''
+        }
+    
+    return resultado
+
+# ============================================================================
+# HELPER FUNCTIONS - Subsecciones Personalizadas Procesos
+# ============================================================================
+
+def guardar_subsecciones_procesos(db: Session, cliente_implementacion_id: int, procesos_data: Dict[str, Any]):
+    """
+    Guarda las subsecciones personalizadas (no predefinidas) de Procesos en la tabla específica.
+    
+    Args:
+        db: Sesión de base de datos
+        cliente_implementacion_id: ID de la implementación principal
+        procesos_data: Diccionario con todos los datos de Procesos (predefinidos + personalizados)
+    """
+    campos_predefinidos = CAMPOS_PREDEFINIDOS['procesos']
+    
+    # Filtrar solo las subsecciones personalizadas (las que no están en campos predefinidos)
+    for key, value in procesos_data.items():
+        if key not in campos_predefinidos and isinstance(value, dict):
+            # Esta es una subsección personalizada
+            subseccion = ProjectSubseccionImplementacionProcesos(
+                cliente_implementacion_id=cliente_implementacion_id,
+                seccion='procesos',
+                nombre_subsesion=key,
+                seguimiento=value.get('seguimiento', ''),
+                estado=value.get('estado', ''),
+                responsable=value.get('responsable', ''),
+                notas=value.get('notas', '')
+            )
+            db.add(subseccion)
+    
+    db.commit()
+
+def obtener_subsecciones_procesos(db: Session, cliente_implementacion_id: int) -> Dict[str, Any]:
+    """
+    Obtiene las subsecciones personalizadas de Procesos desde la tabla específica.
+    
+    Args:
+        db: Sesión de base de datos
+        cliente_implementacion_id: ID de la implementación principal
+        
+    Returns:
+        Diccionario con las subsecciones personalizadas en formato {nombre_subsesion: {seguimiento, estado, responsable, notas}}
+    """
+    subsecciones = db.query(ProjectSubseccionImplementacionProcesos).filter(
+        ProjectSubseccionImplementacionProcesos.cliente_implementacion_id == cliente_implementacion_id
+    ).all()
+    
+    resultado = {}
+    for subseccion in subsecciones:
+        resultado[subseccion.nombre_subsesion] = {
+            'seguimiento': subseccion.seguimiento or '',
+            'estado': subseccion.estado or '',
+            'responsable': subseccion.responsable or '',
+            'notas': subseccion.notas or ''
+        }
+    
+    return resultado
+
+# ============================================================================
+# HELPER FUNCTIONS - Subsecciones Personalizadas Tecnología
+# ============================================================================
+
+def guardar_subsecciones_tecnologia(db: Session, cliente_implementacion_id: int, tecnologia_data: Dict[str, Any]):
+    """
+    Guarda las subsecciones personalizadas (no predefinidas) de Tecnología en la tabla específica.
+    
+    Args:
+        db: Sesión de base de datos
+        cliente_implementacion_id: ID de la implementación principal
+        tecnologia_data: Diccionario con todos los datos de Tecnología (predefinidos + personalizados)
+    """
+    campos_predefinidos = CAMPOS_PREDEFINIDOS['tecnologia']
+    
+    # Filtrar solo las subsecciones personalizadas (las que no están en campos predefinidos)
+    for key, value in tecnologia_data.items():
+        if key not in campos_predefinidos and isinstance(value, dict):
+            # Esta es una subsección personalizada
+            subseccion = ProjectSubseccionImplementacionTecnologia(
+                cliente_implementacion_id=cliente_implementacion_id,
+                seccion='tecnologia',
+                nombre_subsesion=key,
+                seguimiento=value.get('seguimiento', ''),
+                estado=value.get('estado', ''),
+                responsable=value.get('responsable', ''),
+                notas=value.get('notas', '')
+            )
+            db.add(subseccion)
+    
+    db.commit()
+
+def obtener_subsecciones_tecnologia(db: Session, cliente_implementacion_id: int) -> Dict[str, Any]:
+    """
+    Obtiene las subsecciones personalizadas de Tecnología desde la tabla específica.
+    
+    Args:
+        db: Sesión de base de datos
+        cliente_implementacion_id: ID de la implementación principal
+        
+    Returns:
+        Diccionario con las subsecciones personalizadas en formato {nombre_subsesion: {seguimiento, estado, responsable, notas}}
+    """
+    subsecciones = db.query(ProjectSubseccionImplementacionTecnologia).filter(
+        ProjectSubseccionImplementacionTecnologia.cliente_implementacion_id == cliente_implementacion_id
+    ).all()
+    
+    resultado = {}
+    for subseccion in subsecciones:
+        resultado[subseccion.nombre_subsesion] = {
+            'seguimiento': subseccion.seguimiento or '',
+            'estado': subseccion.estado or '',
+            'responsable': subseccion.responsable or '',
+            'notas': subseccion.notas or ''
+        }
+    
+    return resultado
+
+# ============================================================================
+# ENDPOINTS
+# ============================================================================
 
 @router.post("/", response_model=ImplementacionOut)
 def crear_implementacion(data: ImplementacionCreate, db: Session = Depends(get_db)):
@@ -180,7 +429,14 @@ def crear_implementacion(data: ImplementacionCreate, db: Session = Depends(get_d
     )
     db.add(tecnologia)
     db.commit()
-    # 6. Retornar toda la info
+    
+    # 6. Guardar subsecciones personalizadas (en tablas específicas)
+    guardar_subsecciones_contractual(db, nueva.id, data.contractual)
+    guardar_subsecciones_talento_humano(db, nueva.id, data.talento_humano)
+    guardar_subsecciones_procesos(db, nueva.id, data.procesos)
+    guardar_subsecciones_tecnologia(db, nueva.id, data.tecnologia)
+    
+    # 7. Retornar toda la info
     return {
         "id": nueva.id,
         "cliente": nueva.cliente,
@@ -407,6 +663,12 @@ def obtener_implementacion(id: int, db: Session = Depends(get_db)):
                 'notas': tecnologia_data.requisitos_grabacion_notas or ''
             }
         }
+    
+    # Agregar subsecciones personalizadas (desde tablas específicas)
+    contractual.update(obtener_subsecciones_contractual(db, id))
+    talento_humano.update(obtener_subsecciones_talento_humano(db, id))
+    procesos.update(obtener_subsecciones_procesos(db, id))
+    tecnologia.update(obtener_subsecciones_tecnologia(db, id))
     
     return ImplementacionOut(
         id=imp.id,
@@ -714,6 +976,30 @@ def actualizar_implementacion(id: int, data: ImplementacionCreate, db: Session =
         else:
             print("⚠️ No hay datos de tecnología para actualizar")
         
+        
+        # Actualizar subsecciones personalizadas (Contractual, Talento Humano, Procesos y Tecnología)
+        # Primero eliminar las existentes para esta implementación
+        db.query(ProjectImplementacionSubseccionPersonalizada).filter_by(
+            cliente_implementacion_id=id,
+            seccion='contractual'
+        ).delete()
+        db.query(ProjectSubseccionImplementacionTalentoHumano).filter_by(
+            cliente_implementacion_id=id
+        ).delete()
+        db.query(ProjectSubseccionImplementacionProcesos).filter_by(
+            cliente_implementacion_id=id
+        ).delete()
+        db.query(ProjectSubseccionImplementacionTecnologia).filter_by(
+            cliente_implementacion_id=id
+        ).delete()
+        
+        # Luego guardar las nuevas subsecciones personalizadas
+        guardar_subsecciones_contractual(db, id, data.contractual)
+        guardar_subsecciones_talento_humano(db, id, data.talento_humano)
+        guardar_subsecciones_procesos(db, id, data.procesos)
+        guardar_subsecciones_tecnologia(db, id, data.tecnologia)
+        print("Subsecciones personalizadas actualizadas (Contractual, Talento Humano, Procesos, Tecnología)")
+        
         # Commit de la transacción
         db.commit()
         db.refresh(imp)
@@ -785,15 +1071,347 @@ def eliminar_implementacion(id: int, db: Session = Depends(get_db)):
 
 @router.get("/descargar_excel")
 def descargar_excel(db: Session = Depends(get_db)):
-    datos = db.query(ProjectImplementacionesClienteImple).all()
-    df = pd.DataFrame([i.__dict__ for i in datos])
-    df = df.drop("_sa_instance_state", axis=1, errors="ignore")
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False)
-    response = Response(output.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    response.headers["Content-Disposition"] = "attachment; filename=implementaciones.xlsx"
-    return response
+    """
+    Genera un Excel con todas las implementaciones incluyendo campos predefinidos y personalizados
+    de las 4 secciones (Contractual, Talento Humano, Procesos, Tecnología)
+    """
+    try:
+        # Obtener todas las implementaciones
+        implementaciones = db.query(ProjectImplementacionesClienteImple).all()
+        
+        # Lista para almacenar los datos procesados
+        datos_excel = []
+        
+        for impl in implementaciones:
+            # Datos básicos
+            fila = {
+                'ID': impl.id,
+                'Cliente': impl.cliente,
+                'Proceso': impl.proceso,
+                'Estado General': impl.estado or ''
+            }
+            
+            # === CONTRACTUAL ===
+            contractual_data = db.query(ProjectImplementacionContractual).filter_by(
+                cliente_implementacion_id=impl.id
+            ).first()
+            
+            if contractual_data:
+                # Campos predefinidos contractuales
+                fila['CONTRACTUAL - Modelo Contrato (Seguimiento)'] = contractual_data.modelo_contrato_seguimiento or ''
+                fila['CONTRACTUAL - Modelo Contrato (Estado)'] = contractual_data.modelo_contrato_estado or ''
+                fila['CONTRACTUAL - Modelo Contrato (Responsable)'] = contractual_data.modelo_contrato_responsable or ''
+                fila['CONTRACTUAL - Modelo Contrato (Notas)'] = contractual_data.modelo_contrato_notas or ''
+                
+                fila['CONTRACTUAL - Modelo Confidencialidad (Seguimiento)'] = contractual_data.modelo_confidencialidad_seguimiento or ''
+                fila['CONTRACTUAL - Modelo Confidencialidad (Estado)'] = contractual_data.modelo_confidencialidad_estado or ''
+                fila['CONTRACTUAL - Modelo Confidencialidad (Responsable)'] = contractual_data.modelo_confidencialidad_responsable or ''
+                fila['CONTRACTUAL - Modelo Confidencialidad (Notas)'] = contractual_data.modelo_confidencialidad_notas or ''
+                
+                fila['CONTRACTUAL - Alcance (Seguimiento)'] = contractual_data.alcance_seguimiento or ''
+                fila['CONTRACTUAL - Alcance (Estado)'] = contractual_data.alcance_estado or ''
+                fila['CONTRACTUAL - Alcance (Responsable)'] = contractual_data.alcance_responsable or ''
+                fila['CONTRACTUAL - Alcance (Notas)'] = contractual_data.alcance_notas or ''
+                
+                fila['CONTRACTUAL - Fecha Inicio (Seguimiento)'] = contractual_data.fecha_inicio_seguimiento or ''
+                fila['CONTRACTUAL - Fecha Inicio (Estado)'] = contractual_data.fecha_inicio_estado or ''
+                fila['CONTRACTUAL - Fecha Inicio (Responsable)'] = contractual_data.fecha_inicio_responsable or ''
+                fila['CONTRACTUAL - Fecha Inicio (Notas)'] = contractual_data.fecha_inicio_notas or ''
+            
+            # Subsecciones personalizadas Contractual
+            subsecciones_contractual = db.query(ProjectImplementacionSubseccionPersonalizada).filter_by(
+                cliente_implementacion_id=impl.id,
+                seccion='contractual'
+            ).all()
+            
+            print(f"🔍 Implementación {impl.id} ({impl.cliente}): {len(subsecciones_contractual)} subsecciones contractuales")
+            
+            for subseccion in subsecciones_contractual:
+                nombre_campo = subseccion.nombre_subsesion
+                print(f"  ➕ Agregando subsección contractual: {nombre_campo}")
+                fila[f'CONTRACTUAL - {nombre_campo} (Seguimiento)'] = subseccion.seguimiento or ''
+                fila[f'CONTRACTUAL - {nombre_campo} (Estado)'] = subseccion.estado or ''
+                fila[f'CONTRACTUAL - {nombre_campo} (Responsable)'] = subseccion.responsable or ''
+                fila[f'CONTRACTUAL - {nombre_campo} (Notas)'] = subseccion.notas or ''
+            
+            # === TALENTO HUMANO ===
+            talento_data = db.query(ProjectImplementacionTalentoHumano).filter_by(
+                cliente_implementacion_id=impl.id
+            ).first()
+            
+            if talento_data:
+                # Campos predefinidos talento humano
+                fila['TALENTO HUMANO - Perfil Personal (Seguimiento)'] = talento_data.perfil_personal_seguimiento or ''
+                fila['TALENTO HUMANO - Perfil Personal (Estado)'] = talento_data.perfil_personal_estado or ''
+                fila['TALENTO HUMANO - Perfil Personal (Responsable)'] = talento_data.perfil_personal_responsable or ''
+                fila['TALENTO HUMANO - Perfil Personal (Notas)'] = talento_data.perfil_personal_notas or ''
+                
+                fila['TALENTO HUMANO - Cantidad Asesores (Seguimiento)'] = talento_data.cantidad_asesores_seguimiento or ''
+                fila['TALENTO HUMANO - Cantidad Asesores (Estado)'] = talento_data.cantidad_asesores_estado or ''
+                fila['TALENTO HUMANO - Cantidad Asesores (Responsable)'] = talento_data.cantidad_asesores_responsable or ''
+                fila['TALENTO HUMANO - Cantidad Asesores (Notas)'] = talento_data.cantidad_asesores_notas or ''
+                
+                fila['TALENTO HUMANO - Horarios (Seguimiento)'] = talento_data.horarios_seguimiento or ''
+                fila['TALENTO HUMANO - Horarios (Estado)'] = talento_data.horarios_estado or ''
+                fila['TALENTO HUMANO - Horarios (Responsable)'] = talento_data.horarios_responsable or ''
+                fila['TALENTO HUMANO - Horarios (Notas)'] = talento_data.horarios_notas or ''
+                
+                fila['TALENTO HUMANO - Formador (Seguimiento)'] = talento_data.formador_seguimiento or ''
+                fila['TALENTO HUMANO - Formador (Estado)'] = talento_data.formador_estado or ''
+                fila['TALENTO HUMANO - Formador (Responsable)'] = talento_data.formador_responsable or ''
+                fila['TALENTO HUMANO - Formador (Notas)'] = talento_data.formador_notas or ''
+                
+                fila['TALENTO HUMANO - Capacitaciones Andes (Seguimiento)'] = talento_data.capacitaciones_andes_seguimiento or ''
+                fila['TALENTO HUMANO - Capacitaciones Andes (Estado)'] = talento_data.capacitaciones_andes_estado or ''
+                fila['TALENTO HUMANO - Capacitaciones Andes (Responsable)'] = talento_data.capacitaciones_andes_responsable or ''
+                fila['TALENTO HUMANO - Capacitaciones Andes (Notas)'] = talento_data.capacitaciones_andes_notas or ''
+                
+                fila['TALENTO HUMANO - Capacitaciones Cliente (Seguimiento)'] = talento_data.capacitaciones_cliente_seguimiento or ''
+                fila['TALENTO HUMANO - Capacitaciones Cliente (Estado)'] = talento_data.capacitaciones_cliente_estado or ''
+                fila['TALENTO HUMANO - Capacitaciones Cliente (Responsable)'] = talento_data.capacitaciones_cliente_responsable or ''
+                fila['TALENTO HUMANO - Capacitaciones Cliente (Notas)'] = talento_data.capacitaciones_cliente_notas or ''
+            
+            # Subsecciones personalizadas Talento Humano
+            subsecciones_talento = db.query(ProjectSubseccionImplementacionTalentoHumano).filter_by(
+                cliente_implementacion_id=impl.id
+            ).all()
+            
+            print(f"🔍 Implementación {impl.id}: {len(subsecciones_talento)} subsecciones talento humano")
+            
+            for subseccion in subsecciones_talento:
+                nombre_campo = subseccion.nombre_subsesion
+                print(f"  ➕ Agregando subsección talento humano: {nombre_campo}")
+                fila[f'TALENTO HUMANO - {nombre_campo} (Seguimiento)'] = subseccion.seguimiento or ''
+                fila[f'TALENTO HUMANO - {nombre_campo} (Estado)'] = subseccion.estado or ''
+                fila[f'TALENTO HUMANO - {nombre_campo} (Responsable)'] = subseccion.responsable or ''
+                fila[f'TALENTO HUMANO - {nombre_campo} (Notas)'] = subseccion.notas or ''
+            
+            # === PROCESOS ===
+            procesos_data = db.query(ProjectImplementacionProcesos).filter_by(
+                cliente_implementacion_id=impl.id
+            ).first()
+            
+            if procesos_data:
+                # Campos predefinidos procesos
+                fila['PROCESOS - Responsable Cliente (Seguimiento)'] = procesos_data.responsable_cliente_seguimiento or ''
+                fila['PROCESOS - Responsable Cliente (Estado)'] = procesos_data.responsable_cliente_estado or ''
+                fila['PROCESOS - Responsable Cliente (Responsable)'] = procesos_data.responsable_cliente_responsable or ''
+                fila['PROCESOS - Responsable Cliente (Notas)'] = procesos_data.responsable_cliente_notas or ''
+                
+                fila['PROCESOS - Responsable Andes (Seguimiento)'] = procesos_data.responsable_andes_seguimiento or ''
+                fila['PROCESOS - Responsable Andes (Estado)'] = procesos_data.responsable_andes_estado or ''
+                fila['PROCESOS - Responsable Andes (Responsable)'] = procesos_data.responsable_andes_responsable or ''
+                fila['PROCESOS - Responsable Andes (Notas)'] = procesos_data.responsable_andes_notas or ''
+                
+                fila['PROCESOS - Responsables Operación (Seguimiento)'] = procesos_data.responsables_operacion_seguimiento or ''
+                fila['PROCESOS - Responsables Operación (Estado)'] = procesos_data.responsables_operacion_estado or ''
+                fila['PROCESOS - Responsables Operación (Responsable)'] = procesos_data.responsables_operacion_responsable or ''
+                fila['PROCESOS - Responsables Operación (Notas)'] = procesos_data.responsables_operacion_notas or ''
+                
+                fila['PROCESOS - Listado Reportes (Seguimiento)'] = procesos_data.listado_reportes_seguimiento or ''
+                fila['PROCESOS - Listado Reportes (Estado)'] = procesos_data.listado_reportes_estado or ''
+                fila['PROCESOS - Listado Reportes (Responsable)'] = procesos_data.listado_reportes_responsable or ''
+                fila['PROCESOS - Listado Reportes (Notas)'] = procesos_data.listado_reportes_notas or ''
+                
+                fila['PROCESOS - Protocolo Comunicaciones (Seguimiento)'] = procesos_data.protocolo_comunicaciones_seguimiento or ''
+                fila['PROCESOS - Protocolo Comunicaciones (Estado)'] = procesos_data.protocolo_comunicaciones_estado or ''
+                fila['PROCESOS - Protocolo Comunicaciones (Responsable)'] = procesos_data.protocolo_comunicaciones_responsable or ''
+                fila['PROCESOS - Protocolo Comunicaciones (Notas)'] = procesos_data.protocolo_comunicaciones_notas or ''
+                
+                fila['PROCESOS - Información Diaria (Seguimiento)'] = procesos_data.informacion_diaria_seguimiento or ''
+                fila['PROCESOS - Información Diaria (Estado)'] = procesos_data.informacion_diaria_estado or ''
+                fila['PROCESOS - Información Diaria (Responsable)'] = procesos_data.informacion_diaria_responsable or ''
+                fila['PROCESOS - Información Diaria (Notas)'] = procesos_data.informacion_diaria_notas or ''
+                
+                fila['PROCESOS - Seguimiento Periódico (Seguimiento)'] = procesos_data.seguimiento_periodico_seguimiento or ''
+                fila['PROCESOS - Seguimiento Periódico (Estado)'] = procesos_data.seguimiento_periodico_estado or ''
+                fila['PROCESOS - Seguimiento Periódico (Responsable)'] = procesos_data.seguimiento_periodico_responsable or ''
+                fila['PROCESOS - Seguimiento Periódico (Notas)'] = procesos_data.seguimiento_periodico_notas or ''
+                
+                fila['PROCESOS - Guiones Protocolos (Seguimiento)'] = procesos_data.guiones_protocolos_seguimiento or ''
+                fila['PROCESOS - Guiones Protocolos (Estado)'] = procesos_data.guiones_protocolos_estado or ''
+                fila['PROCESOS - Guiones Protocolos (Responsable)'] = procesos_data.guiones_protocolos_responsable or ''
+                fila['PROCESOS - Guiones Protocolos (Notas)'] = procesos_data.guiones_protocolos_notas or ''
+                
+                fila['PROCESOS - Proceso Monitoreo (Seguimiento)'] = procesos_data.proceso_monitoreo_seguimiento or ''
+                fila['PROCESOS - Proceso Monitoreo (Estado)'] = procesos_data.proceso_monitoreo_estado or ''
+                fila['PROCESOS - Proceso Monitoreo (Responsable)'] = procesos_data.proceso_monitoreo_responsable or ''
+                fila['PROCESOS - Proceso Monitoreo (Notas)'] = procesos_data.proceso_monitoreo_notas or ''
+                
+                fila['PROCESOS - Cronograma Tecnología (Seguimiento)'] = procesos_data.cronograma_tecnologia_seguimiento or ''
+                fila['PROCESOS - Cronograma Tecnología (Estado)'] = procesos_data.cronograma_tecnologia_estado or ''
+                fila['PROCESOS - Cronograma Tecnología (Responsable)'] = procesos_data.cronograma_tecnologia_responsable or ''
+                fila['PROCESOS - Cronograma Tecnología (Notas)'] = procesos_data.cronograma_tecnologia_notas or ''
+                
+                fila['PROCESOS - Cronograma Capacitaciones (Seguimiento)'] = procesos_data.cronograma_capacitaciones_seguimiento or ''
+                fila['PROCESOS - Cronograma Capacitaciones (Estado)'] = procesos_data.cronograma_capacitaciones_estado or ''
+                fila['PROCESOS - Cronograma Capacitaciones (Responsable)'] = procesos_data.cronograma_capacitaciones_responsable or ''
+                fila['PROCESOS - Cronograma Capacitaciones (Notas)'] = procesos_data.cronograma_capacitaciones_notas or ''
+                
+                fila['PROCESOS - Realización Pruebas (Seguimiento)'] = procesos_data.realizacion_pruebas_seguimiento or ''
+                fila['PROCESOS - Realización Pruebas (Estado)'] = procesos_data.realizacion_pruebas_estado or ''
+                fila['PROCESOS - Realización Pruebas (Responsable)'] = procesos_data.realizacion_pruebas_responsable or ''
+                fila['PROCESOS - Realización Pruebas (Notas)'] = procesos_data.realizacion_pruebas_notas or ''
+            
+            # Subsecciones personalizadas Procesos
+            subsecciones_procesos = db.query(ProjectSubseccionImplementacionProcesos).filter_by(
+                cliente_implementacion_id=impl.id
+            ).all()
+            
+            print(f"🔍 Implementación {impl.id}: {len(subsecciones_procesos)} subsecciones procesos")
+            
+            for subseccion in subsecciones_procesos:
+                nombre_campo = subseccion.nombre_subsesion
+                print(f"  ➕ Agregando subsección procesos: {nombre_campo}")
+                fila[f'PROCESOS - {nombre_campo} (Seguimiento)'] = subseccion.seguimiento or ''
+                fila[f'PROCESOS - {nombre_campo} (Estado)'] = subseccion.estado or ''
+                fila[f'PROCESOS - {nombre_campo} (Responsable)'] = subseccion.responsable or ''
+                fila[f'PROCESOS - {nombre_campo} (Notas)'] = subseccion.notas or ''
+            
+            # === TECNOLOGÍA ===
+            tecnologia_data = db.query(ProjectImplementacionTecnologia).filter_by(
+                cliente_implementacion_id=impl.id
+            ).first()
+            
+            if tecnologia_data:
+                # Campos predefinidos tecnología
+                fila['TECNOLOGÍA - Creación Módulo (Seguimiento)'] = tecnologia_data.creacion_modulo_seguimiento or ''
+                fila['TECNOLOGÍA - Creación Módulo (Estado)'] = tecnologia_data.creacion_modulo_estado or ''
+                fila['TECNOLOGÍA - Creación Módulo (Responsable)'] = tecnologia_data.creacion_modulo_responsable or ''
+                fila['TECNOLOGÍA - Creación Módulo (Notas)'] = tecnologia_data.creacion_modulo_notas or ''
+                
+                fila['TECNOLOGÍA - Tipificación Interacciones (Seguimiento)'] = tecnologia_data.tipificacion_interacciones_seguimiento or ''
+                fila['TECNOLOGÍA - Tipificación Interacciones (Estado)'] = tecnologia_data.tipificacion_interacciones_estado or ''
+                fila['TECNOLOGÍA - Tipificación Interacciones (Responsable)'] = tecnologia_data.tipificacion_interacciones_responsable or ''
+                fila['TECNOLOGÍA - Tipificación Interacciones (Notas)'] = tecnologia_data.tipificacion_interacciones_notas or ''
+                
+                fila['TECNOLOGÍA - Aplicativos Proceso (Seguimiento)'] = tecnologia_data.aplicativos_proceso_seguimiento or ''
+                fila['TECNOLOGÍA - Aplicativos Proceso (Estado)'] = tecnologia_data.aplicativos_proceso_estado or ''
+                fila['TECNOLOGÍA - Aplicativos Proceso (Responsable)'] = tecnologia_data.aplicativos_proceso_responsable or ''
+                fila['TECNOLOGÍA - Aplicativos Proceso (Notas)'] = tecnologia_data.aplicativos_proceso_notas or ''
+                
+                fila['TECNOLOGÍA - WhatsApp (Seguimiento)'] = tecnologia_data.whatsapp_seguimiento or ''
+                fila['TECNOLOGÍA - WhatsApp (Estado)'] = tecnologia_data.whatsapp_estado or ''
+                fila['TECNOLOGÍA - WhatsApp (Responsable)'] = tecnologia_data.whatsapp_responsable or ''
+                fila['TECNOLOGÍA - WhatsApp (Notas)'] = tecnologia_data.whatsapp_notas or ''
+                
+                fila['TECNOLOGÍA - Correos Electrónicos (Seguimiento)'] = tecnologia_data.correos_electronicos_seguimiento or ''
+                fila['TECNOLOGÍA - Correos Electrónicos (Estado)'] = tecnologia_data.correos_electronicos_estado or ''
+                fila['TECNOLOGÍA - Correos Electrónicos (Responsable)'] = tecnologia_data.correos_electronicos_responsable or ''
+                fila['TECNOLOGÍA - Correos Electrónicos (Notas)'] = tecnologia_data.correos_electronicos_notas or ''
+                
+                fila['TECNOLOGÍA - Requisitos Grabación (Seguimiento)'] = tecnologia_data.requisitos_grabacion_seguimiento or ''
+                fila['TECNOLOGÍA - Requisitos Grabación (Estado)'] = tecnologia_data.requisitos_grabacion_estado or ''
+                fila['TECNOLOGÍA - Requisitos Grabación (Responsable)'] = tecnologia_data.requisitos_grabacion_responsable or ''
+                fila['TECNOLOGÍA - Requisitos Grabación (Notas)'] = tecnologia_data.requisitos_grabacion_notas or ''
+            
+            # Subsecciones personalizadas Tecnología
+            subsecciones_tecnologia = db.query(ProjectSubseccionImplementacionTecnologia).filter_by(
+                cliente_implementacion_id=impl.id
+            ).all()
+            
+            print(f"🔍 Implementación {impl.id}: {len(subsecciones_tecnologia)} subsecciones tecnología")
+            
+            for subseccion in subsecciones_tecnologia:
+                nombre_campo = subseccion.nombre_subsesion
+                print(f"  ➕ Agregando subsección tecnología: {nombre_campo}")
+                fila[f'TECNOLOGÍA - {nombre_campo} (Seguimiento)'] = subseccion.seguimiento or ''
+                fila[f'TECNOLOGÍA - {nombre_campo} (Estado)'] = subseccion.estado or ''
+                fila[f'TECNOLOGÍA - {nombre_campo} (Responsable)'] = subseccion.responsable or ''
+                fila[f'TECNOLOGÍA - {nombre_campo} (Notas)'] = subseccion.notas or ''
+            
+            datos_excel.append(fila)
+        
+        print(f"\n📊 Total de implementaciones procesadas: {len(datos_excel)}")
+        
+        # Crear DataFrame con todos los datos
+        # Esto garantiza que todas las columnas dinámicas se incluyan
+        df = pd.DataFrame(datos_excel)
+        
+        # Ordenar columnas: primero las básicas, luego las de cada sección
+        columnas_ordenadas = []
+        columnas_basicas = ['ID', 'Cliente', 'Proceso', 'Estado General']
+        for col in columnas_basicas:
+            if col in df.columns:
+                columnas_ordenadas.append(col)
+        
+        # Agregar columnas de cada sección en orden
+        prefijos = ['CONTRACTUAL', 'TALENTO HUMANO', 'PROCESOS', 'TECNOLOGÍA']
+        for prefijo in prefijos:
+            cols_seccion = [col for col in df.columns if col.startswith(prefijo)]
+            columnas_ordenadas.extend(sorted(cols_seccion))
+        
+        # Reordenar columnas
+        df = df[columnas_ordenadas]
+        
+        print(f"📋 Total de columnas en el Excel: {len(df.columns)}")
+        print(f"🔍 Columnas con subsecciones personalizadas:")
+        for col in df.columns:
+            if not any(campo in col for campo in ['Modelo Contrato', 'Modelo Confidencialidad', 'Alcance', 'Fecha Inicio',
+                                                    'Perfil Personal', 'Cantidad Asesores', 'Horarios', 'Formador', 'Capacitaciones',
+                                                    'Responsable Cliente', 'Responsable Andes', 'Responsables Operación', 'Listado Reportes',
+                                                    'Protocolo Comunicaciones', 'Información Diaria', 'Seguimiento Periódico', 'Guiones Protocolos',
+                                                    'Proceso Monitoreo', 'Cronograma', 'Realización Pruebas',
+                                                    'Creación Módulo', 'Tipificación Interacciones', 'Aplicativos Proceso', 'WhatsApp',
+                                                    'Correos Electrónicos', 'Requisitos Grabación',
+                                                    'ID', 'Cliente', 'Proceso', 'Estado General']):
+                print(f"  ✨ {col}")
+        
+        # Generar Excel
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+            df.to_excel(writer, index=False, sheet_name='Implementaciones')
+            
+            # Obtener el workbook y worksheet para formato
+            workbook = writer.book
+            worksheet = writer.sheets['Implementaciones']
+            
+            # Formato para encabezados
+            header_format = workbook.add_format({
+                'bold': True,
+                'bg_color': '#4F46E5',
+                'font_color': 'white',
+                'border': 1,
+                'align': 'center',
+                'valign': 'vcenter'
+            })
+            
+            # Aplicar formato a encabezados
+            for col_num, value in enumerate(df.columns.values):
+                worksheet.write(0, col_num, value, header_format)
+            
+            # Ajustar ancho de columnas
+            for i, col in enumerate(df.columns):
+                max_len = max(
+                    df[col].astype(str).apply(len).max(),
+                    len(str(col))
+                )
+                worksheet.set_column(i, i, min(max_len + 2, 50))
+        
+        output.seek(0)
+        
+        # Generar nombre de archivo con fecha
+        from datetime import datetime
+        fecha_actual = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"implementaciones_completo_{fecha_actual}.xlsx"
+        
+        response = Response(
+            output.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+        
+        print(f"✅ Excel generado exitosamente: {filename}")
+        print(f"📊 Total de implementaciones: {len(datos_excel)}")
+        print(f"📋 Total de columnas: {len(df.columns)}")
+        
+        return response
+        
+    except Exception as e:
+        print(f"❌ Error al generar Excel: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error al generar Excel: {str(e)}")
 
 @router.get("/{id}/descargar_pdf")
 def descargar_pdf_implementacion(id: int, db: Session = Depends(get_db)):
