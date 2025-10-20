@@ -17,7 +17,7 @@ class EstadoCampaña(str, enum.Enum):
 
 
 class Campaña(Base):
-    __tablename__ = "project_campanas_campanas"
+    __tablename__ = "campanas_campanas"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)

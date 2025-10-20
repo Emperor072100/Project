@@ -4,7 +4,7 @@ from core.database import Base
 
 
 class ClienteCorporativo(Base):
-    __tablename__ = "project_campanas_clientes_corporativos"
+    __tablename__ = "campanas_clientes_corporativos"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False, index=True)

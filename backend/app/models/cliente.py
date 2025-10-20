@@ -5,7 +5,7 @@ from app.models.campana import Campaña
 
 
 class Cliente(Base):
-    __tablename__ = "project_campanas_contacto"
+    __tablename__ = "campanas_contacto"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
