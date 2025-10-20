@@ -22,6 +22,6 @@ class ClienteUpdate(BaseModel):
 
 class ClienteOut(ClienteBase):
     id: int
-    
+
     class Config:
         from_attributes = True

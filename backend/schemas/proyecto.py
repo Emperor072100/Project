@@ -6,6 +6,7 @@ from schemas.estado import EstadoOut
 from schemas.prioridad import PrioridadOut
 from schemas.usuario import UsuarioOut
 
+
 class ProyectoBase(BaseModel):
     nombre: str
     tipo: Optional[List[str]] = []
@@ -19,7 +20,7 @@ class ProyectoBase(BaseModel):
     fecha_fin: Optional[date]
     progreso: Optional[float]
 
-    
+
 class ProyectoCreate(BaseModel):
     nombre: str
     responsable_id: int
@@ -32,7 +33,8 @@ class ProyectoCreate(BaseModel):
     fecha_fin: Optional[date] = None
     progreso: Optional[float] = 0.0
     tipos: Optional[List[int]] = []  # Para IDs de tipos
-    equipos: Optional[List[int]] = [] # Para IDs de equipos
+    equipos: Optional[List[int]] = []  # Para IDs de equipos
+
 
 class ProyectoUpdate(BaseModel):
     nombre: Optional[str] = None
@@ -48,8 +50,10 @@ class ProyectoUpdate(BaseModel):
     fecha_fin: Optional[date] = None
     progreso: Optional[float] = None
 
+
 class ProyectoPatch(BaseModel):
     """Schema específico para operaciones PATCH - todos los campos son opcionales"""
+
     nombre: Optional[str] = None
     tipos: Optional[List[str]] = None
     equipos: Optional[List[str]] = None
@@ -63,17 +67,22 @@ class ProyectoPatch(BaseModel):
     fecha_fin: Optional[date] = None
     progreso: Optional[float] = None
 
+
 class TipoOut(BaseModel):
     id: int
     nombre: str
+
     class Config:
         from_attributes = True
+
 
 class EquipoOut(BaseModel):
     id: int
     nombre: str
+
     class Config:
         from_attributes = True
+
 
 class ProyectoOut(BaseModel):
     id: int
@@ -91,7 +100,6 @@ class ProyectoOut(BaseModel):
     prioridad: PrioridadOut
     tipos: List[TipoOut]
     equipos: List[EquipoOut]
-
 
     class Config:
         from_attributes = True

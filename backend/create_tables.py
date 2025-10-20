@@ -4,7 +4,15 @@ Script para crear todas las tablas en la base de datos
 """
 from core.database import engine, Base
 from app.models import usuario, proyecto, tarea, estado, prioridad, tipo_equipo
-from app.models import Cliente, ClienteCorporativo, Campaña, HistorialCampaña, ProductoCampaña, FacturacionCampaña  # Agregar los nuevos modelos
+from app.models import (
+    Cliente,
+    ClienteCorporativo,
+    Campaña,
+    HistorialCampaña,
+    ProductoCampaña,
+    FacturacionCampaña,
+)  # Agregar los nuevos modelos
+
 
 def create_tables():
     """Crea todas las tablas definidas en los modelos"""

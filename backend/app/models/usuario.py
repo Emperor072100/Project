@@ -3,9 +3,11 @@ from sqlalchemy.orm import relationship
 from core.database import Base
 import enum
 
+
 class RolUsuario(str, enum.Enum):
     admin = "admin"
     usuario = "usuario"
+
 
 class Usuario(Base):
     __tablename__ = "project_usuarios"

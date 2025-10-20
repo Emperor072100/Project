@@ -8,9 +8,9 @@ all_routes = []
 clientes_corp_routes = []
 
 for route in app.routes:
-    if hasattr(route, 'path'):
+    if hasattr(route, "path"):
         all_routes.append(route.path)
-        if 'clientes-corporativos' in route.path:
+        if "clientes-corporativos" in route.path:
             clientes_corp_routes.append(route.path)
 
 print("📋 Todas las rutas registradas:")
@@ -23,7 +23,7 @@ for route_path in clientes_corp_routes:
 
 # Verificar prefixes de los routers
 from routers.contactos import router as contactos_router
-from routers.campañas import router as campañas_router  
+from routers.campañas import router as campañas_router
 from routers.clientes_corporativos import router as clientes_corporativos_router
 
 print(f"\n📝 Prefixes de routers:")

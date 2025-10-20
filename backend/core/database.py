@@ -8,11 +8,7 @@ from pathlib import Path
 # Cargar .env explícitamente desde múltiples ubicaciones posibles
 current_dir = Path(__file__).resolve().parent
 project_dir = current_dir.parent
-env_paths = [
-    project_dir / ".env",
-    current_dir / ".env",
-    Path(".env")
-]
+env_paths = [project_dir / ".env", current_dir / ".env", Path(".env")]
 
 for env_path in env_paths:
     if env_path.exists():
@@ -29,6 +25,7 @@ if not DATABASE_URL:
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 # Este método debe estar aquí:
 def get_db():

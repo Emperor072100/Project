@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from core.database import Base
 
+
 class Estado(Base):
     __tablename__ = "project_estados"
 

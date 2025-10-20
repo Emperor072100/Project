@@ -1,10 +1,13 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from core.database import Base
 
+
 class ProjectImplementacionTecnologia(Base):
     __tablename__ = "project_implementacion_tecnologia"
     id = Column(Integer, primary_key=True, index=True)
-    cliente_implementacion_id = Column(Integer, ForeignKey("project_implementaciones_clienteimple.id"), nullable=False)
+    cliente_implementacion_id = Column(
+        Integer, ForeignKey("project_implementaciones_clienteimple.id"), nullable=False
+    )
     creacion_modulo_seguimiento = Column(String)
     creacion_modulo_estado = Column(String)
     creacion_modulo_responsable = Column(String)

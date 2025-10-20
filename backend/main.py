@@ -23,7 +23,7 @@ try:
     from routers.contactos import router as contactos_router
     from routers.campañas import router as campañas_router
     from routers.clientes_corporativos import router as clientes_corporativos_router
-    
+
     # Routers adicionales del sistema
     from routers.auth import router as auth_router
     from routers.usuarios import router as usuarios_router
@@ -35,23 +35,25 @@ try:
     from routers.prioridades import router as prioridades_router
     from routers.implementaciones import router as implementaciones_router
     from routers.entregas import router as entregas_router
-    
+
     # Registrar todos los routers
     app.include_router(contactos_router)  # Endpoint para contactos
-    app.include_router(campañas_router)   # Endpoint para campañas
-    app.include_router(clientes_corporativos_router)  # Endpoint para clientes corporativos
-    
-    app.include_router(auth_router)       # Autenticación
-    app.include_router(usuarios_router)   # Usuarios
+    app.include_router(campañas_router)  # Endpoint para campañas
+    app.include_router(
+        clientes_corporativos_router
+    )  # Endpoint para clientes corporativos
+
+    app.include_router(auth_router)  # Autenticación
+    app.include_router(usuarios_router)  # Usuarios
     app.include_router(proyectos_router)  # Proyectos
-    app.include_router(tareas_router)     # Tareas
-    app.include_router(equipos_router)    # Equipos
-    app.include_router(tipos_router)      # Tipos
-    app.include_router(estados_router)    # Estados
+    app.include_router(tareas_router)  # Tareas
+    app.include_router(equipos_router)  # Equipos
+    app.include_router(tipos_router)  # Tipos
+    app.include_router(estados_router)  # Estados
     app.include_router(prioridades_router)  # Prioridades
     app.include_router(implementaciones_router)  # Implementaciones
     app.include_router(entregas_router)  # Entregas
-    
+
     print("✅ Todos los routers registrados correctamente")
     print(f"   - Contactos: {contactos_router.prefix}")
     print(f"   - Campañas: {campañas_router.prefix}")
@@ -66,29 +68,32 @@ try:
     print(f"   - Prioridades: {prioridades_router.prefix}")
     print(f"   - Implementaciones: {implementaciones_router.prefix}")
     print(f"   - Entregas: {entregas_router.prefix}")
-    
+
 except ImportError as e:
     print(f"❌ Error importando routers: {e}")
     import traceback
+
     traceback.print_exc()
 
 
 if __name__ == "__main__":
     try:
         import uvicorn
+
         print("🚀 Iniciando servidor FastAPI...")
         print("📍 URL: http://localhost:8000")
         print("📚 Documentación: http://localhost:8000/docs")
-        
+
         # Mostrar todas las rutas registradas
         print("\n📋 Rutas registradas:")
         for route in app.routes:
-            if hasattr(route, 'path'):
+            if hasattr(route, "path"):
                 print(f"   - {route.path}")
-        
+
         print("\n⚡ Iniciando servidor...")
         uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
     except Exception as e:
         print(f"❌ Error iniciando servidor: {e}")
         import traceback
+
         traceback.print_exc()

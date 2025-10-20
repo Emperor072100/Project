@@ -1,10 +1,13 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from core.database import Base
 
+
 class ProjectImplementacionTalentoHumano(Base):
     __tablename__ = "project_implementacion_talentoHumano"
     id = Column(Integer, primary_key=True, index=True)
-    cliente_implementacion_id = Column(Integer, ForeignKey("project_implementaciones_clienteimple.id"), nullable=False)
+    cliente_implementacion_id = Column(
+        Integer, ForeignKey("project_implementaciones_clienteimple.id"), nullable=False
+    )
     perfil_personal_seguimiento = Column(String)
     perfil_personal_estado = Column(String)
     perfil_personal_responsable = Column(String)

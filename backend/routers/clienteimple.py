@@ -3,6 +3,7 @@ from crud.clienteimple import create_clienteimple
 
 router = APIRouter()
 
+
 @router.post("/clienteimple")
 def crear_clienteimple(data: dict):
     cliente = data.get("cliente")

@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+
 class CampañaBase(BaseModel):
     nombre: str
     tipo: str
@@ -16,15 +17,19 @@ class CampañaBase(BaseModel):
     descripcion: Optional[str] = None
     observaciones: Optional[str] = None
 
+
 class CampañaCreate(CampañaBase):
     pass
 
+
 class CampañaUpdate(CampañaBase):
     pass
+
 
 class Campaña(CampañaBase):
     id: int
     cliente_nombre: Optional[str] = None
     fecha_creacion: Optional[datetime] = None
+
     class Config:
         from_attributes = True

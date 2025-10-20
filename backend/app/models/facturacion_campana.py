@@ -11,7 +11,9 @@ class FacturacionCampaña(Base):
     unidad = Column(String, nullable=False)
     cantidad = Column(Integer, nullable=False, default=1)
     valor = Column(Float, nullable=False)
-    periodicidad = Column(String, nullable=False)  # Nuevo campo: periodicidad de facturación
+    periodicidad = Column(
+        String, nullable=False
+    )  # Nuevo campo: periodicidad de facturación
 
     # Relación con campaña
     campaña = relationship("Campaña", back_populates="facturacion")

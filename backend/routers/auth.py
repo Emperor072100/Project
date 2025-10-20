@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+):
     logger.info(f"Intento de login para: {form_data.username}")
     usuario = db.query(Usuario).filter(Usuario.correo == form_data.username).first()
-    
+
     if not usuario:
         logger.warning(f"Usuario no encontrado: {form_data.username}")
         raise HTTPException(
@@ -50,9 +52,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             "nombre": usuario.nombre,
             "apellido": usuario.apellido,
             "correo": usuario.correo,
-            "rol": usuario.rol
-        }
+            "rol": usuario.rol,
+        },
     }
+
 
 @router.get("/me", response_model=UsuarioOut)
 def leer_usuario_actual(usuario: UserInDB = Depends(get_current_user)):
@@ -62,8 +65,9 @@ def leer_usuario_actual(usuario: UserInDB = Depends(get_current_user)):
         "nombre": usuario.nombre,
         "apellido": usuario.apellido,
         "correo": usuario.correo,
-        "rol": usuario.rol
+        "rol": usuario.rol,
     }
+
 
 @router.post("/register", response_model=UsuarioOut)
 def register_user(usuario: UsuarioCreate, db: Session = Depends(get_db)):
@@ -71,9 +75,13 @@ def register_user(usuario: UsuarioCreate, db: Session = Depends(get_db)):
     try:
         print("Datos recibidos en POST /auth/register:", usuario)
 
-        existente = db.query(Usuario).filter(
-            (Usuario.nombre == usuario.nombre) | (Usuario.correo == usuario.correo)
-        ).first()
+        existente = (
+            db.query(Usuario)
+            .filter(
+                (Usuario.nombre == usuario.nombre) | (Usuario.correo == usuario.correo)
+            )
+            .first()
+        )
         if existente:
             raise HTTPException(status_code=400, detail="Nombre o correo ya en uso")
 
@@ -83,7 +91,7 @@ def register_user(usuario: UsuarioCreate, db: Session = Depends(get_db)):
             apellido=usuario.apellido,
             correo=usuario.correo,
             hashed_password=hashed_password,
-            rol=usuario.rol
+            rol=usuario.rol,
         )
         db.add(nuevo_usuario)
         db.commit()
@@ -92,4 +100,3 @@ def register_user(usuario: UsuarioCreate, db: Session = Depends(get_db)):
     except Exception as e:
         print("🔥 ERROR creando usuario:", e)
         raise HTTPException(status_code=500, detail="Error interno del servidor")
-

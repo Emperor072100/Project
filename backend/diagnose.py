@@ -3,6 +3,7 @@ print("🔍 Diagnóstico paso a paso...")
 # 1. Verificar FastAPI
 try:
     import fastapi
+
     print("✅ FastAPI importado")
 except Exception as e:
     print(f"❌ Error FastAPI: {e}")
@@ -11,6 +12,7 @@ except Exception as e:
 # 2. Crear app básica
 try:
     from fastapi import FastAPI
+
     app = FastAPI()
     print("✅ App básica creada")
 except Exception as e:
@@ -21,7 +23,7 @@ except Exception as e:
 routers = [
     ("routers.contactos", "contactos"),
     ("routers.campañas", "campañas"),
-    ("routers.clientes_corporativos", "clientes_corporativos")
+    ("routers.clientes_corporativos", "clientes_corporativos"),
 ]
 
 for module_name, router_name in routers:
@@ -32,6 +34,7 @@ for module_name, router_name in routers:
     except Exception as e:
         print(f"❌ Error en {router_name}: {e}")
         import traceback
+
         traceback.print_exc()
         print("-" * 40)
 

@@ -14,9 +14,8 @@ class ProjectImplementacionesClienteImple(Base):
     talento_humano = Column(JSON, nullable=True)
     procesos = Column(JSON, nullable=True)
     tecnologia = Column(JSON, nullable=True)
-    
+
     # Relación con entregas
     entregas = relationship(
-        "ProjectEntregaImplementaciones",
-        back_populates="implementacion"
+        "ProjectEntregaImplementaciones", back_populates="implementacion"
     )

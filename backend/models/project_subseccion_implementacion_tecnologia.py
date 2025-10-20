@@ -1,12 +1,18 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from core.database import Base
 
+
 class ProjectSubseccionImplementacionTecnologia(Base):
-    __tablename__ = 'project_subseccion_implementacion_tecnologia'
-    
+    __tablename__ = "project_subseccion_implementacion_tecnologia"
+
     id = Column(Integer, primary_key=True, index=True)
-    cliente_implementacion_id = Column(Integer, ForeignKey('project_implementaciones_clienteimple.id', ondelete='CASCADE'), nullable=False, index=True)
-    seccion = Column(String(50), default='tecnologia', nullable=False)
+    cliente_implementacion_id = Column(
+        Integer,
+        ForeignKey("project_implementaciones_clienteimple.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    seccion = Column(String(50), default="tecnologia", nullable=False)
     nombre_subsesion = Column(String(255), nullable=False)
     seguimiento = Column(Text)
     estado = Column(String(100))

@@ -20,9 +20,13 @@ class ProductoCampaña(Base):
     id = Column(Integer, primary_key=True, index=True)
     campaña_id = Column(Integer, ForeignKey("campanas_campanas.id"), nullable=False)
     tipo = Column(Enum(TipoProducto), nullable=False, default=TipoProducto.PRODUCTO)
-    producto_servicio = Column(String, nullable=False)  # Nuevo campo: nombre específico del producto/servicio
+    producto_servicio = Column(
+        String, nullable=False
+    )  # Nuevo campo: nombre específico del producto/servicio
     proveedor = Column(String, nullable=False)
-    propiedad = Column(Enum(PropiedadProducto), nullable=False, default=PropiedadProducto.PROPIA)
+    propiedad = Column(
+        Enum(PropiedadProducto), nullable=False, default=PropiedadProducto.PROPIA
+    )
     cantidad = Column(Integer, nullable=False, default=1)
 
     # Relación con campaña

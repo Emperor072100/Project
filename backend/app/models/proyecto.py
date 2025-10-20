@@ -5,6 +5,7 @@ from app.models.tipo_equipo import proyecto_tipos, proyecto_equipos
 from app.models.estado import Estado
 from app.models.prioridad import Prioridad
 
+
 class Proyecto(Base):
 
     __tablename__ = "project_proyectos"
@@ -29,4 +30,6 @@ class Proyecto(Base):
     responsable = relationship("Usuario", back_populates="proyectos")
 
     tipos = relationship("Tipo", secondary=proyecto_tipos, back_populates="proyectos")
-    equipos = relationship("Equipo", secondary=proyecto_equipos, back_populates="proyectos")
+    equipos = relationship(
+        "Equipo", secondary=proyecto_equipos, back_populates="proyectos"
+    )

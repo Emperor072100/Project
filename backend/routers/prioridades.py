@@ -7,12 +7,15 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/prioridades", tags=["Prioridades"])
 
+
 class PrioridadCreate(BaseModel):
     nivel: str
+
 
 @router.get("/", response_model=list[PrioridadOut])
 def listar_prioridades(db: Session = Depends(get_db)):
     return db.query(Prioridad).all()
+
 
 @router.post("/", response_model=PrioridadOut)
 def crear_prioridad(prioridad: PrioridadCreate, db: Session = Depends(get_db)):

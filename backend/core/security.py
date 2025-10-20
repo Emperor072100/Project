@@ -69,15 +69,19 @@ from app.models.usuario import Usuario
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 def verificar_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
 
 def hash_password(password):
     return pwd_context.hash(password)
 
+
 # -------------------------
 # Modelo base del usuario para el token (ligero)
 # -------------------------
+
 
 class UserInDB(BaseModel):
     id: int
@@ -85,28 +89,35 @@ class UserInDB(BaseModel):
     correo: EmailStr
     rol: str
 
+
 # -------------------------
 # Crear token de acceso
 # -------------------------
+
 
 def crear_token_acceso(usuario, expires_delta: timedelta = None):
     to_encode = {
         "sub": str(usuario.id),
         "nombre": usuario.nombre,
         "correo": usuario.correo,
-        "rol": str(usuario.rol)
+        "rol": str(usuario.rol),
         # puedes agregar más si quieres: "apellido": usuario.apellido, ...
     }
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.utcnow() + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 # -------------------------
 # Decodificar token
 # -------------------------
 
+
 def decodificar_token(token: str):
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
 
 # -------------------------
 # OAuth2 esquema
@@ -119,9 +130,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 # Puedes alternar: solo con token, o con base de datos.
 # -------------------------
 
+
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> Usuario:
     """
     Extrae el ID del token y busca al usuario completo en la base de datos.
@@ -144,6 +155,7 @@ def get_current_user(
         raise cred_excepcion
 
     return usuario
+
 
 # Si prefieres usar solo el token (sin consultar la BD), puedes crear una función aparte:
 def get_current_user_from_token(token: str = Depends(oauth2_scheme)) -> UserInDB:

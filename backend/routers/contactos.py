@@ -14,19 +14,18 @@ router = APIRouter(prefix="/contactos", tags=["Contactos"])
 def crear_contacto(
     contacto: ClienteCreate,
     db: Session = Depends(get_db),
-    usuario: UserInDB = Depends(get_current_user)
+    usuario: UserInDB = Depends(get_current_user),
 ):
     """Crear un nuevo contacto"""
     # Verificar que el cliente corporativo existe
-    cliente_corp = db.query(ClienteCorporativo).filter(
-        ClienteCorporativo.id == contacto.cliente_corporativo_id
-    ).first()
+    cliente_corp = (
+        db.query(ClienteCorporativo)
+        .filter(ClienteCorporativo.id == contacto.cliente_corporativo_id)
+        .first()
+    )
     if not cliente_corp:
-        raise HTTPException(
-            status_code=404,
-            detail="Cliente corporativo no encontrado"
-        )
-    
+        raise HTTPException(status_code=404, detail="Cliente corporativo no encontrado")
+
     nuevo_contacto = Cliente(**contacto.dict())
     db.add(nuevo_contacto)
     db.commit()
@@ -36,13 +35,10 @@ def crear_contacto(
 
 @router.get("/", response_model=List[ClienteOut])
 def listar_contactos(
-    db: Session = Depends(get_db),
-    usuario: UserInDB = Depends(get_current_user)
+    db: Session = Depends(get_db), usuario: UserInDB = Depends(get_current_user)
 ):
     """Listar todos los contactos con información del cliente corporativo"""
-    contactos = db.query(Cliente).options(
-        joinedload(Cliente.cliente_corporativo)
-    ).all()
+    contactos = db.query(Cliente).options(joinedload(Cliente.cliente_corporativo)).all()
     return contactos
 
 
@@ -50,12 +46,15 @@ def listar_contactos(
 def obtener_contacto(
     contacto_id: int,
     db: Session = Depends(get_db),
-    usuario: UserInDB = Depends(get_current_user)
+    usuario: UserInDB = Depends(get_current_user),
 ):
     """Obtener un contacto específico"""
-    contacto = db.query(Cliente).options(
-        joinedload(Cliente.cliente_corporativo)
-    ).filter(Cliente.id == contacto_id).first()
+    contacto = (
+        db.query(Cliente)
+        .options(joinedload(Cliente.cliente_corporativo))
+        .filter(Cliente.id == contacto_id)
+        .first()
+    )
     if not contacto:
         raise HTTPException(status_code=404, detail="Contacto no encontrado")
     return contacto
@@ -66,29 +65,30 @@ def actualizar_contacto(
     contacto_id: int,
     contacto_update: ClienteUpdate,
     db: Session = Depends(get_db),
-    usuario: UserInDB = Depends(get_current_user)
+    usuario: UserInDB = Depends(get_current_user),
 ):
     """Actualizar un contacto existente"""
     contacto = db.query(Cliente).filter(Cliente.id == contacto_id).first()
     if not contacto:
         raise HTTPException(status_code=404, detail="Contacto no encontrado")
-    
+
     # Verificar cliente corporativo si se está actualizando
     if contacto_update.cliente_corporativo_id is not None:
-        cliente_corp = db.query(ClienteCorporativo).filter(
-            ClienteCorporativo.id == contacto_update.cliente_corporativo_id
-        ).first()
+        cliente_corp = (
+            db.query(ClienteCorporativo)
+            .filter(ClienteCorporativo.id == contacto_update.cliente_corporativo_id)
+            .first()
+        )
         if not cliente_corp:
             raise HTTPException(
-                status_code=404,
-                detail="Cliente corporativo no encontrado"
+                status_code=404, detail="Cliente corporativo no encontrado"
             )
-    
+
     # Actualizar campos
     update_data = contacto_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(contacto, field, value)
-    
+
     db.commit()
     db.refresh(contacto)
     return contacto
@@ -98,27 +98,30 @@ def actualizar_contacto(
 def eliminar_contacto(
     contacto_id: int,
     db: Session = Depends(get_db),
-    usuario: UserInDB = Depends(get_current_user)
+    usuario: UserInDB = Depends(get_current_user),
 ):
     """Eliminar un contacto"""
     contacto = db.query(Cliente).filter(Cliente.id == contacto_id).first()
     if not contacto:
         raise HTTPException(status_code=404, detail="Contacto no encontrado")
-    
+
     db.delete(contacto)
     db.commit()
     return {"message": "Contacto eliminado exitosamente"}
 
 
-@router.get("/por-cliente-corporativo/{cliente_corp_id}",
-            response_model=List[ClienteOut])
+@router.get(
+    "/por-cliente-corporativo/{cliente_corp_id}", response_model=List[ClienteOut]
+)
 def obtener_contactos_por_cliente_corporativo(
     cliente_corp_id: int,
     db: Session = Depends(get_db),
-    usuario: UserInDB = Depends(get_current_user)
+    usuario: UserInDB = Depends(get_current_user),
 ):
     """Obtener todos los contactos de un cliente corporativo específico"""
-    contactos = db.query(Cliente).filter(
-        Cliente.cliente_corporativo_id == cliente_corp_id
-    ).all()
+    contactos = (
+        db.query(Cliente)
+        .filter(Cliente.cliente_corporativo_id == cliente_corp_id)
+        .all()
+    )
     return contactos

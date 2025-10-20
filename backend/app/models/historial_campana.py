@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from core.database import Base
 from datetime import datetime
 
+
 class HistorialCampaña(Base):
     __tablename__ = "historial_campanas"
 

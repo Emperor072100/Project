@@ -5,7 +5,16 @@ from dotenv import load_dotenv
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from core.database import Base
-from app.models import usuario, proyecto, tarea, estado, prioridad, tipo_equipo, campana, cliente
+from app.models import (
+    usuario,
+    proyecto,
+    tarea,
+    estado,
+    prioridad,
+    tipo_equipo,
+    campana,
+    cliente,
+)
 
 from alembic import context
 from alembic.script import ScriptDirectory
@@ -25,6 +34,7 @@ if database_url:
 # Add this section to handle revision issues
 script_dir = ScriptDirectory.from_config(config)
 
+
 # Custom script revision directory to handle missing revisions
 class CustomScriptDirectory(ScriptDirectory):
     @property
@@ -36,6 +46,7 @@ class CustomScriptDirectory(ScriptDirectory):
             # Regenerate the revision map from scratch
             self._revision_map = {}
             return super()._revision_map
+
 
 # Replace the script directory with our custom one
 context.script = CustomScriptDirectory.from_config(config)
@@ -90,12 +101,11 @@ def run_migrations_online() -> None:
     """
     # Usar nuestro engine directamente desde database.py
     from core.database import engine
+
     connectable = engine
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

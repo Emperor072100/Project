@@ -34,6 +34,6 @@ class CampañaUpdate(BaseModel):
 
 class CampañaOut(CampañaBase):
     id: int
-    
+
     class Config:
         from_attributes = True

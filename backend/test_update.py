@@ -4,9 +4,10 @@
 import requests
 import json
 
+
 def test_update():
     url = "http://localhost:8000/implementaciones/1"
-    
+
     data = {
         "cliente": "Holaaa",
         "proceso": "SAC",
@@ -16,181 +17,182 @@ def test_update():
                 "seguimiento": "Seguimiento de prueba actualizado",
                 "estado": "ok",
                 "responsable": "Andes BPO",
-                "notas": "Notas de prueba"
+                "notas": "Notas de prueba",
             },
             "modeloConfidencialidad": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "alcance": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "fechaInicio": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
-            }
+                "notas": "",
+            },
         },
         "talento_humano": {
             "perfilPersonal": {
                 "seguimiento": "Perfil actualizado desde script",
                 "estado": "en proceso",
                 "responsable": "Cliente",
-                "notas": "Test"
+                "notas": "Test",
             },
             "cantidadAsesores": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "horarios": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "formador": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "capacitacionesAndes": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "capacitacionesCliente": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
-            }
+                "notas": "",
+            },
         },
         "procesos": {
             "responsableCliente": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "responsableAndes": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "responsablesOperacion": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "listadoReportes": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "protocoloComunicaciones": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "guionesProtocolos": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "procesoMonitoreo": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "cronogramaTecnologia": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "cronogramaCapacitaciones": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "realizacionPruebas": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
-            }
+                "notas": "",
+            },
         },
         "tecnologia": {
             "creacionModulo": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "tipificacionInteracciones": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "aplicativosProceso": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "whatsapp": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "correosElectronicos": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
+                "notas": "",
             },
             "requisitosGrabacion": {
                 "seguimiento": "",
                 "estado": "",
                 "responsable": "",
-                "notas": ""
-            }
-        }
+                "notas": "",
+            },
+        },
     }
-    
+
     headers = {"Content-Type": "application/json"}
-    
+
     print("Enviando datos de prueba...")
     print(json.dumps(data, indent=2))
-    
+
     response = requests.put(url, json=data, headers=headers)
-    
+
     print(f"\nRespuesta del servidor: {response.status_code}")
     print(response.text)
-    
+
     if response.status_code == 200:
         print("\n✅ Actualización exitosa!")
     else:
         print("\n❌ Error en la actualización")
+
 
 if __name__ == "__main__":
     test_update()

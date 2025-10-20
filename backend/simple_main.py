@@ -33,12 +33,7 @@ def estadisticas_test():
     return {
         "total_clientes": 0,
         "total_campañas": 0,
-        "por_servicio": {
-            "SAC": 0,
-            "TMC": 0,
-            "TVT": 0,
-            "CBZ": 0
-        }
+        "por_servicio": {"SAC": 0, "TMC": 0, "TVT": 0, "CBZ": 0},
     }
 
 
