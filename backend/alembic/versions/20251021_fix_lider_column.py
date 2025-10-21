@@ -14,13 +14,7 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
-    # Renombrar columna si existe con nombre incorrecto
-    with op.batch_alter_table('campanas_campanas') as batch_op:
-        batch_op.alter_column('lider_de_campa±a', new_column_name='lider_de_campaña', existing_type=sa.String(), existing_nullable=True)
-    # Si no existe, agregar la columna correctamente
-    op.add_column('campanas_campanas', sa.Column('lider_de_campaña', sa.String(), nullable=True))
+    pass
 
 def downgrade() -> None:
-    with op.batch_alter_table('campanas_campanas') as batch_op:
-        batch_op.alter_column('lider_de_campaña', new_column_name='lider_de_campa±a', existing_type=sa.String(), existing_nullable=True)
-    op.drop_column('campanas_campanas', 'lider_de_campaña')
+    pass
