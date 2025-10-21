@@ -29,7 +29,7 @@ class Campaña(Base):
     contacto_id_secundario = Column(
         Integer, ForeignKey("campanas_contacto.id"), nullable=True
     )
-    lider_de_campaña = Column("lider_de_campaÂ±a", String, nullable=False)
+    lider_de_campaña = Column("lider_de_campaña", String, nullable=False)
     ejecutivo = Column(String, nullable=False)
     fecha_de_produccion = Column(Date, nullable=False)  # Solo fecha, sin hora
     estado = Column(Enum(EstadoCampaña), nullable=False, default=EstadoCampaña.ACTIVO)
