@@ -169,6 +169,14 @@ const Implementaciones = () => {
   const [entregaParaEliminar, setEntregaParaEliminar] = useState(null);
   const [formEditarEntregaData, setFormEditarEntregaData] = useState({});
   const [confirmacionEliminar, setConfirmacionEliminar] = useState('');
+  // Modal para "Campaña en producción"
+  const [showCampanaProduccionModal, setShowCampanaProduccionModal] = useState(false);
+  const [implementacionSeleccionadaParaProduccion, setImplementacionSeleccionadaParaProduccion] = useState(null);
+  const [comentarioNoCien, setComentarioNoCien] = useState('');
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [mostrarFormularioComentario, setMostrarFormularioComentario] = useState(false);
+  // Estado para guardar progreso de contractual por implementación
+  const [progresoContractualPorImplementacion, setProgresoContractualPorImplementacion] = useState({});
   // Estados para manejo de nuevas subsecciones
   const [nuevoNombreSubsesion, setNuevoNombreSubsesion] = useState({
     contractual: '',
@@ -632,17 +640,27 @@ const Implementaciones = () => {
           
           const progresoCalculado = calcularProgresoRealImplementacion(response.data);
           
+          // Calcular progreso específico de Contractual
+          const progresoContractual = calcularProgresoSeccion(response.data.contractual);
+          
           // Crear información de debug solo para la primera carga
           const debug = analizarImplementacionDetallado(response.data, implementacion.id);
           
           console.log(`✅ Progreso calculado para ${implementacion.id}: ${progresoCalculado}%`);
-          console.log(`🔬 Análisis detallado:`, debug);
+          console.log(`� Progreso Contractual: ${progresoContractual}%`);
+          console.log(`�🔬 Análisis detallado:`, debug);
           
           setProgreso(progresoCalculado);
           // También actualizar el estado global
           setImplementacionesProgreso(prev => ({
             ...prev,
             [implementacion.id]: progresoCalculado
+          }));
+          
+          // Guardar progreso de contractual
+          setProgresoContractualPorImplementacion(prev => ({
+            ...prev,
+            [implementacion.id]: progresoContractual
           }));
           
         } catch (error) {
@@ -2491,6 +2509,8 @@ const Implementaciones = () => {
                   <option value="">Seleccione una opción</option>
                   <option value="Pendiente">Pendiente</option>
                   <option value="En Proceso">En Proceso</option>
+                  <option value="Activo">Activo</option>
+                  <option value="En producción">En producción</option>
                   <option value="Finalizado">Finalizado</option>
                   <option value="Cancelado">Cancelado</option>
                 </select>
@@ -3937,6 +3957,7 @@ const Implementaciones = () => {
                                 { value: 'Pendiente', label: '🟡 Pendiente', bg: 'bg-amber-50', text: 'text-amber-800', hover: 'hover:bg-amber-100' },
                                 { value: 'En Proceso', label: '🔵 En Proceso', bg: 'bg-blue-50', text: 'text-blue-800', hover: 'hover:bg-blue-100' },
                                 { value: 'Activo', label: '✅ Activo', bg: 'bg-emerald-50', text: 'text-emerald-800', hover: 'hover:bg-emerald-100' },
+                                { value: 'En producción', label: '🚀 En producción', bg: 'bg-purple-50', text: 'text-purple-800', hover: 'hover:bg-purple-100' },
                                 { value: 'Finalizado', label: '🟢 Finalizado', bg: 'bg-indigo-50', text: 'text-indigo-800', hover: 'hover:bg-indigo-100' },
                                 { value: 'Cancelado', label: '🔴 Cancelado', bg: 'bg-red-50', text: 'text-red-800', hover: 'hover:bg-red-100' }
                               ].map((estado) => (
@@ -3977,6 +3998,7 @@ const Implementaciones = () => {
                             implementacion.estado === 'Activo' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200 hover:border-emerald-300' :
                             implementacion.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200 hover:border-amber-300' :
                             implementacion.estado === 'En Proceso' ? 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200 hover:border-blue-300' :
+                            implementacion.estado === 'En producción' ? 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200 hover:border-purple-300' :
                             implementacion.estado === 'Finalizado' ? 'bg-indigo-100 text-indigo-800 border-indigo-200 hover:bg-indigo-200 hover:border-indigo-300' :
                             'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200 hover:border-gray-300'
                           }`}
@@ -3986,6 +4008,7 @@ const Implementaciones = () => {
                             implementacion.estado === 'Activo' ? 'bg-emerald-500' :
                             implementacion.estado === 'Pendiente' ? 'bg-amber-500' :
                             implementacion.estado === 'En Proceso' ? 'bg-blue-500' :
+                            implementacion.estado === 'En producción' ? 'bg-purple-500' :
                             implementacion.estado === 'Finalizado' ? 'bg-indigo-500' :
                             'bg-gray-500'
                           }`}></div>
@@ -4030,6 +4053,42 @@ const Implementaciones = () => {
                         >
                           <FaFileExcel className="mr-1.5" size={12} />
                           Excel
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const progresoContractualActual = progresoContractualPorImplementacion[implementacion.id] ?? 0;
+                            
+                            if (progresoContractualActual >= 100) {
+                              // Si Contractual está al 100%, cambiar estado directamente a "En producción"
+                              try {
+                                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                                const config = { headers: { Authorization: `Bearer ${token}` } };
+                                
+                                await axios.put(
+                                  `http://localhost:8000/implementaciones/${implementacion.id}/estado`,
+                                  { estado: 'En producción' },
+                                  config
+                                );
+                                
+                                toast.success('Implementación marcada como "En producción"');
+                                cargarImplementaciones(); // Recargar la lista
+                              } catch (error) {
+                                console.error('Error al cambiar estado:', error);
+                                toast.error('Error al cambiar el estado a "En producción"');
+                              }
+                            } else {
+                              // Si Contractual NO está al 100%, abrir modal para comentario
+                              setImplementacionSeleccionadaParaProduccion(implementacion);
+                              setComentarioNoCien('');
+                              setShowCampanaProduccionModal(true);
+                            }
+                          }}
+                          className="inline-flex items-center px-3 py-2 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 hover:border-indigo-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          title="Campaña en producción"
+                        >
+                          <FaChevronRight className="mr-1.5" size={12} />
+                          Campaña en producción
                         </button>
                       </div>
                     </td>
@@ -4276,6 +4335,311 @@ const Implementaciones = () => {
                 Procesar Entrega
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal - Campaña en producción */}
+      {showCampanaProduccionModal && (
+        <Modal
+          isOpen={showCampanaProduccionModal}
+          onClose={() => {
+            setShowCampanaProduccionModal(false);
+            setImplementacionSeleccionadaParaProduccion(null);
+            setComentarioNoCien('');
+            setMostrarFormularioComentario(false);
+          }}
+          title={`🚀 Campaña en producción${implementacionSeleccionadaParaProduccion ? ' - ' + implementacionSeleccionadaParaProduccion.cliente : ''}`}
+          size="medium"
+        >
+          <div className="space-y-6">
+            {/* Header con información de estado */}
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-5 rounded-lg border border-purple-200 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                    {implementacionSeleccionadaParaProduccion?.nombre_proyecto || implementacionSeleccionadaParaProduccion?.proceso || 'Proyecto'}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">Cliente</span>
+                      <span className="text-sm font-medium text-gray-800">
+                        {implementacionSeleccionadaParaProduccion?.cliente || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">Estado actual</span>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium w-fit ${
+                        implementacionSeleccionadaParaProduccion?.estado === 'En producción' 
+                          ? 'bg-purple-100 text-purple-800'
+                          : implementacionSeleccionadaParaProduccion?.estado === 'Activo'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {implementacionSeleccionadaParaProduccion?.estado || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">Progreso Contractual</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-300 ${
+                              (progresoContractualPorImplementacion[implementacionSeleccionadaParaProduccion?.id] ?? 0) === 100
+                                ? 'bg-green-500'
+                                : (progresoContractualPorImplementacion[implementacionSeleccionadaParaProduccion?.id] ?? 0) >= 75
+                                ? 'bg-blue-500'
+                                : (progresoContractualPorImplementacion[implementacionSeleccionadaParaProduccion?.id] ?? 0) >= 50
+                                ? 'bg-yellow-500'
+                                : 'bg-red-500'
+                            }`}
+                            style={{ width: `${progresoContractualPorImplementacion[implementacionSeleccionadaParaProduccion?.id] ?? 0}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-semibold text-indigo-600 min-w-[45px] text-right">
+                          {(progresoContractualPorImplementacion[implementacionSeleccionadaParaProduccion?.id] ?? 0).toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contenido principal del modal */}
+            {((progresoContractualPorImplementacion[implementacionSeleccionadaParaProduccion?.id] ?? 0) < 100) ? (
+              <div className="space-y-4">
+                {/* Alerta de advertencia */}
+                <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-red-800 mb-1">
+                        ⚠️ Sección Contractual incompleta
+                      </h4>
+                      <p className="text-sm text-red-700">
+                        La sección Contractual debe estar al 100% para que la campaña entre en producción automáticamente.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mostrar comentario existente o botón para actualizar */}
+                {!mostrarFormularioComentario ? (
+                  <div className="space-y-3">
+                    {implementacionSeleccionadaParaProduccion?.comentario_produccion ? (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="flex-shrink-0 mt-0.5">
+                              <svg className="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-sm font-semibold text-amber-800 mb-2">
+                                📝 Comentario registrado
+                              </h4>
+                              <p className="text-sm text-amber-900 bg-white bg-opacity-60 p-3 rounded border border-amber-200 leading-relaxed">
+                                {implementacionSeleccionadaParaProduccion.comentario_produccion}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            onClick={() => {
+                              setComentarioNoCien(implementacionSeleccionadaParaProduccion.comentario_produccion);
+                              setMostrarFormularioComentario(true);
+                            }}
+                            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Actualizar comentario
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center">
+                            <svg className="w-7 h-7 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">
+                              No hay comentario registrado
+                            </h4>
+                            <p className="text-xs text-gray-600">
+                              Agregue un comentario explicando por qué Contractual no está al 100%
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setMostrarFormularioComentario(true)}
+                            className="mt-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-medium shadow-md hover:shadow-lg flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Agregar comentario
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botón cerrar cuando no está editando */}
+                    <div className="flex justify-end pt-2">
+                      <button
+                        onClick={() => {
+                          setShowCampanaProduccionModal(false);
+                          setImplementacionSeleccionadaParaProduccion(null);
+                          setComentarioNoCien('');
+                        }}
+                        className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Formulario de edición/creación de comentario */
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Comentario explicativo <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={comentarioNoCien}
+                        onChange={(e) => setComentarioNoCien(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg min-h-[140px] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
+                        placeholder="Ejemplo: El cliente solicitó postergar la firma del contrato hasta la próxima semana debido a cambios internos en su organización..."
+                        maxLength={500}
+                      />
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-xs text-gray-500">
+                          Explique por qué la sección Contractual no está completa
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {comentarioNoCien.length}/500 caracteres
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => {
+                          setMostrarFormularioComentario(false);
+                          setComentarioNoCien('');
+                        }}
+                        className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!comentarioNoCien.trim()) {
+                            toast.error('⚠️ Debe escribir un comentario antes de continuar');
+                            return;
+                          }
+                          try {
+                            setEnviandoComentario(true);
+                            
+                            const config = {
+                              headers: {
+                                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                                "Content-Type": "application/json",
+                              },
+                            };
+                            
+                            await axios.put(
+                              `http://localhost:8000/implementaciones/${implementacionSeleccionadaParaProduccion?.id}/comentario-produccion`,
+                              { comentario_produccion: comentarioNoCien },
+                              config
+                            );
+                            
+                            console.log('✅ Comentario guardado exitosamente');
+                            toast.success('✅ Comentario guardado exitosamente');
+                            
+                            // Recargar implementaciones
+                            cargarImplementaciones();
+                            
+                            setMostrarFormularioComentario(false);
+                            setComentarioNoCien('');
+                          } catch (err) {
+                            console.error('❌ Error al guardar comentario:', err);
+                            toast.error('❌ Error al guardar el comentario');
+                          } finally {
+                            setEnviandoComentario(false);
+                          }
+                        }}
+                        disabled={enviandoComentario || !comentarioNoCien.trim()}
+                        className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {enviandoComentario ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Guardando...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Guardar comentario
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Cuando Contractual está al 100% */
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-8 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+                      <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="absolute -top-1 -right-1">
+                      <span className="flex h-5 w-5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-5 w-5 bg-green-500"></span>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-xl font-bold text-green-800">
+                      ✅ Campaña lista para producción
+                    </h4>
+                    <p className="text-sm text-green-700 max-w-md">
+                      La sección Contractual está completa al 100%. Esta implementación está en estado <span className="font-semibold">"En producción"</span>.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowCampanaProduccionModal(false);
+                      setImplementacionSeleccionadaParaProduccion(null);
+                    }}
+                    className="mt-4 px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium shadow-md hover:shadow-lg"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

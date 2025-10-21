@@ -45,6 +45,7 @@ class ImplementacionOut(BaseModel):
     cliente: str
     proceso: str
     estado: Optional[str]
+    comentario_produccion: Optional[str] = None
     contractual: Optional[Dict[str, Any]]
     talento_humano: Optional[Dict[str, Any]]
     procesos: Optional[Dict[str, Any]]
@@ -59,6 +60,7 @@ class ImplementacionBasic(BaseModel):
     cliente: str
     proceso: str
     estado: Optional[str]
+    comentario_produccion: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -66,6 +68,10 @@ class ImplementacionBasic(BaseModel):
 
 class EstadoUpdate(BaseModel):
     estado: str
+
+
+class ComentarioProduccionUpdate(BaseModel):
+    comentario_produccion: str
 
 
 router = APIRouter(prefix="/implementaciones", tags=["Implementaciones"])
@@ -731,6 +737,26 @@ def actualizar_estado_implementacion(
     )
 
 
+@router.put("/{id}/comentario-produccion")
+def actualizar_comentario_produccion(
+    id: int, data: ComentarioProduccionUpdate, db: Session = Depends(get_db)
+):
+    """Endpoint para actualizar el comentario de producción cuando Contractual < 100%"""
+    imp = db.query(ProjectImplementacionesClienteImple).filter_by(id=id).first()
+    if not imp:
+        raise HTTPException(status_code=404, detail="Implementación no encontrada")
+
+    imp.comentario_produccion = data.comentario_produccion
+    db.commit()
+    db.refresh(imp)
+
+    return {
+        "id": imp.id,
+        "comentario_produccion": imp.comentario_produccion,
+        "message": "Comentario guardado exitosamente"
+    }
+
+
 @router.get("/{id}", response_model=ImplementacionOut)
 def obtener_implementacion(id: int, db: Session = Depends(get_db)):
     """Endpoint para obtener una implementación específica con todos sus detalles"""
@@ -957,6 +983,7 @@ def obtener_implementacion(id: int, db: Session = Depends(get_db)):
         cliente=imp.cliente,
         proceso=imp.proceso,
         estado=imp.estado,
+        comentario_produccion=imp.comentario_produccion,
         contractual=contractual,
         talento_humano=talento_humano,
         procesos=procesos,

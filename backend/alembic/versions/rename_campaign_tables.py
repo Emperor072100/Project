@@ -20,169 +20,23 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Rename campaign tables removing project_ prefix."""
-    # Primero, eliminamos las restricciones de clave foránea para evitar errores
-    op.drop_constraint(
-        "project_productos_campanas_campaña_id_fkey", "project_productos_campanas"
-    )
-    op.drop_constraint(
-        "project_historial_campanas_campaña_id_fkey", "project_historial_campanas"
-    )
-    op.drop_constraint(
-        "project_facturacion_campanas_campaña_id_fkey", "project_facturacion_campanas"
-    )
-    op.drop_constraint(
-        "project_campanas_contacto_cliente_corporativo_id_fkey",
-        "project_campanas_contacto",
-    )
-    op.drop_constraint(
-        "project_campanas_campanas_cliente_corporativo_id_fkey",
-        "project_campanas_campanas",
-    )
-    op.drop_constraint(
-        "project_campanas_campanas_contacto_id_fkey", "project_campanas_campanas"
-    )
-    op.drop_constraint(
-        "project_campanas_campanas_contacto_id_secundario_fkey",
-        "project_campanas_campanas",
-    )
-
-    # Renombramos las tablas
-    op.rename_table("project_campanas_campanas", "campanas_campanas")
-    op.rename_table(
-        "project_campanas_clientes_corporativos", "campanas_clientes_corporativos"
-    )
-    op.rename_table("project_campanas_contacto", "campanas_contacto")
-    op.rename_table("project_facturacion_campanas", "facturacion_campanas")
-    op.rename_table("project_historial_campanas", "historial_campanas")
-    op.rename_table("project_productos_campanas", "productos_campanas")
-
-    # Recreamos las restricciones de clave foránea con los nuevos nombres
-    op.create_foreign_key(
-        "productos_campanas_campaña_id_fkey",
-        "productos_campanas",
-        "campanas_campanas",
-        ["campaña_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "historial_campanas_campaña_id_fkey",
-        "historial_campanas",
-        "campanas_campanas",
-        ["campaña_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "facturacion_campanas_campaña_id_fkey",
-        "facturacion_campanas",
-        "campanas_campanas",
-        ["campaña_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "campanas_contacto_cliente_corporativo_id_fkey",
-        "campanas_contacto",
-        "campanas_clientes_corporativos",
-        ["cliente_corporativo_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "campanas_campanas_cliente_corporativo_id_fkey",
-        "campanas_campanas",
-        "campanas_clientes_corporativos",
-        ["cliente_corporativo_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "campanas_campanas_contacto_id_fkey",
-        "campanas_campanas",
-        "campanas_contacto",
-        ["contacto_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "campanas_campanas_contacto_id_secundario_fkey",
-        "campanas_campanas",
-        "campanas_contacto",
-        ["contacto_id_secundario"],
-        ["id"],
-    )
+    """Rename campaign tables removing project_ prefix using safe SQL."""
+    # Use raw SQL with IF EXISTS for robustness
+    # Rename tables directly - PostgreSQL automatically renames constraints and indexes
+    op.execute("ALTER TABLE IF EXISTS project_campanas_clientes_corporativos RENAME TO campanas_clientes_corporativos;")
+    op.execute("ALTER TABLE IF EXISTS project_campanas_contacto RENAME TO campanas_contacto;")
+    op.execute("ALTER TABLE IF EXISTS project_campanas_campanas RENAME TO campanas_campanas;")
+    op.execute("ALTER TABLE IF EXISTS project_facturacion_campanas RENAME TO facturacion_campanas;")
+    op.execute("ALTER TABLE IF EXISTS project_historial_campanas RENAME TO historial_campanas;")
+    op.execute("ALTER TABLE IF EXISTS project_productos_campanas RENAME TO productos_campanas;")
 
 
 def downgrade() -> None:
-    """Restore original table names."""
-    # Primero, eliminamos las restricciones de clave foránea
-    op.drop_constraint("productos_campanas_campaña_id_fkey", "productos_campanas")
-    op.drop_constraint("historial_campanas_campaña_id_fkey", "historial_campanas")
-    op.drop_constraint("facturacion_campanas_campaña_id_fkey", "facturacion_campanas")
-    op.drop_constraint(
-        "campanas_contacto_cliente_corporativo_id_fkey", "campanas_contacto"
-    )
-    op.drop_constraint(
-        "campanas_campanas_cliente_corporativo_id_fkey", "campanas_campanas"
-    )
-    op.drop_constraint("campanas_campanas_contacto_id_fkey", "campanas_campanas")
-    op.drop_constraint(
-        "campanas_campanas_contacto_id_secundario_fkey", "campanas_campanas"
-    )
-
-    # Renombramos las tablas de vuelta a sus nombres originales
-    op.rename_table("campanas_campanas", "project_campanas_campanas")
-    op.rename_table(
-        "campanas_clientes_corporativos", "project_campanas_clientes_corporativos"
-    )
-    op.rename_table("campanas_contacto", "project_campanas_contacto")
-    op.rename_table("facturacion_campanas", "project_facturacion_campanas")
-    op.rename_table("historial_campanas", "project_historial_campanas")
-    op.rename_table("productos_campanas", "project_productos_campanas")
-
-    # Recreamos las restricciones de clave foránea originales
-    op.create_foreign_key(
-        "project_productos_campanas_campaña_id_fkey",
-        "project_productos_campanas",
-        "project_campanas_campanas",
-        ["campaña_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "project_historial_campanas_campaña_id_fkey",
-        "project_historial_campanas",
-        "project_campanas_campanas",
-        ["campaña_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "project_facturacion_campanas_campaña_id_fkey",
-        "project_facturacion_campanas",
-        "project_campanas_campanas",
-        ["campaña_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "project_campanas_contacto_cliente_corporativo_id_fkey",
-        "project_campanas_contacto",
-        "project_campanas_clientes_corporativos",
-        ["cliente_corporativo_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "project_campanas_campanas_cliente_corporativo_id_fkey",
-        "project_campanas_campanas",
-        "project_campanas_clientes_corporativos",
-        ["cliente_corporativo_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "project_campanas_campanas_contacto_id_fkey",
-        "project_campanas_campanas",
-        "project_campanas_contacto",
-        ["contacto_id"],
-        ["id"],
-    )
-    op.create_foreign_key(
-        "project_campanas_campanas_contacto_id_secundario_fkey",
-        "project_campanas_campanas",
-        "project_campanas_contacto",
-        ["contacto_id_secundario"],
-        ["id"],
-    )
+    """Restore original table names using safe SQL."""
+    # Rename tables back to original names with project_ prefix
+    op.execute("ALTER TABLE IF EXISTS campanas_clientes_corporativos RENAME TO project_campanas_clientes_corporativos;")
+    op.execute("ALTER TABLE IF EXISTS campanas_contacto RENAME TO project_campanas_contacto;")
+    op.execute("ALTER TABLE IF EXISTS campanas_campanas RENAME TO project_campanas_campanas;")
+    op.execute("ALTER TABLE IF EXISTS facturacion_campanas RENAME TO project_facturacion_campanas;")
+    op.execute("ALTER TABLE IF EXISTS historial_campanas RENAME TO project_historial_campanas;")
+    op.execute("ALTER TABLE IF EXISTS productos_campanas RENAME TO project_productos_campanas;")
