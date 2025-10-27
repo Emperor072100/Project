@@ -1,5 +1,4 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
 import axiosInstance from '../services/axiosConfig';
 import toast from 'react-hot-toast';
 
@@ -20,10 +19,7 @@ export const ProyectosProvider = ({ children }) => {
   // Función para obtener prioridades disponibles del backend
   const fetchPrioridades = async () => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await axios.get('http://localhost:8000/prioridades', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axiosInstance.get('/prioridades');
       console.log('🎯 Prioridades disponibles en el backend:', response.data);
       setPrioridadesDisponibles(response.data);
       return response.data;
@@ -41,10 +37,7 @@ export const ProyectosProvider = ({ children }) => {
   };
   const fetchEstados = async () => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await axios.get('http://localhost:8000/estados', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axiosInstance.get('/estados');
       console.log('📋 Estados disponibles en el backend:', response.data);
       setEstadosDisponibles(response.data);
       return response.data;
@@ -65,13 +58,8 @@ export const ProyectosProvider = ({ children }) => {
   const fetchProyectos = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const res = await axios.get('http://localhost:8000/proyectos', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      const res = await axiosInstance.get('/proyectos');
       // Normalizar los datos para que sean consistentes en todas las vistas
-      // En la función fetchProyectos
       const proyectosNormalizados = res.data.map((p) => ({
         ...p,
         id: p.id,
@@ -97,7 +85,6 @@ export const ProyectosProvider = ({ children }) => {
         fechaFinObj: p.fecha_fin ? new Date(p.fecha_fin) : new Date(p.fechaFin || Date.now()),
         color: getColorByEstado(p.estado)
       }));
-      
       setProyectos(proyectosNormalizados);
       setError(null);
     } catch (error) {
@@ -442,11 +429,7 @@ export const ProyectosProvider = ({ children }) => {
   // Función para eliminar un proyecto
   const deleteProyecto = async (id) => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      await axios.delete(`http://localhost:8000/proyectos/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      await axiosInstance.delete(`/proyectos/${id}`);
       // Actualizar estado local
       setProyectos(prev => prev.filter(p => p.id !== id));
       toast.success("Proyecto eliminado");
@@ -457,26 +440,16 @@ export const ProyectosProvider = ({ children }) => {
       return false;
     }
   };
-  
   // Función para crear un nuevo proyecto
   const createProyecto = async (nuevoProyecto) => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
       // Preparar datos para la API
       const apiData = {
         ...nuevoProyecto,
         fecha_inicio: nuevoProyecto.fechaInicio,
         fecha_fin: nuevoProyecto.fechaFin
       };
-      
-      const res = await axios.post('http://localhost:8000/proyectos', apiData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
+      const res = await axiosInstance.post('/proyectos', apiData);
       // Añadir el nuevo proyecto al estado
       const proyectoCreado = {
         ...res.data,
@@ -491,7 +464,6 @@ export const ProyectosProvider = ({ children }) => {
         fechaFinObj: res.data.fecha_fin ? new Date(res.data.fecha_fin) : new Date(),
         color: getColorByEstado(res.data.estado)
       };
-      
       setProyectos(prev => [...prev, proyectoCreado]);
       toast.success("Proyecto creado correctamente");
       return true;

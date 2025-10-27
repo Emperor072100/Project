@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaLock, FaEye, FaEyeSlash, FaUser } from 'react-icons/fa';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Login = () => {
   const [credentials, setCredentials] = useState({
     correo: '',
@@ -38,7 +40,7 @@ const Login = () => {
       formData.append('username', credentials.correo);
       formData.append('password', credentials.password);
 
-      const response = await fetch('http://localhost:8000/auth/login', {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

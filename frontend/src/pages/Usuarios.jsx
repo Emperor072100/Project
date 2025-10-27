@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Usuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -25,7 +27,7 @@ const Usuarios = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      let url = 'http://localhost:8000/usuarios';
+      let url = `${API_URL}/usuarios`;
       if (searchTerm) {
         url += `?nombre=${encodeURIComponent(searchTerm)}`; // Añadir parámetro de búsqueda si existe
       }
@@ -64,11 +66,9 @@ const Usuarios = () => {
     setError(null); // Limpiar errores previos
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
       const url = editingId 
-        ? `http://localhost:8000/usuarios/${editingId}` 
-        : 'http://localhost:8000/auth/register'; // Usar el nuevo endpoint
-      
+        ? `${API_URL}/usuarios/${editingId}` 
+        : `${API_URL}/auth/register`; // Usar el nuevo endpoint
       const method = editingId ? 'PUT' : 'POST';
       
       // Preparar el cuerpo de la solicitud según el formato requerido por FastAPI
@@ -153,7 +153,7 @@ const Usuarios = () => {
     setError(null); // Limpiar errores previos
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/usuarios/${id}`, { // Esta URL debe coincidir con el backend
+      const response = await fetch(`${API_URL}/usuarios/${id}`, { // Esta URL debe coincidir con el backend
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

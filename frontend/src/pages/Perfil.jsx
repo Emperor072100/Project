@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 // Recibe la prop sidebarCollapsed desde el layout
 export default function Perfil({ sidebarCollapsed = false }) {
   const navigate = useNavigate();
@@ -52,7 +54,7 @@ export default function Perfil({ sidebarCollapsed = false }) {
       if (!userData.id) return;
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       try {
-        const response = await fetch('http://localhost:8000/proyectos/', {
+        const response = await fetch(`${API_URL}/proyectos/`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -83,13 +85,13 @@ export default function Perfil({ sidebarCollapsed = false }) {
     const fetchDatos = async () => {
       try {
         // Obtener campañas, clientes corporativos e implementaciones
-        const respCampañas = await fetch('http://localhost:8000/campanas/', {
+        const respCampañas = await fetch(`${API_URL}/campanas/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const respClientes = await fetch('http://localhost:8000/clientes-corporativos', {
+        const respClientes = await fetch(`${API_URL}/clientes-corporativos`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const respImplementaciones = await fetch('http://localhost:8000/implementaciones/basic', {
+        const respImplementaciones = await fetch(`${API_URL}/implementaciones/basic`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         

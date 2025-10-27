@@ -19,7 +19,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!userId || !token) return;
 
-    fetch(`http://localhost:8000/usuarios/${userId}`, {
+    fetch(`${import.meta.env.VITE_API_URL}/usuarios/${userId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.ok ? res.json() : Promise.reject('No se pudo obtener el usuario'))
