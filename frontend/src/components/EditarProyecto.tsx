@@ -124,11 +124,11 @@ const EditarProyecto: React.FC<Props> = ({ proyectoId, isOpen, onClose, onActual
       
       // Cargar todos los datos necesarios en paralelo
       const [usuariosRes, estadosRes, prioridadesRes, tiposRes, equiposRes] = await Promise.all([
-        axios.get('http://localhost:8000/usuarios', config),
-        axios.get('http://localhost:8000/estados', config),
-        axios.get('http://localhost:8000/prioridades', config),
-        axios.get('http://localhost:8000/tipos', config),
-        axios.get('http://localhost:8000/equipos', config)
+        axios.get(`${import.meta.env.VITE_API_URL}/usuarios`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/estados`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/prioridades`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/tipos`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/equipos`, config)
       ]);
 
       setUsuarios(usuariosRes.data);
@@ -148,7 +148,7 @@ const EditarProyecto: React.FC<Props> = ({ proyectoId, isOpen, onClose, onActual
     try {
       setCargando(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await axios.get(`http://localhost:8000/proyectos/${id}`, {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/proyectos/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -272,7 +272,7 @@ const EditarProyecto: React.FC<Props> = ({ proyectoId, isOpen, onClose, onActual
       
       console.log('Datos enviados al backend:', JSON.stringify(datosAEnviar, null, 2));
       
-      const response = await axios.put(`http://localhost:8000/proyectos/${proyectoId}`, datosAEnviar, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL}/proyectos/${proyectoId}`, datosAEnviar, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

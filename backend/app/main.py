@@ -19,7 +19,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Solo permite el frontend local
+    allow_origins=["https://campaignmanagement.andesbpo.com"],  # Solo permite el frontend local
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

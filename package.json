@@ -2,5 +2,8 @@
   "dependencies": {
     "dayjs": "^1.11.13",
     "react-hot-toast": "^2.5.2"
+  },
+  "devDependencies": {
+    "vite": "^7.1.12"
   }
 }

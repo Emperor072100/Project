@@ -466,7 +466,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
       // Intentar con PATCH primero (más específico)
       try {
         const response = await axios.patch(
-          `http://localhost:8000/proyectos/${proyectoId}/equipo`,
+          `${import.meta.env.VITE_API_URL}/proyectos/${proyectoId}/equipo`,
           { equipo: nuevoEquipo },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -478,7 +478,7 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
         
         // Si PATCH falla, usar PUT pero con datos mínimos
         const response = await axios.put(
-          `http://localhost:8000/proyectos/${proyectoId}`,
+          `${import.meta.env.VITE_API_URL}/proyectos/${proyectoId}`,
           { equipo: nuevoEquipo },
           { headers: { Authorization: `Bearer ${token}` } }
         );
