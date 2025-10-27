@@ -972,7 +972,7 @@ const Implementaciones = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       // Intentar cargar los detalles completos de la implementación
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacion.id}`, config);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacionId}`, config);
       setImplementacionDetail(response.data);
     } catch (error) {
       console.error('Error al cargar detalles:', error);
@@ -1252,7 +1252,7 @@ const Implementaciones = () => {
         
         // Luego, agregar los campos personalizados que vienen del backend pero no están en defaultStructure
         Object.keys(seccionData).forEach(key => {
-          if (!defaultStructure.hasOwnProperty(key) && typeof seccionData[key] === 'object') {
+          if (!Object.prototype.hasOwnProperty.call(defaultStructure, key) && typeof seccionData[key] === 'object') {
             mapped[key] = {
               seguimiento: seccionData[key]?.seguimiento || '',
               estado: seccionData[key]?.estado || '',
