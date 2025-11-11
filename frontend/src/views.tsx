@@ -35,26 +35,8 @@ export const Dashboard: React.FC = () => {
   const { proyectos, updateProyecto, deleteProyecto, fetchProyectos } = useProyectos();
   const navigate = useNavigate();
   
-  useEffect(() => {
-    // Verificar si ya se ha recargado
-    const hasReloaded = sessionStorage.getItem('dashboard_reloaded');
-    
-    if (!hasReloaded) {
-      // Marcar como recargado antes de la recarga para evitar un bucle
-      sessionStorage.setItem('dashboard_reloaded', 'true');
-      
-      // Recargar la página después de un corto retraso
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
-    }
-    
-    // Limpiar el flag cuando se desmonte el componente (opcional)
-    return () => {
-      // Descomenta si quieres que recargue cada vez que se monte nuevamente
-      // sessionStorage.removeItem('dashboard_reloaded');
-    };
-  }, []); // Array de dependencias vacío - solo ejecutar al montar
+  // Removed automatic page reload that was causing infinite loop
+  // The ProyectosContext now handles data loading properly
 
   const [filtros, setFiltros] = useState({ estado: '', equipo: '', prioridad: '', responsable: '' });
   const [busqueda, setBusqueda] = useState<string>('');
@@ -67,7 +49,8 @@ export const Dashboard: React.FC = () => {
     const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId') || '';
     const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
     if (userId && token) {
-      fetch(`${import.meta.env.VITE_API_URL}/usuarios/${userId}`, {
+      const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+      fetch(`${API_URL}/usuarios/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => res.ok ? res.json() : Promise.reject('No se pudo obtener el usuario'))
@@ -203,14 +186,17 @@ export const Dashboard: React.FC = () => {
             <option key={createSelectKey('responsable', 'todos')} value="">Todos los responsables</option>
             {[...new Set(proyectos.map(p => p.responsable_nombre || p.responsable))]
               .filter(Boolean)
-              .map((res, index) => (
-                <option 
-                  key={createSelectKey('responsable', res, index)} 
-                  value={res}
-                >
-                  {res}
-                </option>
-              ))}
+              .map((res, index) => {
+                const responsable = String(res); // Convert to string to fix type issues
+                return (
+                  <option 
+                    key={createSelectKey('responsable', responsable, index)} 
+                    value={responsable}
+                  >
+                    {responsable}
+                  </option>
+                );
+              })}
           </select>
         </div>
       </div> {/* Cierra el div de "flex flex-wrap gap-2 justify-between items-center mb-2" */}

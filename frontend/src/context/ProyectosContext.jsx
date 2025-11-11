@@ -138,8 +138,6 @@ export const ProyectosProvider = ({ children }) => {
   // Función para actualizar un proyecto
   const updateProyecto = async (id, campo, valor) => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
       // Obtener el proyecto actual
       const proyectoActual = proyectos.find(p => p.id === id);
       if (!proyectoActual) {
@@ -176,7 +174,7 @@ export const ProyectosProvider = ({ children }) => {
         case 'enlace':
           proyectoActualizado[campo] = String(valor);
           break;
-        case 'prioridad':
+        case 'prioridad': {
           // Validar que la prioridad sea válida antes de asignarla
           const prioridadValida = prioridadesDisponibles.find(p => 
             (typeof p === 'string' && p === valor) || 
@@ -191,7 +189,8 @@ export const ProyectosProvider = ({ children }) => {
           
           proyectoActualizado[campo] = String(valor);
           break;
-        case 'estado':
+        }
+        case 'estado': {
           // Validar que el estado sea válido antes de asignarlo
           const estadoValido = estadosDisponibles.find(e => 
             (typeof e === 'string' && e === valor) || 
@@ -206,6 +205,7 @@ export const ProyectosProvider = ({ children }) => {
           
           proyectoActualizado[campo] = String(valor);
           break;
+        }
         default:
           proyectoActualizado[campo] = valor;
       }
@@ -386,8 +386,6 @@ export const ProyectosProvider = ({ children }) => {
       console.log(`Actualizando proyecto ${id} de "${proyecto.estado}" a "${nuevoEstado}"`);
       console.log(`Columna de destino: ${newColumn}`);
       
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
       // Usar el nuevo endpoint PATCH específico para estados
       const nuevoProgreso = getProgresoByEstado(nuevoEstado);
       const updateData = {
@@ -555,6 +553,7 @@ export const ProyectosProvider = ({ children }) => {
       }
     };
     initializeData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized]);
   
   // Valor del contexto

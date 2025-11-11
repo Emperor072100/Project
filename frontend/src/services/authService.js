@@ -95,25 +95,21 @@ export const setupAuthInterceptor = () => {
       };
     }
     
-    try {
-      const response = await originalFetch(url, options);
-      
-      // Si hay error 401 (no autorizado), intentar refrescar token
-      if (response.status === 401) {
-        const refreshedToken = await authService.refreshToken();
-        if (refreshedToken) {
-          // Reintentar con el nuevo token
-          options.headers = {
-            ...options.headers,
-            'Authorization': `Bearer ${refreshedToken}`
-          };
-          return originalFetch(url, options);
-        }
+    const response = await originalFetch(url, options);
+    
+    // Si hay error 401 (no autorizado), intentar refrescar token
+    if (response.status === 401) {
+      const refreshedToken = await authService.refreshToken();
+      if (refreshedToken) {
+        // Reintentar con el nuevo token
+        options.headers = {
+          ...options.headers,
+          'Authorization': `Bearer ${refreshedToken}`
+        };
+        return originalFetch(url, options);
       }
-      
-      return response;
-    } catch (error) {
-      throw error;
     }
+    
+    return response;
   };
 };
