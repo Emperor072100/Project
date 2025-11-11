@@ -1,6 +1,9 @@
 // Servicio para manejar la autenticación
 const BASE_URL = import.meta.env.VITE_API_URL;
 
+// Flag para prevenir múltiples redirecciones
+let redirectingToLogin = false;
+
 export const authService = {
   // Iniciar sesión
   login: async (username, password) => {
@@ -23,12 +26,16 @@ export const authService = {
   
   // Cerrar sesión
   logout: () => {
+    console.log('🔓 Cerrando sesión...');
+    redirectingToLogin = false; // Reset flag
     localStorage.removeItem('token');
     localStorage.removeItem('tokenType');
     localStorage.removeItem('userId');
+    localStorage.removeItem('user');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('tokenType');
     sessionStorage.removeItem('userId');
+    sessionStorage.removeItem('user');
   },
   
   // Obtener token
@@ -45,6 +52,27 @@ export const authService = {
   refreshToken: async () => {
     // Implementación pendiente
     return null;
+  },
+  
+  // Función para manejar redirección al login de manera controlada
+  redirectToLogin: () => {
+    if (redirectingToLogin) {
+      console.log('🔄 Ya redirigiendo al login, saltando...');
+      return;
+    }
+    
+    const currentPath = window.location.pathname;
+    if (currentPath === '/login') {
+      console.log('🔄 Ya estamos en login, no redirigir');
+      return;
+    }
+    
+    console.log('🔄 Redirigiendo a login desde:', currentPath);
+    redirectingToLogin = true;
+    
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 100); // Reducir el tiempo de espera
   }
 };
 

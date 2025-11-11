@@ -16,9 +16,13 @@ export const ProyectosProvider = ({ children }) => {
   const [estadosDisponibles, setEstadosDisponibles] = useState([]);
   const [prioridadesDisponibles, setPrioridadesDisponibles] = useState([]);
   
+  // Flag para prevenir llamadas múltiples durante la inicialización
+  const [initialized, setInitialized] = useState(false);
+  
   // Función para obtener prioridades disponibles del backend
   const fetchPrioridades = async () => {
     try {
+      console.log('🎯 fetchPrioridades called');
       const response = await axiosInstance.get('/prioridades');
       console.log('🎯 Prioridades disponibles en el backend:', response.data);
       setPrioridadesDisponibles(response.data);
@@ -57,6 +61,7 @@ export const ProyectosProvider = ({ children }) => {
   // Función para obtener todos los proyectos
   const fetchProyectos = async () => {
     try {
+      console.log('🚀 fetchProyectos called');
       setLoading(true);
       const res = await axiosInstance.get('/proyectos');
       // Normalizar los datos para que sean consistentes en todas las vistas
@@ -87,10 +92,19 @@ export const ProyectosProvider = ({ children }) => {
       }));
       setProyectos(proyectosNormalizados);
       setError(null);
+      console.log('✅ Proyectos cargados exitosamente:', proyectosNormalizados.length);
     } catch (error) {
-      console.error('Error al cargar proyectos:', error);
-      setError('Error al cargar proyectos');
-      toast.error("Error al cargar proyectos");
+      console.error('❌ Error al cargar proyectos:', error);
+      
+      // Si es error 401, no mostrar toast de error adicional porque 
+      // el interceptor ya maneja la redirección al login
+      if (error.response?.status !== 401) {
+        setError('Error al cargar proyectos');
+        toast.error("Error al cargar proyectos");
+      } else {
+        console.log('🔐 Error 401 - El interceptor manejará la redirección');
+        setError('No autenticado');
+      }
     } finally {
       setLoading(false);
     }
@@ -521,13 +535,27 @@ export const ProyectosProvider = ({ children }) => {
   
   // Cargar proyectos y estados al montar el componente
   useEffect(() => {
+    if (initialized) {
+      console.log('🛑 Ya inicializado, saltando carga de datos');
+      return;
+    }
+    
+    console.log('🚀 Iniciando carga de datos del contexto');
     const initializeData = async () => {
-      await fetchEstados(); // Cargar estados primero
-      await fetchPrioridades(); // Cargar prioridades
-      await fetchProyectos(); // Luego cargar proyectos
+      try {
+        setInitialized(true);
+        await fetchEstados(); // Cargar estados primero
+        await fetchPrioridades(); // Cargar prioridades
+        await fetchProyectos(); // Luego cargar proyectos
+        console.log('✅ Datos del contexto cargados exitosamente');
+      } catch (error) {
+        console.error('❌ Error al inicializar datos:', error);
+        setError('Error al inicializar datos');
+        setLoading(false);
+      }
     };
     initializeData();
-  }, []);
+  }, [initialized]);
   
   // Valor del contexto
   const value = {

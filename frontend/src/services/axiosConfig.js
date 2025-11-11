@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { authService } from './authService';
 
 // Determinar la URL base según el entorno
 const API_URL = import.meta.env.VITE_API_URL;
@@ -34,19 +35,22 @@ axiosInstance.interceptors.response.use(
     if (error.response) {
       // Manejar error 401 (No autorizado)
       if (error.response.status === 401) {
-        console.log('Sesión expirada o token inválido');
+        console.log('❌ Error 401: Sesión expirada o token inválido');
         
-        // Limpiar tokens
-        localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
-        
-        // Notificar al usuario
-        toast.error('Sesión expirada. Redirigiendo a login...');
-        
-        // Redirigir a login después de un pequeño retraso
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 1500);
+        // Limpiar tokens solo una vez
+        const hasToken = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (hasToken) {
+          console.log('🧹 Limpiando tokens de autenticación');
+          authService.logout();
+          
+          // Notificar al usuario
+          toast.error('Sesión expirada. Redirigiendo a login...');
+          
+          // Usar la función controlada de redirección
+          authService.redirectToLogin();
+        } else {
+          console.log('🚫 No hay tokens para limpiar');
+        }
       }
       
       // Manejar error 403 (Prohibido)
