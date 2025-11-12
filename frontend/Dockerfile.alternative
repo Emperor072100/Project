@@ -2,17 +2,15 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Copy package files
+# Install dependencies first (better caching)
 COPY package.json package-lock.json* ./
-
-# Install dependencies
 RUN npm ci --only=production=false
 
 # Copy source code
 COPY . .
 
-# Fix permissions and build
-RUN chmod -R +x node_modules/.bin/ && npm run build
+# Build the application using npx (alternative approach)
+RUN npx vite build
 
 # Servidor estático de producción
 FROM nginx:alpine
