@@ -23,7 +23,7 @@ export const ProyectosProvider = ({ children }) => {
   const fetchPrioridades = async () => {
     try {
       console.log('🎯 fetchPrioridades called');
-      const response = await axiosInstance.get('/prioridades');
+      const response = await axiosInstance.get('/prioridades/');
       console.log('🎯 Prioridades disponibles en el backend:', response.data);
       setPrioridadesDisponibles(response.data);
       return response.data;
@@ -41,7 +41,7 @@ export const ProyectosProvider = ({ children }) => {
   };
   const fetchEstados = async () => {
     try {
-      const response = await axiosInstance.get('/estados');
+      const response = await axiosInstance.get('/estados/');
       console.log('📋 Estados disponibles en el backend:', response.data);
       setEstadosDisponibles(response.data);
       return response.data;
@@ -63,7 +63,7 @@ export const ProyectosProvider = ({ children }) => {
     try {
       console.log('🚀 fetchProyectos called');
       setLoading(true);
-      const res = await axiosInstance.get('/proyectos');
+      const res = await axiosInstance.get('/proyectos/');
       // Normalizar los datos para que sean consistentes en todas las vistas
       const proyectosNormalizados = res.data.map((p) => ({
         ...p,
@@ -461,7 +461,7 @@ export const ProyectosProvider = ({ children }) => {
         fecha_inicio: nuevoProyecto.fechaInicio,
         fecha_fin: nuevoProyecto.fechaFin
       };
-      const res = await axiosInstance.post('/proyectos', apiData);
+      const res = await axiosInstance.post('/proyectos/', apiData);
       // Añadir el nuevo proyecto al estado
       const proyectoCreado = {
         ...res.data,

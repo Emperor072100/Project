@@ -124,11 +124,11 @@ const EditarProyecto: React.FC<Props> = ({ proyectoId, isOpen, onClose, onActual
       
       // Cargar todos los datos necesarios en paralelo
       const [usuariosRes, estadosRes, prioridadesRes, tiposRes, equiposRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/usuarios`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/estados`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/prioridades`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/tipos`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/equipos`, config)
+        axios.get(`${import.meta.env.VITE_API_URL}/usuarios/`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/estados/`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/prioridades/`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/tipos/`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/equipos/`, config)
       ]);
 
       setUsuarios(usuariosRes.data);

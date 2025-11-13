@@ -185,11 +185,11 @@ const NuevoProyecto: React.FC<Props> = ({ onCreado, onCancel }) => {
       
       // Cargar todos los datos necesarios en paralelo
       const [usuariosRes, estadosRes, prioridadesRes, tiposRes, equiposRes] = await Promise.all([
-        axiosInstance.get('/usuarios'),
-        axiosInstance.get('/estados'),
-        axiosInstance.get('/prioridades'),
-        axiosInstance.get('/tipos'),
-        axiosInstance.get('/equipos')
+        axiosInstance.get('/usuarios/'),
+        axiosInstance.get('/estados/'),
+        axiosInstance.get('/prioridades/'),
+        axiosInstance.get('/tipos/'),
+        axiosInstance.get('/equipos/')
       ]);
 
       console.log('📡 Respuestas recibidas:');

@@ -2,13 +2,11 @@ import React from 'react'
 import { createRoot} from 'react-dom/client'
 import { RouterProvider, createBrowserRouter as Router } from 'react-router-dom'
 import './index.css'
-import { setupAuthInterceptor } from './services/authService'
 import { ProyectosProvider } from './context/ProyectosContext'
 
 import { routes } from './routes'
 
-// Configurar interceptor de autenticación
-setupAuthInterceptor();
+// Nota: El interceptor de autenticación se configura automáticamente en axiosConfig.js
 
 const router = Router(routes)
 

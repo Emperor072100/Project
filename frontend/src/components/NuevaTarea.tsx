@@ -56,7 +56,7 @@ const NuevaTarea: React.FC<Props> = ({
   const cargarProyectos = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get('/proyectos');
+      const response = await axiosInstance.get('/proyectos/');
       const proyectosData = Array.isArray(response.data) ? response.data : [];
       setProyectos(proyectosData);
     } catch (error) {

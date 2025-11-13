@@ -1,5 +1,4 @@
-// Servicio para manejar la autenticación
-const BASE_URL = import.meta.env.VITE_API_URL;
+import axiosInstance from './axiosConfig';
 
 // Flag para prevenir múltiples redirecciones
 let redirectingToLogin = false;
@@ -11,17 +10,22 @@ export const authService = {
     formData.append('username', username);
     formData.append('password', password);
     
-    const response = await fetch(`${BASE_URL}/auth/login`, {
-      method: 'POST',
-      body: formData,
-    });
+    console.log('🔐 Intentando login...');
     
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al iniciar sesión');
+    try {
+      const response = await axiosInstance.post('/auth/login', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('✅ Login exitoso');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error en login:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Error al iniciar sesión';
+      throw new Error(errorMessage);
     }
-    
-    return response.json();
   },
   
   // Cerrar sesión
@@ -76,40 +80,5 @@ export const authService = {
   }
 };
 
-// Interceptor para refrescar token automáticamente
-export const setupAuthInterceptor = () => {
-  const originalFetch = window.fetch;
-  
-  window.fetch = async (url, options = {}) => {
-    // Si la URL es para login, no añadir token
-    if (url.includes('/auth/login')) {
-      return originalFetch(url, options);
-    }
-    
-    // Añadir token a las peticiones
-    const token = authService.getToken();
-    if (token) {
-      options.headers = {
-        ...options.headers,
-        'Authorization': `Bearer ${token}`
-      };
-    }
-    
-    const response = await originalFetch(url, options);
-    
-    // Si hay error 401 (no autorizado), intentar refrescar token
-    if (response.status === 401) {
-      const refreshedToken = await authService.refreshToken();
-      if (refreshedToken) {
-        // Reintentar con el nuevo token
-        options.headers = {
-          ...options.headers,
-          'Authorization': `Bearer ${refreshedToken}`
-        };
-        return originalFetch(url, options);
-      }
-    }
-    
-    return response;
-  };
-};
+// Nota: El interceptor de autenticación se maneja automáticamente en axiosConfig.js
+// No necesitamos setupAuthInterceptor ya que axios maneja esto por nosotros
