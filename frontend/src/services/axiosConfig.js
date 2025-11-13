@@ -5,9 +5,40 @@ import { authService } from './authService';
 // Determinar la URL base según el entorno
 const API_URL = import.meta.env.VITE_API_URL;
 
+// Resolver la URL final y prevenir "Mixed Content" cuando la app está en HTTPS
+const resolveApiUrl = () => {
+  let url = API_URL || '';
+
+  try {
+    if (typeof window !== 'undefined' && window.location) {
+      const isHttps = window.location.protocol === 'https:';
+      
+      // Si la app se sirve por HTTPS y la URL del API comienza con http:, forzar https:
+      if (isHttps && url && url.trim().toLowerCase().startsWith('http:')) {
+        console.warn('🔒 Forzando HTTPS en VITE_API_URL para evitar Mixed Content');
+        url = url.replace(/^http:/i, 'https:');
+      }
+      
+      // Si no hay URL configurada y estamos en producción, usar rutas relativas
+      if (!url && isHttps) {
+        console.info('🔄 Usando rutas relativas para API en producción');
+        return '/api';
+      }
+    }
+  } catch (e) {
+    // En entornos de build/server donde `window` no existe, no hacer nada
+    console.warn('⚠️ No se pudo acceder a window.location:', e.message || e);
+  }
+
+  // Si no hay URL explícita, usar rutas relativas
+  return url || '/api';
+};
+
+const RESOLVED_API_URL = resolveApiUrl();
+
 // Crear una instancia de axios
 const axiosInstance = axios.create({
-  baseURL: API_URL
+  baseURL: RESOLVED_API_URL
 });
 
 // Interceptor de solicitud que añade automáticamente el token
