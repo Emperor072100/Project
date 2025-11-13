@@ -12,17 +12,25 @@ const resolveApiUrl = () => {
   try {
     if (typeof window !== 'undefined' && window.location) {
       const isHttps = window.location.protocol === 'https:';
+      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      
+      console.log('🌍 Entorno detectado:', {
+        hostname: window.location.hostname,
+        protocol: window.location.protocol,
+        isProduction,
+        configuredUrl: url
+      });
+      
+      // En producción, siempre usar rutas relativas para aprovechar el proxy de Nginx
+      if (isProduction) {
+        console.info('🔄 Entorno de producción detectado - usando proxy /api');
+        return '/api';
+      }
       
       // Si la app se sirve por HTTPS y la URL del API comienza con http:, forzar https:
       if (isHttps && url && url.trim().toLowerCase().startsWith('http:')) {
         console.warn('🔒 Forzando HTTPS en VITE_API_URL para evitar Mixed Content');
         url = url.replace(/^http:/i, 'https:');
-      }
-      
-      // Si no hay URL configurada y estamos en producción, usar rutas relativas
-      if (!url && isHttps) {
-        console.info('🔄 Usando rutas relativas para API en producción');
-        return '/api';
       }
     }
   } catch (e) {
@@ -30,7 +38,7 @@ const resolveApiUrl = () => {
     console.warn('⚠️ No se pudo acceder a window.location:', e.message || e);
   }
 
-  // Si no hay URL explícita, usar rutas relativas
+  // Fallback: Si no hay URL explícita, usar rutas relativas
   return url || '/api';
 };
 

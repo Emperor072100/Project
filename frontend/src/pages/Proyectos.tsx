@@ -20,7 +20,9 @@ const Proyectos = () => {
       setError(null);
       
       // Usar axiosInstance configurado para manejar correctamente la URL de la API
-      const response = await axiosInstance.get('/proyectos/');
+      console.log('🔄 Cargando proyectos...');
+      const response = await axiosInstance.get('/proyectos');
+      console.log('✅ Proyectos cargados:', response.data);
       
       setProyectos(response.data);
     } catch (err: any) {
