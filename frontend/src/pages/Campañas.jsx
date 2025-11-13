@@ -149,11 +149,11 @@ const Campañas = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const [campañasRes, clientesCorporativosRes, contactosRes, usuariosRes, estadisticasRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/campanas`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/clientes-corporativos`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/contactos`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/usuarios`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/campanas/estadisticas`, config)
+        axios.get(`${import.meta.env.VITE_API_URL}/campanas/`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/clientes-corporativos/`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/contactos/`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/usuarios/`, config),
+        axios.get(`${import.meta.env.VITE_API_URL}/campanas/estadisticas/`, config)
       ]);
 
       // Mapear los datos de campañas con información relacionada

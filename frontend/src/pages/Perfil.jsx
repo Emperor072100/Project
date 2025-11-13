@@ -88,7 +88,7 @@ export default function Perfil({ sidebarCollapsed = false }) {
         const respCampañas = await fetch(`${API_URL}/campanas/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const respClientes = await fetch(`${API_URL}/clientes-corporativos`, {
+        const respClientes = await fetch(`${API_URL}/clientes-corporativos/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const respImplementaciones = await fetch(`${API_URL}/implementaciones/basic`, {

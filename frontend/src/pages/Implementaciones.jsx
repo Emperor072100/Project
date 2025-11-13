@@ -1201,7 +1201,7 @@ const Implementaciones = () => {
       } else {
         // Modo creación - crear nueva implementación
         console.log('Creando nueva implementación');
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/implementaciones`, formDataBackend, config);
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/implementaciones/`, formDataBackend, config);
         console.log('Respuesta del servidor (creación):', response.data);
         toast.success('Implementación guardada exitosamente');
       }
@@ -1432,7 +1432,7 @@ const Implementaciones = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       console.log('🔍 Cargando todas las entregas realizadas...');
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/entregas`, config);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/entregas/`, config);
       
       console.log('📦 Entregas encontradas:', response.data);
       setEntregasRealizadas(response.data);
@@ -1675,7 +1675,7 @@ const Implementaciones = () => {
       };
       
       // Enviar datos de entrega al backend
-      await axios.post(`${import.meta.env.VITE_API_URL}/entregas`, entregaData, config);
+      await axios.post(`${import.meta.env.VITE_API_URL}/entregas/`, entregaData, config);
       
       // Cambiar el estado de la implementación a "Finalizado"
       await axios.put(
