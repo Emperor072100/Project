@@ -5,6 +5,13 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
   ],
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    rollupOptions: {
+      input: 'index.html'
+    }
+  },
   server: {
     host: '0.0.0.0',
     port: 3000,
