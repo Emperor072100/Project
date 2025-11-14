@@ -6,16 +6,21 @@ let redirectingToLogin = false;
 export const authService = {
   // Iniciar sesión
   login: async (username, password) => {
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
-    
+    const params = new URLSearchParams();
+    params.append('grant_type', 'password');
+    params.append('username', username);
+    params.append('password', password);
+    params.append('scope', '');
+    params.append('client_id', '');
+    params.append('client_secret', '');
+
     console.log('🔐 Intentando login...');
     
     try {
-      const response = await axiosInstance.post('/auth/login', formData, {
+      const response = await axiosInstance.post('/auth/login', params, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'accept': 'application/json'
         },
       });
       
