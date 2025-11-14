@@ -18,7 +18,8 @@ const resolveApiUrl = () => {
         hostname: window.location.hostname,
         protocol: window.location.protocol,
         isProduction,
-        configuredUrl: url
+        configuredUrl: url,
+        finalUrl: '/api'
       });
       
       // En producción, siempre usar rutas relativas para aprovechar el proxy de Nginx
@@ -44,14 +45,21 @@ const resolveApiUrl = () => {
 
 const RESOLVED_API_URL = resolveApiUrl();
 
-// Crear una instancia de axios
+// Crear una instancia de axios con baseURL dinámica
 const axiosInstance = axios.create({
-  baseURL: RESOLVED_API_URL
+  timeout: 30000, // 30 segundos timeout
 });
 
-// Interceptor de solicitud que añade automáticamente el token
+// Interceptor para resolver la URL dinámicamente en cada petición
 axiosInstance.interceptors.request.use(
   config => {
+    // Resolver la baseURL dinámicamente si no está establecida
+    if (!config.baseURL) {
+      const dynamicBaseURL = resolveApiUrl();
+      config.baseURL = dynamicBaseURL;
+      console.log('🔗 Usando baseURL:', dynamicBaseURL, 'para URL:', config.url);
+    }
+    
     // Obtener token del almacenamiento
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     
