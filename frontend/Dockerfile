@@ -33,11 +33,12 @@ RUN echo 'server {' > /etc/nginx/conf.d/default.conf && \
     echo '' >> /etc/nginx/conf.d/default.conf && \
     echo '    # Proxy para API - CRÍTICO para evitar CORS' >> /etc/nginx/conf.d/default.conf && \
     echo '    location /api/ {' >> /etc/nginx/conf.d/default.conf && \
-    echo '        proxy_pass http://backend:8000/;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_pass https://campaignmanagement.backend.andesbpo.com/;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header Host $host;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header X-Real-IP $remote_addr;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header X-Forwarded-Proto $scheme;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_ssl_verify off;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_connect_timeout 30s;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_send_timeout 30s;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_read_timeout 30s;' >> /etc/nginx/conf.d/default.conf && \
@@ -45,11 +46,12 @@ RUN echo 'server {' > /etc/nginx/conf.d/default.conf && \
     echo '' >> /etc/nginx/conf.d/default.conf && \
     echo '    # (Opcional) Proxy para /auth/ si el frontend no usa /api/' >> /etc/nginx/conf.d/default.conf && \
     echo '    location /auth/ {' >> /etc/nginx/conf.d/default.conf && \
-    echo '        proxy_pass http://backend:8000/auth/;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_pass https://campaignmanagement.backend.andesbpo.com/auth/;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header Host $host;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header X-Real-IP $remote_addr;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header X-Forwarded-Proto $scheme;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_ssl_verify off;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_connect_timeout 30s;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_send_timeout 30s;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_read_timeout 30s;' >> /etc/nginx/conf.d/default.conf && \
