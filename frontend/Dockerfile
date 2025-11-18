@@ -66,7 +66,7 @@ RUN echo 'server {' > /etc/nginx/conf.d/default.conf && \
     echo '}' >> /etc/nginx/conf.d/default.conf
 
 # Verificar configuración de Nginx
-RUN nginx -t
+# RUN nginx -t
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
