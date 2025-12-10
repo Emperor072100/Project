@@ -22,23 +22,16 @@ const resolveApiUrl = () => {
         finalUrl: url || '/api'
       });
       
-      // Si hay URL configurada, usarla (incluso en producción)
+      // MODO 1: Si hay URL configurada, usarla directamente (llamadas browser -> backend)
       if (url && url.trim()) {
         console.info(`🔗 Usando URL configurada: ${url}`);
         return url;
       }
       
-      // Si no hay URL configurada y estamos en producción, usar proxy /api
-      if (isProduction) {
-        console.info('🔄 Entorno de producción sin URL configurada - usando proxy /api');
-        return '/api';
-      }
-      
-      // Si la app se sirve por HTTPS y la URL del API comienza con http:, forzar https:
-      if (isHttps && url && url.trim().toLowerCase().startsWith('http:')) {
-        console.warn('🔒 Forzando HTTPS en VITE_API_URL para evitar Mixed Content');
-        url = url.replace(/^http:/i, 'https:');
-      }
+      // MODO 2: Sin URL configurada, usar proxy nginx (frontend nginx -> backend)
+      // Esto requiere que nginx.conf tenga location /api/ configurado
+      console.info('🔄 Usando proxy /api (nginx redirige al backend)');
+      return '/api';
     }
   } catch (e) {
     // En entornos de build/server donde `window` no existe, no hacer nada
