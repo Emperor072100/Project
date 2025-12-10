@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from "react-hot-toast";
+import axiosInstance from './services/axiosConfig';
 import KPIs from './components/KPIs';
 import TablaProyectos from './components/TablaProyectos';
 import NuevoProyecto from './components/NuevoProyecto';
@@ -49,12 +50,8 @@ export const Dashboard: React.FC = () => {
     const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId') || '';
     const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
     if (userId && token) {
-      const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-      fetch(`${API_URL}/usuarios/${userId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.ok ? res.json() : Promise.reject('No se pudo obtener el usuario'))
-        .then(data => setUser({ id: data.id?.toString() || userId, rol: data.rol || '' }))
+      axiosInstance.get(`/usuarios/${userId}`)
+        .then(response => setUser({ id: response.data.id?.toString() || userId, rol: response.data.rol || '' }))
         .catch(() => setUser({ id: userId, rol: '' }));
     }
   }, []);

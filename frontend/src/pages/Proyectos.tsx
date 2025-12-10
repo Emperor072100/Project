@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import NuevoProyecto from '../components/NuevoProyecto';
 import EditarProyecto from '../components/EditarProyecto';
 import axiosInstance from '../services/axiosConfig';

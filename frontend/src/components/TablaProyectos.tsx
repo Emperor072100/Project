@@ -1,6 +1,6 @@
 // components/TablaProyectos.tsx
 import React, { useState } from 'react';
-import axios from 'axios';
+import axiosInstance from '../services/axiosConfig';
 import { Proyecto } from '../views';
 import { useNavigate } from 'react-router-dom';
 import PanelDetalleProyecto from './PanelDetalleProyecto';
@@ -465,8 +465,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
       
       // Intentar con PATCH primero (más específico)
       try {
-        const response = await axios.patch(
-          `${import.meta.env.VITE_API_URL}/proyectos/${proyectoId}/equipo`,
+        const response = await axiosInstance.patch(
+          `/proyectos/${proyectoId}/equipo`,
           { equipo: nuevoEquipo },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -477,8 +477,8 @@ const TablaProyectos: React.FC<TablaProyectosProps> = ({
         console.log('PATCH falló, intentando con PUT...');
         
         // Si PATCH falla, usar PUT pero con datos mínimos
-        const response = await axios.put(
-          `${import.meta.env.VITE_API_URL}/proyectos/${proyectoId}`,
+        const response = await axiosInstance.put(
+          `/proyectos/${proyectoId}`,
           { equipo: nuevoEquipo },
           { headers: { Authorization: `Bearer ${token}` } }
         );

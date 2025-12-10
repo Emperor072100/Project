@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
+import axiosInstance from '../services/axiosConfig';
 import Swal from 'sweetalert2';
 
 const Sidebar = ({ collapsed, setCollapsed }) => {
@@ -19,11 +20,10 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!userId || !token) return;
 
-    fetch(`${import.meta.env.VITE_API_URL}/usuarios/${userId}`, {
+    axiosInstance.get(`/usuarios/${userId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
-      .then(res => res.ok ? res.json() : Promise.reject('No se pudo obtener el usuario'))
-      .then(data => setUser(data))
+      .then(res => setUser(res.data))
       .catch(() => setUser({ nombre: '', apellido: '', rol: '', foto: null }));
   }, []);
 

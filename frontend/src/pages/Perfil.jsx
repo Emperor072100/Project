@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import axiosInstance from '../services/axiosConfig';
 
 // Recibe la prop sidebarCollapsed desde el layout
 export default function Perfil({ sidebarCollapsed = false }) {
@@ -52,23 +51,14 @@ export default function Perfil({ sidebarCollapsed = false }) {
     // Proyectos asociados
     const fetchProyectosUsuario = async () => {
       if (!userData.id) return;
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       try {
-        const response = await fetch(`${API_URL}/proyectos/`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (userData.rol === 'admin') {
-            setProyectos(data);
-          } else {
-            const proyectosUsuario = data.filter(p => p.responsable_id === userData.id);
-            setProyectos(proyectosUsuario);
-          }
+        const response = await axiosInstance.get('/proyectos/');
+        const data = response.data;
+        if (userData.rol === 'admin') {
+          setProyectos(data);
         } else {
-          setProyectos([]);
+          const proyectosUsuario = data.filter(p => p.responsable_id === userData.id);
+          setProyectos(proyectosUsuario);
         }
       } catch (error) {
         console.error('Error al obtener proyectos:', error);
@@ -81,33 +71,16 @@ export default function Perfil({ sidebarCollapsed = false }) {
   useEffect(() => {
     // Campañas, clientes corporativos e implementaciones solo cuando usuario.id está listo
     if (!usuario.id) return;
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     const fetchDatos = async () => {
       try {
         // Obtener campañas, clientes corporativos e implementaciones
-        const respCampañas = await fetch(`${API_URL}/campanas/`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const respClientes = await fetch(`${API_URL}/clientes-corporativos/`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const respImplementaciones = await fetch(`${API_URL}/implementaciones/basic`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const respCampañas = await axiosInstance.get('/campanas/');
+        const respClientes = await axiosInstance.get('/clientes-corporativos/');
+        const respImplementaciones = await axiosInstance.get('/implementaciones/basic');
         
-        let campañasData = [];
-        let clientesData = [];
-        let implementacionesData = [];
-        
-        if (respCampañas.ok) {
-          campañasData = await respCampañas.json();
-        }
-        if (respClientes.ok) {
-          clientesData = await respClientes.json();
-        }
-        if (respImplementaciones.ok) {
-          implementacionesData = await respImplementaciones.json();
-        }
+        const campañasData = respCampañas.data || [];
+        const clientesData = respClientes.data || [];
+        const implementacionesData = respImplementaciones.data || [];
         
         if (usuario.rol === 'admin') {
           setCampañas(campañasData);

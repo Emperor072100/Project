@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import axiosInstance from '../services/axiosConfig';
 
 const Usuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -26,27 +25,12 @@ const Usuarios = () => {
   const fetchUsuarios = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      let url = `${API_URL}/usuarios`;
-      if (searchTerm) {
-        url += `?nombre=${encodeURIComponent(searchTerm)}`; // Añadir parámetro de búsqueda si existe
-      }
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'No se pudieron cargar los usuarios' }));
-        throw new Error(errorData.detail || 'No se pudieron cargar los usuarios');
-      }
-      
-      const data = await response.json();
-      setUsuarios(data);
+      const params = searchTerm ? { nombre: searchTerm } : {};
+      const response = await axiosInstance.get('/usuarios', { params });
+      setUsuarios(response.data);
       setError(null);
     } catch (err) {
-      setError('Error al cargar usuarios: ' + err.message);
+      setError('Error al cargar usuarios: ' + (err.response?.data?.detail || err.message));
       console.error(err);
     } finally {
       setLoading(false);
@@ -65,12 +49,6 @@ const Usuarios = () => {
     e.preventDefault();
     setError(null); // Limpiar errores previos
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const url = editingId 
-        ? `${API_URL}/usuarios/${editingId}` 
-        : `${API_URL}/auth/register`; // Usar el nuevo endpoint
-      const method = editingId ? 'PUT' : 'POST';
-      
       // Preparar el cuerpo de la solicitud según el formato requerido por FastAPI
       const bodyData = { 
         nombre: formData.nombre,
@@ -85,20 +63,10 @@ const Usuarios = () => {
         delete bodyData.contraseña;
       }
 
-      console.log(`Enviando solicitud ${method} a: ${url}`);
-      console.log('Datos enviados:', JSON.stringify(bodyData));
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(bodyData)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: No se pudo ${editingId ? 'actualizar' : 'crear'} el usuario`);
+      if (editingId) {
+        await axiosInstance.put(`/usuarios/${editingId}`, bodyData);
+      } else {
+        await axiosInstance.post('/auth/register', bodyData);
       }
       
       // Si todo salió bien, actualizar usuarios y resetear formulario
@@ -113,7 +81,7 @@ const Usuarios = () => {
       setEditingId(null);
       setShowForm(false);
     } catch (err) {
-      setError('Error: ' + err.message);
+      setError('Error: ' + (err.response?.data?.detail || err.message));
       console.error(err);
     }
   };
@@ -152,24 +120,11 @@ const Usuarios = () => {
     
     setError(null); // Limpiar errores previos
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await fetch(`${API_URL}/usuarios/${id}`, { // Esta URL debe coincidir con el backend
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        // Intentar obtener un mensaje de error más detallado del backend
-        const errorData = await response.json().catch(() => ({ detail: 'Error al eliminar usuario' }));
-        throw new Error(errorData.detail || 'Error al eliminar usuario');
-      }
-      
+      await axiosInstance.delete(`/usuarios/${id}`);
       // Actualizar la lista de usuarios
       fetchUsuarios();
     } catch (err) {
-      setError('Error: ' + err.message);
+      setError('Error: ' + (err.response?.data?.detail || err.message));
       console.error(err);
     }
   };

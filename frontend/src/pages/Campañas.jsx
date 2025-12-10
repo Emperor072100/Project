@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FaPlus, FaEdit, FaHistory, FaUsers, FaBullhorn, FaChartBar, FaBoxOpen, FaFileInvoiceDollar, FaSearch } from 'react-icons/fa';
-import axios from 'axios';
+import axiosInstance from '../services/axiosConfig';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 //import dayjs from 'dayjs';
@@ -149,11 +149,11 @@ const Campañas = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const [campañasRes, clientesCorporativosRes, contactosRes, usuariosRes, estadisticasRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/campanas/`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/clientes-corporativos/`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/contactos/`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/usuarios/`, config),
-        axios.get(`${import.meta.env.VITE_API_URL}/campanas/estadisticas/`, config)
+        axiosInstance.get(`/campanas/`, config),
+        axiosInstance.get(`/clientes-corporativos/`, config),
+        axiosInstance.get(`/contactos/`, config),
+        axiosInstance.get(`/usuarios/`, config),
+        axiosInstance.get(`/campanas/estadisticas/`, config)
       ]);
 
       // Mapear los datos de campañas con información relacionada
@@ -240,7 +240,7 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.post(`${import.meta.env.VITE_API_URL}/clientes-corporativos/`, formClienteCorporativo, config);
+      await axiosInstance.post(`/clientes-corporativos/`, formClienteCorporativo, config);
       Swal.fire({
         icon: 'success',
         title: 'Cliente corporativo creado',
@@ -267,7 +267,7 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.post(`${import.meta.env.VITE_API_URL}/contactos/`, formContacto, config);
+      await axiosInstance.post(`/contactos/`, formContacto, config);
       Swal.fire({
         icon: 'success',
         title: 'Contacto creado',
@@ -306,7 +306,7 @@ const Campañas = () => {
         estado: formCampaña.estado
       };
 
-      await axios.post(`${import.meta.env.VITE_API_URL}/campanas/`, datosEnvio, config);
+      await axiosInstance.post(`/campanas/`, datosEnvio, config);
       Swal.fire({
         icon: 'success',
         title: 'Campaña creada',
@@ -381,7 +381,7 @@ const Campañas = () => {
         fecha_de_produccion: formEditar.fecha_inicio || null,
         estado: formEditar.estado
       };
-      await axios.put(encodeURI(`${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}`), payload, config);
+      await axiosInstance.put(encodeURI(`/campanas/${campañaSeleccionada.id}`), payload, config);
       setCampañaSeleccionada((prev) => ({ ...prev, ...payload }));
       // Actualizar la lista de campañas
       setCampañas((prev) => 
@@ -462,8 +462,8 @@ const Campañas = () => {
       let res;
       if (formFacturacion.id) {
         // Si tiene ID, es una edición
-        res = await axios.put(
-          `${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}/facturacion/${formFacturacion.id}`,
+        res = await axiosInstance.put(
+          `/campanas/${campañaSeleccionada.id}/facturacion/${formFacturacion.id}`,
           facturacionData,
           config
         );
@@ -481,8 +481,8 @@ const Campañas = () => {
         });
       } else {
         // Si no tiene ID, es una creación
-        res = await axios.post(
-          `${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}/facturacion`,
+        res = await axiosInstance.post(
+          `/campanas/${campañaSeleccionada.id}/facturacion`,
           facturacionData,
           config
         );
@@ -540,9 +540,9 @@ const Campañas = () => {
       let res;
       if (formProducto.id) {
         // Si tiene ID, es una edición
-        console.log('URL del endpoint (PUT):', `${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}/productos/${formProducto.id}`);
-        res = await axios.put(
-          `${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}/productos/${formProducto.id}`,
+        console.log('URL del endpoint (PUT):', `/campanas/${campañaSeleccionada.id}/productos/${formProducto.id}`);
+        res = await axiosInstance.put(
+          `/campanas/${campañaSeleccionada.id}/productos/${formProducto.id}`,
           productoData,
           config
         );
@@ -560,9 +560,9 @@ const Campañas = () => {
         });
       } else {
         // Si no tiene ID, es una creación
-        console.log('URL del endpoint (POST):', `${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}/productos`);
-        res = await axios.post(
-          `${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}/productos`,
+        console.log('URL del endpoint (POST):', `/campanas/${campañaSeleccionada.id}/productos`);
+        res = await axiosInstance.post(
+          `/campanas/${campañaSeleccionada.id}/productos`,
           productoData,
           config
         );
@@ -594,7 +594,7 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/campanas/${campaña.id}/historial`, config);
+      const res = await axiosInstance.get(`/campanas/${campaña.id}/historial`, config);
       setHistorial(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       setHistorial([]);
@@ -609,7 +609,7 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}/historial`, config);
+      const res = await axiosInstance.get(`/campanas/${campañaSeleccionada.id}/historial`, config);
       setHistorial(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.log('Error actualizando historial:', error);
@@ -623,7 +623,7 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/campanas/${campaña.id}/productos`, config);
+      const res = await axiosInstance.get(`/campanas/${campaña.id}/productos`, config);
       setProductoGuardado(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Error cargando productos:', error);
@@ -637,7 +637,7 @@ const Campañas = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/campanas/${campaña.id}/facturacion`, config);
+      const res = await axiosInstance.get(`/campanas/${campaña.id}/facturacion`, config);
       setFacturacionGuardada(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Error cargando facturación:', error);
@@ -2158,7 +2158,7 @@ const Campañas = () => {
                               try {
                                 const token = localStorage.getItem('token') || sessionStorage.getItem('token');
                                 const config = { headers: { Authorization: `Bearer ${token}` } };
-                                await axios.delete(`${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}/productos/${producto.id}`, config);
+                                await axiosInstance.delete(`/campanas/${campañaSeleccionada.id}/productos/${producto.id}`, config);
                                 setProductoGuardado(prev => prev.filter(p => p.id !== producto.id));
                                 toast.success('Producto/servicio eliminado');
                               } catch (error) {
@@ -2333,7 +2333,7 @@ const Campañas = () => {
                               try {
                                 const token = localStorage.getItem('token') || sessionStorage.getItem('token');
                                 const config = { headers: { Authorization: `Bearer ${token}` } };
-                                await axios.delete(`${import.meta.env.VITE_API_URL}/campanas/${campañaSeleccionada.id}/facturacion/${factura.id}`, config);
+                                await axiosInstance.delete(`/campanas/${campañaSeleccionada.id}/facturacion/${factura.id}`, config);
                                 setFacturacionGuardada(prev => prev.filter(f => f.id !== factura.id));
                                 toast.success('Unidad de facturación eliminada');
                               } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import axiosInstance from '../services/axiosConfig';
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -263,7 +263,7 @@ const Implementaciones = () => {
     setLoading(true);
     try {
       // Cambiar la URL para usar solo los datos básicos
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/implementaciones/basic`);
+      const response = await axiosInstance.get(`/implementaciones/basic`);
       setImplementaciones(response.data);
       console.log('Implementaciones cargadas:', response.data);
       
@@ -305,8 +305,8 @@ const Implementaciones = () => {
         responseType: 'blob' // Importante para recibir archivos binarios
       };
       
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/implementaciones/${implementacionId}/descargar_pdf`,
+      const response = await axiosInstance.get(
+        `/implementaciones/${implementacionId}/descargar_pdf`,
         config
       );
       
@@ -354,7 +354,7 @@ const Implementaciones = () => {
               const config = { headers: { Authorization: `Bearer ${token}` } };
               
               console.log(`\n🔍 Analizando implementación ${implementacionId}...`);
-              const response = await axios.get(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacionId}`, config);
+              const response = await axiosInstance.get(`/implementaciones/${implementacionId}`, config);
 
               analizarImplementacionDetallado(response.data, implementacionId);
               
@@ -635,7 +635,7 @@ const Implementaciones = () => {
           
           console.log(`🔍 Cargando progreso para implementación ${implementacion.id} (${implementacion.nombre_proyecto || 'Sin nombre'})`);
           
-          const response = await axios.get(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacion.id}`, config);
+          const response = await axiosInstance.get(`/implementaciones/${implementacion.id}`, config);
           console.log(`📊 Datos completos para implementación ${implementacion.id}:`, response.data);
           
           const progresoCalculado = calcularProgresoRealImplementacion(response.data);
@@ -692,7 +692,7 @@ const Implementaciones = () => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         const config = { headers: { Authorization: `Bearer ${token}` } };
         
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacion.id}`, config);
+        const response = await axiosInstance.get(`/implementaciones/${implementacion.id}`, config);
         analizarImplementacionDetallado(response.data, implementacion.id);
         
       } catch (error) {
@@ -972,7 +972,7 @@ const Implementaciones = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       // Intentar cargar los detalles completos de la implementación
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacionId}`, config);
+      const response = await axiosInstance.get(`/implementaciones/${implementacionId}`, config);
       setImplementacionDetail(response.data);
     } catch (error) {
       console.error('Error al cargar detalles:', error);
@@ -1004,7 +1004,7 @@ const Implementaciones = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.put(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacionId}/estado`, { estado: nuevoEstado }, config);
+      await axiosInstance.put(`/implementaciones/${implementacionId}/estado`, { estado: nuevoEstado }, config);
       
       // Actualizar el estado local
       setImplementaciones(prev => 
@@ -1086,8 +1086,8 @@ const Implementaciones = () => {
       // Intentar primero con un endpoint específico para subsesiones si existe
       try {
         // Endpoint específico para actualizar subsesiones
-        await axios.patch(
-          `${import.meta.env.VITE_API_URL}/implementaciones/${implementacionDetail.id}/subsesion`,
+        await axiosInstance.patch(
+          `/implementaciones/${implementacionDetail.id}/subsesion`,
           {
             seccion: seccion,
             campo: campo,
@@ -1100,8 +1100,8 @@ const Implementaciones = () => {
         console.log('⚠️ Endpoint de subsesión no disponible, usando PUT completo...');
         try {
           // Si no existe el endpoint específico, usar PUT completo
-          await axios.put(
-            `${import.meta.env.VITE_API_URL}/implementaciones/${implementacionDetail.id}`,
+          await axiosInstance.put(
+            `/implementaciones/${implementacionDetail.id}`,
             updateData,
             config
           );
@@ -1120,8 +1120,8 @@ const Implementaciones = () => {
             }
           };
           
-          await axios.put(
-            `${import.meta.env.VITE_API_URL}/implementaciones/${implementacionDetail.id}`,
+          await axiosInstance.put(
+            `/implementaciones/${implementacionDetail.id}`,
             minimalData,
             config
           );
@@ -1189,11 +1189,11 @@ const Implementaciones = () => {
       if (isEditMode && editingImplementacion) {
         // Modo edición - actualizar implementación existente
         console.log(`🔄 Actualizando implementación ID: ${editingImplementacion.id}`);
-        console.log('📤 URL de actualización:', `${import.meta.env.VITE_API_URL}/implementaciones/${editingImplementacion.id}`);
+        console.log('📤 URL de actualización:', `/implementaciones/${editingImplementacion.id}`);
         console.log('📊 Datos contractuales que se envían:', formDataBackend.contractual);
         console.log('👥 Datos talento humano que se envían:', formDataBackend.talento_humano);
 
-        const response = await axios.put(`${import.meta.env.VITE_API_URL}/implementaciones/${editingImplementacion.id}`, formDataBackend, config);
+        const response = await axiosInstance.put(`/implementaciones/${editingImplementacion.id}`, formDataBackend, config);
         console.log('✅ Respuesta del servidor (actualización):', response.data);
         console.log('📍 Status code:', response.status);
         
@@ -1201,7 +1201,7 @@ const Implementaciones = () => {
       } else {
         // Modo creación - crear nueva implementación
         console.log('Creando nueva implementación');
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/implementaciones/`, formDataBackend, config);
+        const response = await axiosInstance.post(`/implementaciones/`, formDataBackend, config);
         console.log('Respuesta del servidor (creación):', response.data);
         toast.success('Implementación guardada exitosamente');
       }
@@ -1226,7 +1226,7 @@ const Implementaciones = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacion.id}`, config);
+      const response = await axiosInstance.get(`/implementaciones/${implementacion.id}`, config);
       
       // Mapear los datos del backend al formato del formulario
       const detalles = response.data;
@@ -1432,7 +1432,7 @@ const Implementaciones = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       console.log('🔍 Cargando todas las entregas realizadas...');
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/entregas/`, config);
+      const response = await axiosInstance.get(`/entregas/`, config);
       
       console.log('📦 Entregas encontradas:', response.data);
       setEntregasRealizadas(response.data);
@@ -1458,7 +1458,7 @@ const Implementaciones = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       console.log('🔍 Cargando detalles de entrega:', entregaId);
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/entregas/${entregaId}`, config);
+      const response = await axiosInstance.get(`/entregas/${entregaId}`, config);
       
       console.log('📦 Detalles de entrega:', response.data);
       setEntregaSeleccionada(response.data);
@@ -1482,7 +1482,7 @@ const Implementaciones = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       console.log('🔍 Cargando entrega para editar:', entregaId);
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/entregas/${entregaId}`, config);
+      const response = await axiosInstance.get(`/entregas/${entregaId}`, config);
       
       console.log('📦 Datos de entrega para editar:', response.data);
       setEntregaParaEditar(response.data);
@@ -1573,7 +1573,7 @@ const Implementaciones = () => {
 
       console.log('📤 Actualizando entrega:', datosActualizados);
       
-      await axios.put(`${import.meta.env.VITE_API_URL}/entregas/${entregaParaEditar.id}`, datosActualizados, config);
+      await axiosInstance.put(`/entregas/${entregaParaEditar.id}`, datosActualizados, config);
       
       toast.success('✅ Entrega actualizada exitosamente');
       cerrarModalEditarEntrega();
@@ -1596,7 +1596,7 @@ const Implementaciones = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       console.log('🔍 Cargando entrega para eliminar:', entregaId);
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/entregas/${entregaId}`, config);
+      const response = await axiosInstance.get(`/entregas/${entregaId}`, config);
       
       console.log('📦 Datos de entrega para eliminar:', response.data);
       setEntregaParaEliminar(response.data);
@@ -1630,7 +1630,7 @@ const Implementaciones = () => {
 
       console.log('🗑️ Eliminando entrega:', entregaParaEliminar.id);
       
-      await axios.delete(`${import.meta.env.VITE_API_URL}/entregas/${entregaParaEliminar.id}`, config);
+      await axiosInstance.delete(`/entregas/${entregaParaEliminar.id}`, config);
       
       toast.success('✅ Entrega eliminada exitosamente');
       cerrarModalEliminarEntrega();
@@ -1675,11 +1675,11 @@ const Implementaciones = () => {
       };
       
       // Enviar datos de entrega al backend
-      await axios.post(`${import.meta.env.VITE_API_URL}/entregas/`, entregaData, config);
+      await axiosInstance.post(`/entregas/`, entregaData, config);
       
       // Cambiar el estado de la implementación a "Finalizado"
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/implementaciones/${implementacionEntrega.id}/estado`,
+      await axiosInstance.put(
+        `/implementaciones/${implementacionEntrega.id}/estado`,
         { estado: 'Finalizado' },
         config
       );
@@ -1722,7 +1722,7 @@ const Implementaciones = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      await axios.delete(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacionToDelete.id}`, config);
+      await axiosInstance.delete(`/implementaciones/${implementacionToDelete.id}`, config);
       
       toast.success(`Implementación "${implementacionToDelete.cliente}" eliminada exitosamente`);
       
@@ -1751,7 +1751,7 @@ const Implementaciones = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       console.log('🟢 Obteniendo datos del backend para ID:', implementacion.id);
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/implementaciones/${implementacion.id}`, config);
+      const response = await axiosInstance.get(`/implementaciones/${implementacion.id}`, config);
       console.log('🟢 Datos recibidos del backend:', response.data);
       const detalleCompleto = response.data;
       
@@ -4060,8 +4060,8 @@ const Implementaciones = () => {
                                 const token = localStorage.getItem('token') || sessionStorage.getItem('token');
                                 const config = { headers: { Authorization: `Bearer ${token}` } };
                                 
-                                await axios.put(
-                                  `${import.meta.env.VITE_API_URL}/implementaciones/${implementacion.id}/estado`,
+                                await axiosInstance.put(
+                                  `/implementaciones/${implementacion.id}/estado`,
                                   { estado: 'En producción' },
                                   config
                                 );
@@ -4553,8 +4553,8 @@ const Implementaciones = () => {
                               },
                             };
                             
-                            await axios.put(
-                              `${import.meta.env.VITE_API_URL}/implementaciones/${implementacionSeleccionadaParaProduccion?.id}/comentario-produccion`,
+                            await axiosInstance.put(
+                              `/implementaciones/${implementacionSeleccionadaParaProduccion?.id}/comentario-produccion`,
                               { comentario_produccion: comentarioNoCien },
                               config
                             );

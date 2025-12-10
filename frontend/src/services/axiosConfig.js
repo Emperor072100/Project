@@ -19,12 +19,18 @@ const resolveApiUrl = () => {
         protocol: window.location.protocol,
         isProduction,
         configuredUrl: url,
-        finalUrl: '/api'
+        finalUrl: url || '/api'
       });
       
-      // En producción, siempre usar rutas relativas para aprovechar el proxy de Nginx
+      // Si hay URL configurada, usarla (incluso en producción)
+      if (url && url.trim()) {
+        console.info(`🔗 Usando URL configurada: ${url}`);
+        return url;
+      }
+      
+      // Si no hay URL configurada y estamos en producción, usar proxy /api
       if (isProduction) {
-        console.info('🔄 Entorno de producción detectado - usando proxy /api');
+        console.info('🔄 Entorno de producción sin URL configurada - usando proxy /api');
         return '/api';
       }
       

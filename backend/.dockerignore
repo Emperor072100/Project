@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Environment variables (usar las del servidor)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Scripts de desarrollo/migración (no necesarios en producción)
+check_users.py
+debug_*.py
+diagnose.py
+diagnostico_api.py
+fix_user.py
+init_db.py
+list_tables.py
+simple_*.py
+test_*.py
+verify_fix.py
+crear_tabla_*.py
+create_*.py
+generar_historial_inicial.py
+migrate_*.py
+recreate_*.py
+update_*.py
+agregar_*.py
+convert_*.py
+
+# Alembic (si no usas migraciones en producción)
+alembic.ini.backup
+alembic_clean.ini
+
+# Batch files
+*.bat
+
+# SQL scripts
+*.sql
+
+# Markdown docs
+SUBSECCIONES_PERSONALIZADAS.md

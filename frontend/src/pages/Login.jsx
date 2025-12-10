@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaLock, FaEye, FaEyeSlash, FaUser } from 'react-icons/fa';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import axiosInstance from '../services/axiosConfig';
 
 const Login = () => {
   const [credentials, setCredentials] = useState({
@@ -40,20 +39,14 @@ const Login = () => {
       formData.append('username', credentials.correo);
       formData.append('password', credentials.password);
 
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
+      const response = await axiosInstance.post('/auth/login', formData, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: formData,
       });
 
-      const data = await response.json();
+      const data = response.data;
       console.log('Datos recibidos:', data);
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al iniciar sesión');
-      }
 
       // Validar respuesta del servidor
       if (!data.user || !data.user.rol || !data.user.nombre || !data.access_token) {
