@@ -148,20 +148,44 @@ const Campañas = () => {
       setLoading(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const [campañasRes, clientesCorporativosRes, contactosRes, usuariosRes, estadisticasRes] = await Promise.all([
+      
+      // Usar Promise.allSettled para que un fallo no rompa toda la página
+      const results = await Promise.allSettled([
         axiosInstance.get(`/campanas/`, config),
         axiosInstance.get(`/clientes-corporativos/`, config),
         axiosInstance.get(`/contactos/`, config),
         axiosInstance.get(`/usuarios/`, config),
-        axiosInstance.get(`/campanas/estadisticas/`, config)
+        axiosInstance.get(`/campanas/estadisticas`, config) // Sin slash final para evitar redirect http
       ]);
 
+      // Desestructurar resultados
+      const [campañasRes, clientesCorporativosRes, contactosRes, usuariosRes, estadisticasRes] = results;
+
+      // Verificar si campañas cargó bien (es crítico)
+      if (campañasRes.status === 'rejected') {
+        console.error("Error cargando campañas:", campañasRes.reason);
+        toast.error("Error al cargar las campañas");
+        setLoading(false);
+        return;
+      }
+
+      // Obtener datos o arrays vacíos si falló
+      const campañasData = campañasRes.value.data;
+      const clientesData = clientesCorporativosRes.status === 'fulfilled' ? clientesCorporativosRes.value.data : [];
+      const contactosData = contactosRes.status === 'fulfilled' ? contactosRes.value.data : [];
+      const usuariosData = usuariosRes.status === 'fulfilled' ? usuariosRes.value.data : [];
+      
+      if (usuariosRes.status === 'rejected') {
+        console.warn("⚠️ No se pudieron cargar los usuarios:", usuariosRes.reason);
+        // No mostramos toast para no alarmar si es un error secundario
+      }
+
       // Mapear los datos de campañas con información relacionada
-      const campañasConDatos = campañasRes.data.map(campaña => {
-        const clienteCorporativo = clientesCorporativosRes.data.find(
+      const campañasConDatos = campañasData.map(campaña => {
+        const clienteCorporativo = clientesData.find(
           cliente => cliente.id === campaña.cliente_corporativo_id
         );
-        const contacto = contactosRes.data.find(
+        const contacto = contactosData.find(
           cont => cont.id === campaña.contacto_id
         );
 
@@ -184,12 +208,16 @@ const Campañas = () => {
       } else {
         setCampañas(campañasConDatos.filter(c => c.lider_de_campaña === usuario.nombre || c.ejecutivo === usuario.nombre));
       }
-      setClientesCorporativos(clientesCorporativosRes.data);
-      setContactos(contactosRes.data);
-      setUsuarios(usuariosRes.data);
+      
+      setClientesCorporativos(clientesData);
+      setContactos(contactosData);
+      setUsuarios(usuariosData);
+
       // Si es admin, mostrar estadísticas globales. Si es usuario, calcular solo de sus campañas.
       if ((usuario.rol || '').toLowerCase() === 'admin') {
-        setEstadisticas(estadisticasRes.data);
+        if (estadisticasRes.status === 'fulfilled') {
+          setEstadisticas(estadisticasRes.value.data);
+        }
       } else {
         // Calcular estadísticas solo de campañas filtradas
         const campañasUsuario = campañasConDatos.filter(c => c.lider_de_campaña === usuario.nombre || c.ejecutivo === usuario.nombre);
